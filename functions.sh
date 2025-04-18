@@ -1,5 +1,21 @@
 #!/bin/bash
 
+########################### FUNCTIONS ###################################
+
+# welcome message to the user
+welcome_user(){
+	echo 'Please enter your name:'
+	read -r name
+}
+
+
+goodbye_user(){
+	echo "Thank you for interacting with us"
+	echo "we wish you a great day"
+	echo "see you soon"
+	echo "Goodbye $name"
+}
+
 # User choice
 user_choice(){
 	echo "Choose [rock], [paper], or [scissors]:"
@@ -32,18 +48,17 @@ winner(){
 
 }
 
+################################### END FUNCTIONS #################################################
 
 
+################################### Main code ##################################################### 
+welcome_user
+goodbye_user
 user_choice
 computer_choice
+goodbye_user
 winner
-
-
-
-
-
-
-
-
-
-
+goodbye_user
+echo 'the code is done'
+goodbye_user
+################################### END Main code #####################################################
