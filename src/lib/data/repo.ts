@@ -343,8 +343,14 @@ export function cohortSpaces(cohortId: string): Space[] {
   return db().spaces.filter((s) => s.cohortId === cohortId);
 }
 
+export function teaches(userId: string, cohortId: string): boolean {
+  return db().cohortMembers.some((m) => m.userId === userId && m.cohortId === cohortId && m.role === "instructor");
+}
+
+/** Read-only spaces: admins anywhere, instructors only in cohorts they teach. Mirrors can_moderate_space() in SQL. */
 export function canPost(user: Profile, space: Space): boolean {
-  return !space.readOnly || user.role !== "student";
+  if (!space.readOnly || user.role === "admin") return true;
+  return !!space.cohortId && teaches(user.id, space.cohortId);
 }
 
 export interface PostView {

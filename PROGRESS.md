@@ -35,22 +35,14 @@ This file is the single source of truth for what's planned, what's built, and wh
 | Timezone | All schedule times in `Europe/Amsterdam`, set via `ACADEMY_TIMEZONE` | **Assumption.** Pricing is in euros so I picked CET/CEST. Change the env var if you teach from elsewhere. |
 | Video | Zoom links for V1, LiveKit later | Brief says integrate first, build later. |
 | Design | Warm off-white paper, near-black ink, one signal-orange accent, mono uppercase labels, square geometry. Light + dark. | Matches "bold, geometric, minimalist". |
-| Auth (now) | Cookie picks a seeded profile. Default is Ahmed (student). Switch profiles on `/profile`. | Lets you see both student and instructor views. Disabled automatically once `NEXT_PUBLIC_SUPABASE_URL` is set. |
+| Auth (now) | Cookie picks a seeded profile. Default is Ahmed (student). Switch profiles on `/profile`. | Lets you see both student and instructor views. Disabled automatically once `NEXT_PUBLIC_SUPABASE_URL` is set. **Not safe on a public URL.** |
+| Roles | `student`, `instructor` (acts only in cohorts they teach), `admin` (runs the academy). Rakan is seeded as `admin`. | Came out of the security review: "any instructor can edit everything" was too broad. |
 
 ---
 
 ## Running it
 
-```bash
-npm install
-npm run dev          # http://localhost:3000
-npm run typecheck    # route types + tsc
-npm run lint
-npm run format       # prettier + tailwind class sorting
-npm run build
-```
-
-Demo data resets on every server restart. The seed always places the active cohort in **week 4 of 6**, so the dashboard looks alive whenever you open it.
+Full setup, commands, configuration and troubleshooting are in [README.md](README.md). Short version: Node 20.9+, `npm install`, `npm run dev`, open http://localhost:3000.
 
 ---
 
@@ -70,6 +62,7 @@ src/
 │   ├── globals.css              design tokens (light + dark)
 │   └── not-found.tsx
 ├── components/                  ui primitives, nav, forms, certificate
+├── proxy.ts                     per-request Content Security Policy
 └── lib/
     ├── types.ts                 domain model (mirrors SQL)
     ├── time.ts                  timezone-aware date helpers
@@ -80,16 +73,21 @@ src/
         ├── store.ts             in-memory store
         └── repo.ts              every read query  ← swap point for Supabase
 supabase/migrations/0001_init.sql   full schema + RLS
+supabase/migrations/0002_security_hardening.sql   review fixes
+supabase/tests/rls.test.mjs         35 RLS checks on PGlite (npm run test:db)
 legacy/                             previous repo contents, untouched
 ```
 
 **Access rules** live in two places that must stay in sync: server actions/`repo.ts` (demo mode) and RLS policies (Supabase). Rules today:
 
-- You see a cohort, its classes, labs, assignments, resources and spaces only if you're a member.
+- You see a cohort, its classes, labs, assignments, resources and spaces only if you're a member (admins see all).
 - Students write only their own progress, lab attempts, submissions, posts, comments and reactions.
-- Students can't post in read-only spaces (Announcements), can't mark labs as passed, can't edit graded submissions, can't change their own role.
-- Cohort instructors see every submission in their cohort. Admins see everything.
-- Certificates are publicly readable (for the verification URL).
+- Students can't post in read-only spaces, can't mark labs as passed, can't edit graded submissions, can't change their own role.
+- Authors edit only a post's title and body. Moving or pinning posts is for moderators.
+- The server clock sets submission times; students can't backdate.
+- Instructors see submissions, post in Announcements, moderate and manage resources/events **only in cohorts they teach**. Campus-wide content and the catalogue (including prices) are admin-only.
+- Notifications: users can only mark them read. Mentions only notify people who can see the space.
+- Certificates: owners and admins read rows; anyone can verify a single ID through `verify_certificate()`.
 
 ---
 
@@ -139,7 +137,9 @@ legacy/                             previous repo contents, untouched
 Needs from you: a Supabase project, a Stripe account, a Resend account (see **Open questions**).
 
 - [ ] Supabase clients (`@supabase/ssr`, already installed) for server components and actions
-- [ ] Auth: email magic link + Google. `proxy.ts` refreshes the session. Replace `currentUser()`.
+- [ ] Auth: email magic link + Google. Add the Supabase session refresh to the existing `src/proxy.ts` (keep the CSP). Replace `currentUser()`. Remove the demo profile switcher.
+- [ ] Rate limiting on every write (posts, comments, reactions, submissions) (security review #9)
+- [ ] Dependabot or Renovate for dependency updates (two Next.js security releases landed in Sep 2026 alone)
 - [ ] Rewrite `repo.ts` and `actions.ts` bodies against Supabase; delete the demo store
 - [ ] Seed script that loads `seed.ts` data into Supabase for staging
 - [ ] Storage bucket `submissions` for ZIP uploads (RLS: owner + cohort instructors)
@@ -147,7 +147,7 @@ Needs from you: a Supabase project, a Stripe account, a Resend account (see **Op
 - [ ] Coupons, refunds (webhook sets payment `refunded`, removes membership)
 - [ ] Resend: welcome, class-starts-in-30-min, deadline-tomorrow, graded, mentioned
 - [ ] Realtime: live new posts/comments in spaces, notification badge
-- [ ] Deploy (Vercel + Supabase), preview environments per PR, CI running typecheck/lint/build
+- [ ] Deploy (Vercel + Supabase), preview environments per PR, CI running typecheck, lint, `test:db` and build
 
 ## Phase 3: Instructor and admin ⬜
 
@@ -175,6 +175,26 @@ Needs from you: a Supabase project, a Stripe account, a Resend account (see **Op
 
 ---
 
+## Security
+
+Review of the whole app on 2026-09-23. Every finding was reproduced by exploiting it (browser for the app, PGlite for the database) and re-tested after the fix.
+
+**Dependencies.** Next.js 16.3.6 (includes the 22 Sep 2026 fix for GHSA-vcvr-r3jv-pc5j), React 19.2.8 (past CVE-2025-55182 and its follow-ups), `npm audit` clean. Recheck on every Next.js security release.
+
+| # | Severity | Finding | Status |
+| --- | --- | --- | --- |
+| 1 | High | Demo sign-in is a cookie with a user ID, so anyone can be anyone | ⬜ Phase 2 (real auth). Don't deploy publicly until then. |
+| 2 | High | Students could mark their own lab **passed** by editing the `.bind()` argument | ✅ Runtime check in `updateLab`. Exploit re-run: blocked. |
+| 3 | Medium | Authors could move their post into Announcements and pin it | ✅ `posts_guard` trigger + per-space moderation (0002) |
+| 4 | Medium | Students could backdate `submitted_at` and re-point submissions | ✅ `submissions_guard` trigger sets server time, locks owner/assignment/folder (0002) |
+| 5 | Medium | Every instructor could edit the whole catalogue (incl. prices) and every cohort | ✅ New `admin` role, instructors scoped to cohorts they teach (0002 + app) |
+| 6 | Low | Mentions notified people outside the space, leaking private post titles | ✅ Visibility check, max 10 mentions per post |
+| 7 | Low | Users could rewrite notification links, then get redirected there | ✅ Only `read_at` is updatable (0002); app only redirects to in-app paths |
+| 8 | Low | No security headers, `X-Powered-By` exposed, clickjacking possible | ✅ Nonce CSP in `src/proxy.ts`, headers in `next.config.ts` |
+| 9 | Low | No rate limits; in-memory store grows forever | ⬜ Phase 2 |
+| 10 | Info | Cookie not `Secure`; certificates table public | ✅ `Secure` in production; `verify_certificate()` replaces the public table |
+| n/a | Bug | 0001's submission update policy recursed, so no student could ever update a submission | ✅ Fixed in 0002 (`is_graded()`), found by the new test suite |
+
 ## Out of scope for V1 (on purpose)
 
 Full Circle parity: DMs, member directory, events ticketing, custom domains, white-labelling, native apps, heavy gamification.
@@ -196,3 +216,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | Date | Change |
 | --- | --- |
 | 2026-09-23 | Phase 0 and Phase 1 complete. Next.js app at repo root, demo store, 21 pages, Supabase schema with RLS validated on PGlite, browser-tested flows. |
+| 2026-09-23 | Security review and fixes (#2 to #8, #10), migration 0002, `npm run test:db` (35 checks), admin role, setup guide in README. |

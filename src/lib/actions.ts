@@ -20,14 +20,22 @@ function notify(userId: string, text: string, href: string) {
   db().notifications.push({ id: newId("n"), userId, text, href, createdAt: new Date(), readAt: null });
 }
 
-function notifyMentions(body: string, author: Profile, href: string, where: string) {
-  const handles = new Set([...body.matchAll(/@([a-z0-9_]+)/gi)].map((m) => m[1].toLowerCase()));
-  for (const handle of handles) {
+const MAX_MENTIONS = 10;
+
+/** Notify mentioned users, but only those who can see the space (no leaking private titles). */
+function notifyMentions(body: string, author: Profile, spaceId: string, href: string, where: string) {
+  const handles = [...new Set([...body.matchAll(/@([a-z0-9_]+)/gi)].map((m) => m[1].toLowerCase()))];
+  for (const handle of handles.slice(0, MAX_MENTIONS)) {
     const target = profileByHandle(handle);
-    if (target && target.id !== author.id) {
+    if (target && target.id !== author.id && visibleSpaces(target.id).some((sp) => sp.id === spaceId)) {
       notify(target.id, `${author.fullName.split(" ")[0]} mentioned you in “${where}”`, href);
     }
   }
+}
+
+/** In-app paths only: rejects absolute and protocol-relative URLs ("//evil", "/\\evil"). */
+function isInternalPath(href: string): boolean {
+  return href.startsWith("/") && !href.startsWith("//") && !href.startsWith("/\\");
 }
 
 function inProgrammeCohort(userId: string, programmeId: string): boolean {
@@ -50,7 +58,12 @@ export async function toggleLesson(lessonId: string) {
   revalidatePath("/", "layout");
 }
 
+const STUDENT_LAB_STATUSES: readonly LabStatus[] = ["in_progress", "submitted"];
+
 export async function updateLab(labId: string, status: Extract<LabStatus, "in_progress" | "submitted">) {
+  // Bound arguments arrive as plain JSON from the client, so the type above is
+  // not a guarantee. Only instructors may set "passed".
+  if (!STUDENT_LAB_STATUSES.includes(status)) throw new Error("Invalid status");
   const user = await currentUser();
   const s = db();
   const lab = s.labs.find((l) => l.id === labId);
@@ -132,7 +145,7 @@ export async function createPost(_prev: FormState, form: FormData): Promise<Form
   const id = newId("po");
   db().posts.push({ id, spaceId: space.id, authorId: user.id, title, body, createdAt: new Date(), pinned: false });
   const href = `/community/${space.slug}/${id}`;
-  notifyMentions(body, user, href, title);
+  notifyMentions(body, user, space.id, href, title);
   revalidatePath("/", "layout");
   redirect(href);
 }
@@ -154,7 +167,7 @@ export async function addComment(_prev: FormState, form: FormData): Promise<Form
   if (post.authorId !== user.id) {
     notify(post.authorId, `${user.fullName.split(" ")[0]} commented on “${post.title}”`, href);
   }
-  notifyMentions(body, user, href, post.title);
+  notifyMentions(body, user, space.id, href, post.title);
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -190,7 +203,7 @@ export async function openNotification(id: string) {
   if (!n) redirect("/notifications");
   n.readAt ??= new Date();
   revalidatePath("/", "layout");
-  redirect(n.href);
+  redirect(isInternalPath(n.href) ? n.href : "/notifications");
 }
 
 /** Demo only: switch which seeded profile you're signed in as. */
@@ -198,7 +211,12 @@ export async function switchDemoUser(form: FormData) {
   if (process.env.NEXT_PUBLIC_SUPABASE_URL) return; // real auth is configured
   const id = String(form.get("userId") ?? "");
   if (!db().profiles.some((p) => p.id === id)) return;
-  (await cookies()).set(SESSION_COOKIE, id, { httpOnly: true, sameSite: "lax", path: "/" });
+  (await cookies()).set(SESSION_COOKIE, id, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
   revalidatePath("/", "layout");
   redirect("/dashboard");
 }

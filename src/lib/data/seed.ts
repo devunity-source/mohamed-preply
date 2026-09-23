@@ -73,7 +73,7 @@ const profiles: Profile[] = [
     id: INSTRUCTOR,
     fullName: "Rakan Matouq",
     handle: "rakan",
-    role: "instructor",
+    role: "admin",
     headline: "Lead instructor, DevOps & Cloud",
     avatarColor: "#111111",
   },
