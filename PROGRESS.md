@@ -17,7 +17,7 @@ This file is the single source of truth for what's planned, what's built, and wh
 | 0 | Foundations: repo, stack, design system, domain model, SQL schema | ✅ Done |
 | 1 | Student V1 on demo data: dashboard, cohort, curriculum, classes, labs, assignments, calendar, community, resources, notifications, profile | ✅ Done |
 | 2 | Real backend: Supabase auth + data, storage, Stripe enrolment, email | ⬜ Next |
-| 3 | Instructor/admin area, grading, projects, certificates, attendance | ⬜ |
+| 3 | Instructor/admin area, grading, projects, certificates, attendance | ✅ Done (on demo data; Zoom API and server-side PDFs stubbed) |
 | 4 | Lab environments (ephemeral Azure/AWS sandboxes) | ⬜ |
 | 5 | AI layer: tutor, lab assistant, assignment feedback, student copilot | ⬜ |
 
@@ -59,6 +59,7 @@ src/
 │   │   ├── community/           feed, spaces, posts, comments, reactions
 │   │   ├── calendar/            month grid + day agenda
 │   │   ├── resources/  notifications/  profile/
+│   │   ├── admin/               admin + instructor tools (Phase 3)
 │   ├── globals.css              design tokens (light + dark)
 │   └── not-found.tsx
 ├── components/                  ui primitives, nav, forms, certificate
@@ -67,15 +68,20 @@ src/
     ├── types.ts                 domain model (mirrors SQL)
     ├── time.ts                  timezone-aware date helpers
     ├── session.ts               current user (demo cookie for now)
-    ├── actions.ts               all writes (server actions, each re-checks access)
+    ├── actions.ts               student writes (server actions, each re-checks access)
+    ├── admin-actions.ts         admin/instructor writes (same rules)
+    ├── authz.ts                 who may manage which cohort (mirrors SQL)
+    ├── integrations/video.ts    meeting creation (Zoom API goes here)
     └── data/
         ├── seed.ts              demo data
         ├── store.ts             in-memory store
-        └── repo.ts              every read query  ← swap point for Supabase
+        ├── repo.ts              student read queries  ← swap point for Supabase
+        └── admin.ts             admin read queries
 supabase/migrations/0001_init.sql   full schema + RLS
 supabase/migrations/0002_security_hardening.sql   review fixes
 supabase/migrations/0003_waitlist.sql             landing page waitlist
-supabase/tests/rls.test.mjs         44 RLS checks on PGlite (npm run test:db)
+supabase/migrations/0004_teaching_tools.sql       Phase 3: rubrics, milestones, attendance, certificates
+supabase/tests/rls.test.mjs         70 RLS checks on PGlite (npm run test:db)
 legacy/                             previous repo contents, untouched
 ```
 
@@ -151,17 +157,22 @@ Needs from you: a Supabase project, a Stripe account, a Resend account (see **Op
 - [ ] Realtime: live new posts/comments in spaces, notification badge
 - [ ] Deploy (Vercel + Supabase), preview environments per PR, CI running typecheck, lint, `test:db` and build
 
-## Phase 3: Instructor and admin ⬜
+## Phase 3: Instructor and admin ✅
 
-- [ ] Admin shell: students, programmes, cohorts, curriculum, classes, assignments, projects, community moderation, attendance, grades, certificates, analytics
-- [ ] Cohort dashboard: revenue, attendance %, submission %, average progress, upcoming
-- [ ] Curriculum editor (modules, lessons, reorder)
-- [ ] Class scheduler with Zoom API meeting creation, recordings auto-attached
-- [ ] Grading: rubric, grade + feedback, bulk actions, notify student
-- [ ] Attendance capture (Zoom participant report import)
-- [ ] Projects: teams, milestones, repo link, progress, presentation slot
-- [ ] Certificates: issue on completion, ID format `AM-<PROG>-<YEAR>-<SEQ>`, PDF, public `/verify/<id>` page
-- [ ] Moderation: pin, delete, lock threads
+Admin area at `/admin` (the **Admin** item in the sidebar). **Admins see everything; instructors only see cohorts they teach** (same rules as `is_admin()` / `teaches()` in SQL). Catalogue, curriculum, students, waitlist and certificates are admin-only. Try it: switch to **Rakan** (admin) or **Samira** (instructor, AI Engineering only) on the profile page.
+
+- [x] Admin shell: overview KPIs, students, curriculum, waitlist (+ CSV export), moderation; per-cohort tabs for dashboard, grading, lab reviews, attendance, classes, projects, certificates
+- [x] Cohort dashboard: students, week, attendance %, submission %, average progress, **estimated revenue** (admins only, labelled "est." until Stripe), what needs grading, upcoming, at-risk students with reasons, per-student table
+- [x] Curriculum editor: programme title/tagline/description/price/published, module titles, lessons (add, edit, reorder, delete). Unpublishing hides a programme from the landing page, catalogue and waitlist.
+- [x] Class scheduler: create, edit, delete (future only), recording links. 🟡 Meeting links are pasted; `src/lib/integrations/video.ts` is where Zoom API creation plugs in once `ZOOM_*` keys exist.
+- [x] Grading: per-criterion rubric (default 40/25/20/15), live total, required feedback, re-grading, student notified with the grade, one-click reminder to everyone who hasn't submitted
+- [x] Lab reviews: queue of submitted labs with pass / return (student notified), full status matrix. Only instructors can pass a lab.
+- [x] Attendance: mark present / late / absent per class, history matrix. 🟡 Zoom participant-report import comes with the Zoom API.
+- [x] Projects: teams, members, presentation slot, milestones (members or instructors tick them), repo link; students see their team and the cohort's progress
+- [x] Certificates: issue at 100% only, IDs `AM-<CODE>-<YEAR>-<SEQ>`, revoke/restore, student page with **Print / Save as PDF** (print-ready layout), public `/verify/<id>` page and `/verify` lookup. A completed demo cohort (#00) has graduates so this is testable.
+- [x] Moderation: pin, lock (no new replies), delete posts and replies on the post itself; queue in Admin → Moderation
+- [x] Migration `0004_teaching_tools.sql` + 26 new RLS checks (70 total)
+- [x] 45 end-to-end browser checks: every feature above, instructor scoping, student view of results, and an ID-swap attack on team milestones (blocked)
 
 ## Phase 4: Lab environments ⬜
 
@@ -196,6 +207,7 @@ Review of the whole app on 2026-09-23. Every finding was reproduced by exploitin
 | 9 | Low | No rate limits; in-memory store grows forever | 🟡 Waitlist rate-limited (5/min per IP) and capped; other writes in Phase 2 |
 | 10 | Info | Cookie not `Secure`; certificates table public | ✅ `Secure` in production; `verify_certificate()` replaces the public table |
 | n/a | Bug | 0001's submission update policy recursed, so no student could ever update a submission | ✅ Fixed in 0002 (`is_graded()`), found by the new test suite |
+| n/a | Bug | Every form cleared what you typed when the server rejected it (React 19 resets `<form action>` after every submission), e.g. a post body or grading feedback vanished on a validation error | ✅ `useFormAction` hook keeps input; create forms clear only on success |
 
 ## Landing page ✅
 
@@ -208,7 +220,7 @@ Public page at `/`, the app moved behind it at `/dashboard`. Aimed at career swi
 - [x] Waitlist action: email validation, per-IP rate limit, honeypot for bots, de-duplication, same response whether or not you're already listed (no enumeration)
 - [x] `0003_waitlist.sql`: anyone can join, only admins can read, 9 RLS checks
 - [x] Responsive (390px, no horizontal scroll), dark mode, SEO title/description/Open Graph
-- [ ] Admin view of the waitlist (Phase 3)
+- [x] Admin view of the waitlist with CSV export (Phase 3)
 - [ ] Real bio and photo for Rakan (waiting on you)
 
 ## Out of scope for V1 (on purpose)
@@ -225,7 +237,7 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 4. **Certificate ID prefix.** Using `AM-` for AcadeMe. OK?
 5. **Refund policy.** Needed before Stripe goes live (e.g. full refund before week 2).
 6. **AI Engineering price.** The landing page shows **€690**. I made that number up in the seed data; the €590 DevOps price came from your brief. Confirm or change it in `src/lib/data/seed.ts`.
-7. **Landing page claims to confirm:** "8 to 10 hours a week", "no cloud experience needed", and "certificate with a public verification link" (certificates arrive in Phase 3). Edit the FAQ in `src/app/(marketing)/page.tsx` if any are wrong.
+7. **Landing page claims to confirm:** "8 to 10 hours a week" and "no cloud experience needed". (The certificate verification link now exists.) Edit the FAQ in `src/app/(marketing)/page.tsx` if any are wrong.
 8. **Instructor bio.** Currently name and role only. Send a few lines and a photo when you want them on the page.
 
 ---
@@ -237,3 +249,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-23 | Phase 0 and Phase 1 complete. Next.js app at repo root, demo store, 21 pages, Supabase schema with RLS validated on PGlite, browser-tested flows. |
 | 2026-09-23 | Security review and fixes (#2 to #8, #10), migration 0002, `npm run test:db` (35 checks), admin role, setup guide in README. |
 | 2026-09-23 | Landing page at `/` with waitlist, migration 0003, rate limiter, `test:db` now 44 checks. |
+| 2026-09-23 | Phase 3: admin area, grading, lab reviews, attendance, classes, projects, certificates + public verify, moderation, curriculum editor. Migration 0004, `test:db` 70 checks. Fixed forms losing input after a validation error (React 19 auto-reset). |

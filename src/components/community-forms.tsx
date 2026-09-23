@@ -1,14 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import { addComment, createPost, type FormState } from "@/lib/actions";
+import { useState } from "react";
+import { useFormAction } from "@/components/use-form-action";
+import { addComment, createPost } from "@/lib/actions";
 import { Button } from "@/components/ui";
 
 const field = "w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-ink";
 
 export function NewPostForm({ space, spaceName }: { space: string; spaceName: string }) {
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState<FormState, FormData>(createPost, {});
+  const { state, pending, formProps } = useFormAction(createPost);
 
   if (!open) {
     return (
@@ -22,7 +23,7 @@ export function NewPostForm({ space, spaceName }: { space: string; spaceName: st
   }
 
   return (
-    <form action={action} className="space-y-3 rounded-md border border-ink bg-surface p-4">
+    <form {...formProps} className="space-y-3 rounded-md border border-ink bg-surface p-4">
       <input type="hidden" name="space" value={space} />
       <input name="title" required maxLength={140} placeholder="Title" className={`${field} font-medium`} autoFocus />
       <textarea
@@ -44,15 +45,10 @@ export function NewPostForm({ space, spaceName }: { space: string; spaceName: st
 }
 
 export function CommentForm({ postId }: { postId: string }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(addComment, {});
-  const ref = useRef<HTMLFormElement>(null);
-
-  useEffect(() => {
-    if (state.ok) ref.current?.reset();
-  }, [state]);
+  const { state, pending, formProps } = useFormAction(addComment, { resetOnSuccess: true });
 
   return (
-    <form ref={ref} action={action} className="space-y-3">
+    <form {...formProps} className="space-y-3">
       <input type="hidden" name="postId" value={postId} />
       <textarea name="body" required rows={3} placeholder="Write a reply…" className={field} />
       {state.error && <p className="text-sm text-k-deadline">{state.error}</p>}

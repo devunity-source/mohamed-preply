@@ -28,7 +28,7 @@ export default async function CohortLayout({ children, params }: LayoutProps<"/c
 
   return (
     <>
-      <header className="mb-6">
+      <header className="mb-6 print:hidden">
         <Label className="mb-2">
           {programme.title} · Cohort {cohort.code}
         </Label>

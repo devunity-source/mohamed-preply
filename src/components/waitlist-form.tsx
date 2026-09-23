@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useId } from "react";
+import { useId } from "react";
+import { useFormAction } from "@/components/use-form-action";
 import clsx from "clsx";
 import { ArrowRight, Check } from "lucide-react";
-import { joinWaitlist, type FormState } from "@/lib/actions";
+import { joinWaitlist } from "@/lib/actions";
 
 export function WaitlistForm({
   programmes,
@@ -14,7 +15,7 @@ export function WaitlistForm({
   defaultProgramme?: string;
   tone?: "light" | "dark";
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(joinWaitlist, {});
+  const { state, pending, formProps } = useFormAction(joinWaitlist);
   const id = useId();
   const dark = tone === "dark";
   const field = clsx(
@@ -40,7 +41,7 @@ export function WaitlistForm({
   }
 
   return (
-    <form action={action} className="w-full">
+    <form {...formProps} className="w-full">
       <div className="flex flex-col gap-2 sm:flex-row">
         <label htmlFor={`${id}-email`} className="sr-only">
           Email

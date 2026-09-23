@@ -98,5 +98,37 @@ await expect("anon edits a waitlist row", "deny", as(null, `update waitlist set 
 await expect("admin reads waitlist", "ok", as(adm, `select email from waitlist`));
 await db.exec(`update programmes set published=false`);
 await expect("anon joins unpublished programme", "deny", as(null, `insert into waitlist (email, programme_id) values ('b@example.com','${PROG}')`));
+console.log("-- teaching tools (0004)");
+// Fixtures: a class in C1, a team of Ahmed (st) in C1, a locked-able post.
+await db.exec(`insert into classes (id, cohort_id, title, starts_at) values ('${U(30)}','${C1}','K8s', now() - interval '1 day')`);
+await expect("cohort instructor records attendance", "ok", as(ins, `insert into class_attendance values ('${U(30)}','${st}','present') returning status`));
+await expect("student records own attendance", "deny", as(st, `insert into class_attendance values ('${U(30)}','${st2}','present')`));
+await expect("unrelated instructor records attendance", "deny", as(ins2, `insert into class_attendance values ('${U(30)}','${st2}','late')`));
+
+await expect("cohort instructor creates project", "ok", as(ins, `insert into projects (id, cohort_id, title, team_name) values ('${U(31)}','${C1}','Capstone','Team A') returning id`));
+await expect("student creates project", "deny", as(st, `insert into projects (cohort_id, title, team_name) values ('${C1}','Mine','Solo')`));
+await expect("unrelated instructor creates project in C1", "deny", as(ins2, `insert into projects (cohort_id, title, team_name) values ('${C1}','X','X')`));
+await expect("cohort instructor adds team member", "ok", as(ins, `insert into project_members values ('${U(31)}','${st}') returning user_id`));
+await expect("student adds self to team", "deny", as(st2, `insert into project_members values ('${U(31)}','${st2}')`));
+await expect("member sets repo link", "ok", as(st, `update projects set repo_url='https://github.com/a/cap' where id='${U(31)}' returning repo_url`));
+await expect("member renames team", "deny", as(st, `update projects set team_name='Renamed' where id='${U(31)}'`));
+await expect("non-member edits project", "none", as(st2, `update projects set repo_url='https://evil' where id='${U(31)}' returning id`));
+await expect("instructor adds milestone", "ok", as(ins, `insert into project_milestones (id, project_id, position, title, due_on) values ('${U(32)}','${U(31)}',1,'Proposal', now()) returning id`));
+await expect("member ticks milestone (server time)", "ok", as(st, `update project_milestones set done_at = now() - interval '9 days' where id='${U(32)}' returning (done_at > now() - interval '1 minute') as server_time`));
+await expect("member renames milestone", "deny", as(st, `update project_milestones set title='Easy' where id='${U(32)}'`));
+await expect("non-member ticks milestone", "none", as(st2, `update project_milestones set done_at=null where id='${U(32)}' returning id`));
+await expect("outsider reads milestones", "none", as(out, `select * from project_milestones`));
+
+const lp = await as(st, `insert into posts (space_id, author_id, title, body) values ('${GEN}','${st}','q','b') returning id`);
+await expect("author locks own post", "deny", as(st, `update posts set locked=true where id='${lp.rows[0].id}'`));
+await expect("cohort instructor locks post", "ok", as(ins, `update posts set locked=true where id='${lp.rows[0].id}' returning locked`));
+await expect("reply to locked post", "deny", as(st2, `insert into comments (post_id, author_id, body) values ('${lp.rows[0].id}','${st2}','hi')`));
+await expect("instructor gives rubric scores", "ok", as(ins, `insert into grades (submission_id, grade, graded_by, rubric_scores) select id, 90, '${ins}', '{"works":36}'::jsonb from assignment_submissions where user_id='${st}' returning grade`));
+
+await expect("admin issues certificate", "ok", as(adm, `insert into certificates (id, user_id, cohort_id, issued_by) values ('AM-DEV-2026-00002','${st2}','${C1}','${adm}') returning id`));
+await expect("instructor issues certificate", "deny", as(ins, `insert into certificates (id, user_id, cohort_id, issued_by) values ('AM-DEV-2026-00003','${st}','${C1}','${ins}')`));
+await expect("student revokes own certificate", "none", as(st, `update certificates set revoked_at=now() where user_id='${st}' returning id`));
+await expect("admin revokes certificate", "ok", as(adm, `update certificates set revoked_at=now() where id='AM-DEV-2026-00002' returning revoked_at`));
+await expect("verify reports revocation", "ok", as(null, `select revoked_at from verify_certificate('AM-DEV-2026-00002') where revoked_at is not null`));
 console.log(fail ? `\n${fail} FAILED` : "\nALL PASSED");
 process.exit(fail ? 1 : 0);

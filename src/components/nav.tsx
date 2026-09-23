@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { Bell, BookOpen, CalendarDays, GraduationCap, House, MessagesSquare, UserRound } from "lucide-react";
+import {
+  Bell,
+  BookOpen,
+  CalendarDays,
+  GraduationCap,
+  House,
+  MessagesSquare,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 
 const ITEMS = [
   { href: "/dashboard", label: "Home", icon: House },
@@ -15,8 +24,19 @@ const ITEMS = [
   { href: "/profile", label: "Profile", icon: UserRound },
 ];
 
-export function Nav({ unread, orientation }: { unread: number; orientation: "vertical" | "horizontal" }) {
+const ADMIN_ITEM = { href: "/admin", label: "Admin", icon: ShieldCheck, also: undefined };
+
+export function Nav({
+  unread,
+  orientation,
+  showAdmin,
+}: {
+  unread: number;
+  orientation: "vertical" | "horizontal";
+  showAdmin: boolean;
+}) {
   const pathname = usePathname();
+  const items = showAdmin ? [...ITEMS, ADMIN_ITEM] : ITEMS;
   return (
     <nav
       className={clsx(
@@ -25,7 +45,7 @@ export function Nav({ unread, orientation }: { unread: number; orientation: "ver
           : "flex [scrollbar-width:none] gap-1 overflow-x-auto px-4 pb-3",
       )}
     >
-      {ITEMS.map(({ href, label, icon: Icon, also }) => {
+      {items.map(({ href, label, icon: Icon, also }) => {
         const active = pathname.startsWith(href) || (also && pathname.startsWith(also));
         return (
           <Link

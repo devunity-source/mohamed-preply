@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MessageSquare, Pin } from "lucide-react";
+import { Lock, MessageSquare, Pin } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import type { PostView } from "@/lib/data/repo";
 import { timeAgo } from "@/lib/time";
@@ -34,6 +34,11 @@ export function PostCard({ view, now, showSpace }: { view: PostView; now: Date; 
         <span className="flex items-center gap-1">
           <MessageSquare size={12} /> {commentCount}
         </span>
+        {post.locked && (
+          <span className="flex items-center gap-1">
+            <Lock size={12} /> Locked
+          </span>
+        )}
       </div>
     </Link>
   );

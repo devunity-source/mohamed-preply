@@ -30,11 +30,14 @@ That's it. There's nothing to configure for the demo.
 | Profile | What you'll see |
 | --- | --- |
 | Ahmed Hassan (student) | The default. Mid-programme, with open tasks and a lab in progress. |
-| Rakan Matouq (admin) | Instructor view: submission counts, per-student assignment roster, can post in Announcements. |
+| Rakan Matouq (admin) | Everything, including the **Admin** area: dashboards, grading, attendance, classes, projects, certificates, curriculum, waitlist. |
+| Samira Aziz (instructor) | Admin area scoped to the AI Engineering cohort she teaches. Can't see DevOps or academy-wide pages. |
+| Yara Saleh (graduate) | A finished student with an issued certificate. Open Programmes → the #00 cohort → Certificate to print it. |
 | Any other student | Same cohort, different progress. Sarah hasn't submitted assignment #3, John submitted it late. |
 
 **Things worth clicking:**
 
+- **Admin (as Rakan):** grade assignment #3 with the rubric, pass a lab, take attendance, tick a team milestone, issue Ines's certificate in cohort #00 and open its `/verify` link, lock a thread
 - **Landing page (`/`):** join the waitlist (try a bad email too), click a programme's "Join waitlist" to preselect it
 
 - **Home:** next class, tasks, this week, progress
@@ -90,8 +93,9 @@ supabase/
 ├── migrations/
 │   ├── 0001_init.sql                 27 tables, row level security on every one
 │   ├── 0002_security_hardening.sql   fixes from the security review
-│   └── 0003_waitlist.sql             landing page waitlist
-└── tests/rls.test.mjs                44 access-control checks
+│   ├── 0003_waitlist.sql             landing page waitlist
+│   └── 0004_teaching_tools.sql       grading, projects, attendance, certificates
+└── tests/rls.test.mjs                70 access-control checks
 ```
 
 `npm run test:db` runs every migration on an in-process Postgres (PGlite), then acts as students, instructors, an admin, an outsider and an anonymous visitor to check who can read and write what. No Postgres install or Docker needed.
@@ -121,6 +125,7 @@ Review findings and their status are tracked in [PROGRESS.md](PROGRESS.md#securi
 
 ```
 src/app/(marketing)/  public landing page at /
+src/app/(app)/admin/  admin and instructor tools
 src/app/(app)/        app pages: dashboard, programmes, cohorts, community, calendar, resources, notifications, profile
 src/components/       shared UI
 src/lib/actions.ts    every write (server actions)

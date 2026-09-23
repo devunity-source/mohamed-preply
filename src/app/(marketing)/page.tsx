@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Avatar, KindMark, Label } from "@/components/ui";
 import { WaitlistForm } from "@/components/waitlist-form";
-import { cohortRoster, listProgrammes, modulesFor, nextCohortFor } from "@/lib/data/repo";
+import { cohortRoster, publishedProgrammes, modulesFor, nextCohortFor } from "@/lib/data/repo";
 import { ACADEMY_TZ, formatDate } from "@/lib/time";
 import type { CalendarKind } from "@/lib/types";
 
@@ -115,7 +115,7 @@ const FAQ = [
 
 export default async function Landing({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
-  const programmes = listProgrammes().map((p) => {
+  const programmes = publishedProgrammes().map((p) => {
     const cohort = nextCohortFor(p.id);
     return { ...p, cohort, modules: modulesFor(p.id).map((m) => m.module) };
   });

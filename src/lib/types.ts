@@ -23,6 +23,9 @@ export interface Programme {
   priceCents: number;
   currency: "EUR";
   includes: string[];
+  // Used in certificate IDs, e.g. AM-DEV-2026-00001.
+  certCode: string;
+  published: boolean;
 }
 
 export interface Module {
@@ -124,6 +127,13 @@ export interface Assignment {
   instructions: string;
   dueAt: Date;
   resourceIds: string[];
+  rubric: RubricCriterion[];
+}
+
+export interface RubricCriterion {
+  id: string;
+  label: string;
+  points: number;
 }
 
 export interface Submission {
@@ -135,6 +145,10 @@ export interface Submission {
   submittedAt: Date;
   grade: number | null;
   feedback: string | null;
+  // Points per rubric criterion id, set when graded with a rubric.
+  rubricScores: Record<string, number> | null;
+  gradedBy: string | null;
+  gradedAt: Date | null;
 }
 
 export type CalendarKind = "class" | "lab" | "office_hours" | "workshop" | "deadline" | "event";
@@ -170,6 +184,8 @@ export interface Post {
   body: string;
   createdAt: Date;
   pinned: boolean;
+  // Locked threads accept no new replies.
+  locked: boolean;
 }
 
 export interface Comment {
@@ -193,6 +209,40 @@ export interface Notification {
   href: string;
   createdAt: Date;
   readAt: Date | null;
+}
+
+export interface Project {
+  id: string;
+  cohortId: string;
+  title: string;
+  teamName: string;
+  brief: string;
+  repoUrl: string | null;
+  presentsAt: Date | null;
+}
+
+export interface ProjectMember {
+  projectId: string;
+  userId: string;
+}
+
+export interface Milestone {
+  id: string;
+  projectId: string;
+  position: number;
+  title: string;
+  dueOn: Date;
+  doneAt: Date | null;
+}
+
+export interface Certificate {
+  // Public, e.g. AM-DEV-2026-00001.
+  id: string;
+  userId: string;
+  cohortId: string;
+  issuedAt: Date;
+  issuedBy: string;
+  revokedAt: Date | null;
 }
 
 export interface WaitlistEntry {

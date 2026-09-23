@@ -66,3 +66,14 @@ body {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* Certificates print as a single landscape page with nothing but the certificate. */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+  body {
+    background: #fff;
+  }
+}

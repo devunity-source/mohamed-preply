@@ -2,6 +2,7 @@ import type {
   Assignment,
   Attendance,
   CampusEvent,
+  Certificate,
   ClassSession,
   Cohort,
   CohortMember,
@@ -10,18 +11,24 @@ import type {
   LabAttempt,
   Lesson,
   LessonProgress,
+  Milestone,
   Module,
   Notification,
   Post,
   Profile,
   Programme,
+  Project,
+  ProjectMember,
   Reaction,
   Resource,
+  RubricCriterion,
   Space,
   Submission,
   WaitlistEntry,
 } from "@/lib/types";
-import { addDays, formatMonthYear, startOfWeek } from "@/lib/time";
+import { addDays, formatMonthYear, startOfWeek, zonedParts } from "@/lib/time";
+
+const zonedYear = (d: Date) => zonedParts(d).year;
 
 export interface Store {
   profiles: Profile[];
@@ -45,6 +52,10 @@ export interface Store {
   notifications: Notification[];
   lessonProgress: LessonProgress[];
   waitlist: WaitlistEntry[];
+  projects: Project[];
+  projectMembers: ProjectMember[];
+  milestones: Milestone[];
+  certificates: Certificate[];
 }
 
 export const DEMO_USER_ID = "u_ahmed";
@@ -68,6 +79,15 @@ const people: [string, string, string][] = [
   ["u_ali", "Ali Haddad", "Linux admin, Amman"],
 ];
 
+// Graduates of the previous (completed) cohort. They exist so certificates
+// and the public verification page have real data in the demo.
+const alumni: [string, string, string][] = [
+  ["u_yara", "Yara Saleh", "Platform engineer (graduated cohort #00)"],
+  ["u_ben", "Ben Walker", "Junior DevOps engineer (graduated cohort #00)"],
+  ["u_ines", "Ines Costa", "Cloud engineer (graduated cohort #00)"],
+];
+const ALUMNI_IDS = alumni.map(([id]) => id);
+
 const AVATAR_COLORS = ["#FF5A1F", "#2F6BFF", "#00A870", "#8B5CF6", "#E5484D", "#F5A524"];
 
 const profiles: Profile[] = [
@@ -79,7 +99,15 @@ const profiles: Profile[] = [
     headline: "Lead instructor, DevOps & Cloud",
     avatarColor: "#111111",
   },
-  ...people.map(([id, fullName, headline], i) => ({
+  {
+    id: "u_samira",
+    fullName: "Samira Aziz",
+    handle: "samira",
+    role: "instructor",
+    headline: "Instructor, AI Engineering",
+    avatarColor: "#8B5CF6",
+  },
+  ...[...people, ...alumni].map(([id, fullName, headline], i) => ({
     id,
     fullName,
     handle: id.slice(2),
@@ -103,6 +131,8 @@ const programmes: Programme[] = [
     durationWeeks: 6,
     priceCents: 59000,
     currency: "EUR",
+    certCode: "DEV",
+    published: true,
     includes: [
       "12 live classes",
       "Hands-on labs",
@@ -123,6 +153,8 @@ const programmes: Programme[] = [
     durationWeeks: 6,
     priceCents: 69000,
     currency: "EUR",
+    certCode: "AIE",
+    published: true,
     includes: ["12 live classes", "Weekly builds", "Final project", "Cohort community", "Certificate"],
   },
 ];
@@ -278,6 +310,13 @@ const devopsWeeks: WeekPlan[] = [
   },
 ];
 
+export const DEFAULT_RUBRIC: RubricCriterion[] = [
+  { id: "works", label: "Works end to end", points: 40 },
+  { id: "quality", label: "Code quality", points: 25 },
+  { id: "docs", label: "Documentation", points: 20 },
+  { id: "security", label: "Security", points: 15 },
+];
+
 const aiWeeks = [
   ["LLM fundamentals", "Tokens, context windows, prompting and model choice."],
   ["Retrieval", "Embeddings, chunking and RAG that returns the right thing."],
@@ -303,6 +342,7 @@ export function createSeed(now: Date = new Date()): Store {
   const cohortStart = addDays(startOfWeek(now), -21, "00:00");
   const cohortEnd = addDays(cohortStart, 6 * 7 - 1);
   const nextStart = addDays(cohortStart, 8 * 7, "00:00");
+  const pastStart = addDays(cohortStart, -10 * 7, "00:00");
 
   const cohorts: Cohort[] = [
     {
@@ -323,14 +363,26 @@ export function createSeed(now: Date = new Date()): Store {
       endsOn: addDays(nextStart, 6 * 7 - 1),
       status: "upcoming",
     },
+    {
+      id: "c_devops_00",
+      programmeId: "p_devops",
+      code: "#00",
+      name: `DevOps Engineer · ${formatMonthYear(pastStart)}`,
+      startsOn: pastStart,
+      endsOn: addDays(pastStart, 6 * 7 - 1),
+      status: "completed",
+    },
   ];
   const cohortId = "c_devops_01";
 
-  const students = profiles.filter((p) => p.role === "student");
+  const students = profiles.filter((p) => p.role === "student" && !ALUMNI_IDS.includes(p.id));
   const cohortMembers: CohortMember[] = [
     { cohortId, userId: INSTRUCTOR, role: "instructor" },
     ...students.map((s) => ({ cohortId, userId: s.id, role: "student" as const })),
     { cohortId: "c_ai_02", userId: INSTRUCTOR, role: "instructor" },
+    { cohortId: "c_ai_02", userId: "u_samira", role: "instructor" },
+    { cohortId: "c_devops_00", userId: INSTRUCTOR, role: "instructor" },
+    ...ALUMNI_IDS.map((userId) => ({ cohortId: "c_devops_00", userId, role: "student" as const })),
   ];
 
   devopsWeeks.forEach((week, w) => {
@@ -471,6 +523,7 @@ export function createSeed(now: Date = new Date()): Store {
         instructions,
         dueAt: addDays(weekStart, 4, "23:59"),
         resourceIds: [reqId],
+        rubric: DEFAULT_RUBRIC,
       });
     }
   });
@@ -602,6 +655,9 @@ export function createSeed(now: Date = new Date()): Store {
         submittedAt,
         grade: graded ? 70 + ((si * 7 + n * 5) % 28) : null,
         feedback: graded ? "Solid work. Tighten naming and add a README section on how to tear it down." : null,
+        rubricScores: null,
+        gradedBy: graded ? INSTRUCTOR : null,
+        gradedAt: graded ? addDays(a.dueAt, 2, "12:00") : null,
       });
     });
   });
@@ -767,7 +823,7 @@ export function createSeed(now: Date = new Date()): Store {
 
   const ago = (hours: number) => new Date(now.getTime() - hours * 3_600_000);
 
-  const posts: Post[] = [
+  const posts: Omit<Post, "locked">[] = [
     {
       id: "po_1",
       spaceId: "s_c01_announcements",
@@ -949,6 +1005,78 @@ export function createSeed(now: Date = new Date()): Store {
     },
   ];
 
+  // Every seeded post starts unlocked.
+  const allPosts: Post[] = posts.map((p) => ({ ...p, locked: false }));
+
+  // -------------------------------------------------------------------------
+  // Capstone teams (week 5 and 6). Teams of three, in roster order.
+
+  const projects: Project[] = [];
+  const projectMembers: ProjectMember[] = [];
+  const milestones: Milestone[] = [];
+  const TEAMS = ["Team Aurora", "Team Bastion", "Team Cumulus", "Team Delta"];
+  const week5 = addDays(cohortStart, 4 * 7, "00:00");
+  const presentations = addDays(cohortStart, 5 * 7 + 3, "19:00");
+  const MILESTONES: [string, number, string][] = [
+    ["Architecture proposal", 2, "23:59"],
+    ["Infrastructure in Terraform", 4, "23:59"],
+    ["CI/CD and Kubernetes deploy", 8, "23:59"],
+    ["Monitoring, security and demo", 10, "17:00"],
+  ];
+  TEAMS.forEach((teamName, t) => {
+    const id = `pr_${t + 1}`;
+    projects.push({
+      id,
+      cohortId,
+      title: "Production-ready cloud platform",
+      teamName,
+      brief:
+        "Build and operate a production-ready platform on Azure: Terraform, CI/CD, Kubernetes, monitoring and security. Present it to the cohort.",
+      repoUrl: t === 0 ? "https://github.com/team-aurora/capstone" : null,
+      presentsAt: addDays(presentations, 0, `${19 + Math.floor(t / 2)}:${t % 2 ? "30" : "00"}`),
+    });
+    students.slice(t * 3, t * 3 + 3).forEach((s) => projectMembers.push({ projectId: id, userId: s.id }));
+    MILESTONES.forEach(([title, offset, hhmm], m) =>
+      milestones.push({
+        id: `ms_${t + 1}_${m + 1}`,
+        projectId: id,
+        position: m + 1,
+        title,
+        dueOn: addDays(week5, offset, hhmm),
+        doneAt: null,
+      }),
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // Previous cohort: graduates completed everything; two already have
+  // certificates, Ines is eligible but not issued yet.
+
+  for (const userId of ALUMNI_IDS) {
+    for (const l of lessons.filter((x) => x.moduleId.startsWith("m_devops_"))) {
+      lessonProgress.push({ userId, lessonId: l.id, completedAt: addDays(pastStart, 20, "20:00") });
+    }
+  }
+  const graduation = addDays(pastStart, 6 * 7 + 2, "12:00");
+  const certificates: Certificate[] = [
+    {
+      id: `AM-DEV-${zonedYear(graduation)}-00001`,
+      userId: "u_yara",
+      cohortId: "c_devops_00",
+      issuedAt: graduation,
+      issuedBy: INSTRUCTOR,
+      revokedAt: null,
+    },
+    {
+      id: `AM-DEV-${zonedYear(graduation)}-00002`,
+      userId: "u_ben",
+      cohortId: "c_devops_00",
+      issuedAt: graduation,
+      issuedBy: INSTRUCTOR,
+      revokedAt: null,
+    },
+  ];
+
   return {
     profiles,
     programmes,
@@ -965,11 +1093,15 @@ export function createSeed(now: Date = new Date()): Store {
     resources,
     events,
     spaces,
-    posts,
+    posts: allPosts,
     comments,
     reactions,
     notifications,
     lessonProgress,
     waitlist: [],
+    projects,
+    projectMembers,
+    milestones,
+    certificates,
   };
 }

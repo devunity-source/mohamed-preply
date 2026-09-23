@@ -115,6 +115,9 @@ export async function submitAssignment(_prev: FormState, form: FormData): Promis
       submittedAt: new Date(),
       grade: null,
       feedback: null,
+      rubricScores: null,
+      gradedBy: null,
+      gradedAt: null,
     });
   }
 
@@ -144,7 +147,16 @@ export async function createPost(_prev: FormState, form: FormData): Promise<Form
   if (!title || !body) return { error: "Add a title and some text." };
 
   const id = newId("po");
-  db().posts.push({ id, spaceId: space.id, authorId: user.id, title, body, createdAt: new Date(), pinned: false });
+  db().posts.push({
+    id,
+    spaceId: space.id,
+    authorId: user.id,
+    title,
+    body,
+    createdAt: new Date(),
+    pinned: false,
+    locked: false,
+  });
   const href = `/community/${space.slug}/${id}`;
   notifyMentions(body, user, space.id, href, title);
   revalidatePath("/", "layout");
@@ -156,6 +168,7 @@ export async function addComment(_prev: FormState, form: FormData): Promise<Form
   const s = db();
   const post = s.posts.find((p) => p.id === form.get("postId"));
   if (!post || !visibleSpaces(user.id).some((sp) => sp.id === post.spaceId)) return { error: "Post not found." };
+  if (post.locked) return { error: "This thread is locked." };
 
   const body = String(form.get("body") ?? "")
     .trim()
@@ -208,7 +221,7 @@ export async function joinWaitlist(_prev: FormState, form: FormData): Promise<Fo
   if (email.length > 254 || !EMAIL.test(email)) return { error: "Enter a valid email address." };
 
   const s = db();
-  const programme = s.programmes.find((p) => p.slug === form.get("programme"));
+  const programme = s.programmes.find((p) => p.published && p.slug === form.get("programme"));
   if (!programme) return { error: "Pick a programme." };
 
   // Same answer whether or not the email was already listed, so the form

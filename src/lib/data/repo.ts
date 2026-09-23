@@ -39,6 +39,11 @@ export function listProgrammes(): Programme[] {
   return db().programmes;
 }
 
+/** What prospective students can see: landing page, catalogue, waitlist. */
+export function publishedProgrammes(): Programme[] {
+  return db().programmes.filter((p) => p.published);
+}
+
 /** The cohort a prospective student would join: the next upcoming one, else the one running now. */
 export function nextCohortFor(programmeId: string): Cohort | undefined {
   const cohorts = db()

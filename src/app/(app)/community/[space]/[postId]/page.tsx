@@ -1,16 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import clsx from "clsx";
-import { ArrowLeft, Pin } from "lucide-react";
+import { ArrowLeft, Lock, LockOpen, Pin, PinOff, Trash2 } from "lucide-react";
 import { Avatar, Label } from "@/components/ui";
 import { CommentForm } from "@/components/community-forms";
 import { RichText } from "@/components/rich-text";
 import { postWithComments } from "@/lib/data/repo";
 import { toggleReaction } from "@/lib/actions";
+import { deleteComment, deletePost, toggleLock, togglePin } from "@/lib/admin-actions";
+import { canModerate } from "@/lib/authz";
 import { currentUser } from "@/lib/session";
 import { timeAgo } from "@/lib/time";
 
 const EMOJI = ["👍", "🔥", "🎉", "💡", "❤️"];
+const toolClass =
+  "inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-line px-2.5 py-1 text-xs hover:border-ink";
 
 export default async function PostPage({ params }: PageProps<"/community/[space]/[postId]">) {
   const { space: slug, postId } = await params;
@@ -20,6 +24,8 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
 
   const { post, author, space, reactions, comments } = view;
   const now = new Date();
+  const moderator = canModerate(user, space);
+  const canDelete = moderator || post.authorId === user.id;
 
   return (
     <article className="max-w-3xl">
@@ -68,6 +74,39 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
         })}
       </div>
 
+      {(moderator || canDelete) && (
+        <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-line pt-4 text-sm">
+          {moderator && (
+            <>
+              <span className="mr-1 font-mono text-[11px] tracking-wider text-muted uppercase">Moderate</span>
+              <form action={togglePin.bind(null, post.id)}>
+                <button className={toolClass}>
+                  {post.pinned ? <PinOff size={14} /> : <Pin size={14} />} {post.pinned ? "Unpin" : "Pin"}
+                </button>
+              </form>
+              <form action={toggleLock.bind(null, post.id)}>
+                <button className={toolClass}>
+                  {post.locked ? <LockOpen size={14} /> : <Lock size={14} />} {post.locked ? "Unlock" : "Lock replies"}
+                </button>
+              </form>
+            </>
+          )}
+          {canDelete && (
+            // No-JS confirmation: the real delete button only appears once opened.
+            <details className="relative">
+              <summary className={clsx(toolClass, "list-none hover:border-k-deadline hover:text-k-deadline")}>
+                <Trash2 size={14} /> Delete
+              </summary>
+              <form action={deletePost.bind(null, post.id)} className="absolute top-full left-0 z-10 mt-1">
+                <button className="rounded-md bg-k-deadline px-3 py-1.5 text-xs font-medium whitespace-nowrap text-white">
+                  Delete post and {comments.length} {comments.length === 1 ? "reply" : "replies"}
+                </button>
+              </form>
+            </details>
+          )}
+        </div>
+      )}
+
       <section className="mt-10 border-t border-line pt-8">
         <Label className="mb-5">
           {comments.length} {comments.length === 1 ? "reply" : "replies"}
@@ -85,11 +124,27 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
                   <RichText text={comment.body} />
                 </div>
               </div>
+              {(moderator || comment.authorId === user.id) && (
+                <form action={deleteComment.bind(null, comment.id)}>
+                  <button
+                    aria-label="Delete reply"
+                    className="rounded-md p-1.5 text-muted hover:bg-k-deadline/10 hover:text-k-deadline"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </form>
+              )}
             </li>
           ))}
         </ol>
         <div className="mt-8">
-          <CommentForm postId={post.id} />
+          {post.locked ? (
+            <p className="flex items-center gap-2 rounded-md border border-line bg-surface p-4 text-sm text-muted">
+              <Lock size={14} /> This thread is locked. No new replies.
+            </p>
+          ) : (
+            <CommentForm postId={post.id} />
+          )}
         </div>
       </section>
     </article>

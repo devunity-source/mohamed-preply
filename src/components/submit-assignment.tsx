@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import { submitAssignment, type FormState } from "@/lib/actions";
+import { useFormAction } from "@/components/use-form-action";
+import { submitAssignment } from "@/lib/actions";
 import { Button } from "@/components/ui";
 
 export function SubmitAssignment({
@@ -13,9 +13,9 @@ export function SubmitAssignment({
   defaultRepo?: string;
   resubmit: boolean;
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(submitAssignment, {});
+  const { state, pending, formProps } = useFormAction(submitAssignment);
   return (
-    <form action={action} className="space-y-4">
+    <form {...formProps} className="space-y-4">
       <input type="hidden" name="assignmentId" value={assignmentId} />
       <label className="block">
         <span className="mb-1.5 block text-sm font-medium">Repository URL</span>

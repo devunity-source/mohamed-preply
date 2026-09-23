@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { Card, Label, PageHeader, Pill, ProgressBar } from "@/components/ui";
-import { cohortWeek, listProgrammes, myCohorts, progressFor } from "@/lib/data/repo";
+import { cohortWeek, publishedProgrammes, myCohorts, progressFor } from "@/lib/data/repo";
 import { currentUser } from "@/lib/session";
 import { formatShortDate } from "@/lib/time";
 
@@ -15,7 +15,7 @@ export default async function Programmes() {
   const now = new Date();
   const mine = myCohorts(user.id);
   const enrolledProgrammes = new Set(mine.map((m) => m.programme.id));
-  const catalogue = listProgrammes().filter((p) => !enrolledProgrammes.has(p.id));
+  const catalogue = publishedProgrammes().filter((p) => !enrolledProgrammes.has(p.id));
 
   return (
     <>

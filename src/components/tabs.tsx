@@ -7,7 +7,7 @@ import clsx from "clsx";
 export function Tabs({ base, items }: { base: string; items: { href: string; label: string }[] }) {
   const pathname = usePathname();
   return (
-    <nav className="-mx-4 mb-8 flex [scrollbar-width:none] gap-1 overflow-x-auto border-b border-line px-4 md:mx-0 md:px-0">
+    <nav className="-mx-4 mb-8 flex [scrollbar-width:none] gap-1 overflow-x-auto border-b border-line px-4 md:mx-0 md:px-0 print:hidden">
       {items.map(({ href, label }) => {
         const full = href ? `${base}/${href}` : base;
         const active = href ? pathname.startsWith(full) : pathname === base;
