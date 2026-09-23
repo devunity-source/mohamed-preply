@@ -74,7 +74,8 @@ src/
         └── repo.ts              every read query  ← swap point for Supabase
 supabase/migrations/0001_init.sql   full schema + RLS
 supabase/migrations/0002_security_hardening.sql   review fixes
-supabase/tests/rls.test.mjs         35 RLS checks on PGlite (npm run test:db)
+supabase/migrations/0003_waitlist.sql             landing page waitlist
+supabase/tests/rls.test.mjs         44 RLS checks on PGlite (npm run test:db)
 legacy/                             previous repo contents, untouched
 ```
 
@@ -138,7 +139,8 @@ Needs from you: a Supabase project, a Stripe account, a Resend account (see **Op
 
 - [ ] Supabase clients (`@supabase/ssr`, already installed) for server components and actions
 - [ ] Auth: email magic link + Google. Add the Supabase session refresh to the existing `src/proxy.ts` (keep the CSP). Replace `currentUser()`. Remove the demo profile switcher.
-- [ ] Rate limiting on every write (posts, comments, reactions, submissions) (security review #9)
+- [ ] Rate limiting on every write (posts, comments, reactions, submissions) (security review #9). The waitlist is already limited; move `src/lib/rate-limit.ts` to a shared store so limits hold across instances.
+- [ ] Waitlist: store in Supabase (`0003_waitlist.sql`), confirmation email via Resend, admin export, invite waitlisters when enrolment opens
 - [ ] Dependabot or Renovate for dependency updates (two Next.js security releases landed in Sep 2026 alone)
 - [ ] Rewrite `repo.ts` and `actions.ts` bodies against Supabase; delete the demo store
 - [ ] Seed script that loads `seed.ts` data into Supabase for staging
@@ -191,9 +193,23 @@ Review of the whole app on 2026-09-23. Every finding was reproduced by exploitin
 | 6 | Low | Mentions notified people outside the space, leaking private post titles | ✅ Visibility check, max 10 mentions per post |
 | 7 | Low | Users could rewrite notification links, then get redirected there | ✅ Only `read_at` is updatable (0002); app only redirects to in-app paths |
 | 8 | Low | No security headers, `X-Powered-By` exposed, clickjacking possible | ✅ Nonce CSP in `src/proxy.ts`, headers in `next.config.ts` |
-| 9 | Low | No rate limits; in-memory store grows forever | ⬜ Phase 2 |
+| 9 | Low | No rate limits; in-memory store grows forever | 🟡 Waitlist rate-limited (5/min per IP) and capped; other writes in Phase 2 |
 | 10 | Info | Cookie not `Secure`; certificates table public | ✅ `Secure` in production; `verify_certificate()` replaces the public table |
 | n/a | Bug | 0001's submission update policy recursed, so no student could ever update a submission | ✅ Fixed in 0002 (`is_graded()`), found by the new test suite |
+
+## Landing page ✅
+
+Public page at `/`, the app moved behind it at `/dashboard`. Aimed at career switchers, main action is **join the waitlist**.
+
+- [x] Hero with waitlist form, next-cohort date, "explore the demo" link, geometric cohort-board graphic
+- [x] Old way vs AcadeMe, six features, a typical week (colours match the app calendar), DevOps curriculum, programme cards with price and next dates, instructor (name and role only), outcomes, FAQ, closing waitlist band
+- [x] Every price, date and curriculum item is read from the same data the app uses. No invented stats, testimonials or student counts.
+- [x] Programme cards preselect the programme in the form and scroll to it
+- [x] Waitlist action: email validation, per-IP rate limit, honeypot for bots, de-duplication, same response whether or not you're already listed (no enumeration)
+- [x] `0003_waitlist.sql`: anyone can join, only admins can read, 9 RLS checks
+- [x] Responsive (390px, no horizontal scroll), dark mode, SEO title/description/Open Graph
+- [ ] Admin view of the waitlist (Phase 3)
+- [ ] Real bio and photo for Rakan (waiting on you)
 
 ## Out of scope for V1 (on purpose)
 
@@ -208,6 +224,9 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 3. **Sign-in methods.** Magic link + Google is my default. Want LinkedIn or GitHub too?
 4. **Certificate ID prefix.** Using `AM-` for AcadeMe. OK?
 5. **Refund policy.** Needed before Stripe goes live (e.g. full refund before week 2).
+6. **AI Engineering price.** The landing page shows **€690**. I made that number up in the seed data; the €590 DevOps price came from your brief. Confirm or change it in `src/lib/data/seed.ts`.
+7. **Landing page claims to confirm:** "8 to 10 hours a week", "no cloud experience needed", and "certificate with a public verification link" (certificates arrive in Phase 3). Edit the FAQ in `src/app/(marketing)/page.tsx` if any are wrong.
+8. **Instructor bio.** Currently name and role only. Send a few lines and a photo when you want them on the page.
 
 ---
 
@@ -217,3 +236,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | --- | --- |
 | 2026-09-23 | Phase 0 and Phase 1 complete. Next.js app at repo root, demo store, 21 pages, Supabase schema with RLS validated on PGlite, browser-tested flows. |
 | 2026-09-23 | Security review and fixes (#2 to #8, #10), migration 0002, `npm run test:db` (35 checks), admin role, setup guide in README. |
+| 2026-09-23 | Landing page at `/` with waitlist, migration 0003, rate limiter, `test:db` now 44 checks. |

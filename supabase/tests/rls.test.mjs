@@ -87,5 +87,16 @@ await expect("maria edits GRADED submission", "deny", as(st2, `update assignment
 await expect("student uploads into own folder", "ok", as(st, `update assignment_submissions set file_path='${st}/work.zip' where user_id='${st}' returning file_path`));
 await expect("anon verifies certificate by id", "ok", as(null, `select * from verify_certificate('AM-DEV-2026-00001')`));
 await expect("student reads own certificate", "ok", as(st, `select * from certificates`));
+console.log("-- waitlist (0003)");
+await expect("anon joins waitlist", "ok", as(null, `insert into waitlist (email, programme_id) values ('new@example.com','${PROG}')`));
+await expect("anon joins with mixed-case email", "deny", as(null, `insert into waitlist (email, programme_id) values ('New@Example.com','${PROG}')`));
+await expect("anon joins with invalid email", "deny", as(null, `insert into waitlist (email, programme_id) values ('not-an-email','${PROG}')`));
+await expect("anon reads waitlist", "deny", as(null, `select * from waitlist`));
+await expect("student reads waitlist", "none", as(st, `select * from waitlist`));
+await expect("instructor reads waitlist", "none", as(ins, `select * from waitlist`));
+await expect("anon edits a waitlist row", "deny", as(null, `update waitlist set email='x@evil.com'`));
+await expect("admin reads waitlist", "ok", as(adm, `select email from waitlist`));
+await db.exec(`update programmes set published=false`);
+await expect("anon joins unpublished programme", "deny", as(null, `insert into waitlist (email, programme_id) values ('b@example.com','${PROG}')`));
 console.log(fail ? `\n${fail} FAILED` : "\nALL PASSED");
 process.exit(fail ? 1 : 0);

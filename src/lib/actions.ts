@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, newId } from "@/lib/data/store";
 import { canPost, isCohortMember, profileByHandle, spaceBySlug, visibleSpaces } from "@/lib/data/repo";
+import { rateLimit } from "@/lib/rate-limit";
 import { currentUser, SESSION_COOKIE } from "@/lib/session";
 import type { LabStatus, Profile } from "@/lib/types";
 
@@ -185,6 +186,38 @@ export async function toggleReaction(postId: string, emoji: string) {
   if (i >= 0) s.reactions.splice(i, 1);
   else s.reactions.push({ postId, userId: user.id, emoji });
   revalidatePath("/", "layout");
+}
+
+// ---------------------------------------------------------------------------
+// Public: waitlist (no sign-in)
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const MAX_WAITLIST = 50_000; // bounds the in-memory demo store
+
+export async function joinWaitlist(_prev: FormState, form: FormData): Promise<FormState> {
+  // Honeypot: real people never see or fill this field. Pretend success for bots.
+  if (String(form.get("company") ?? "") !== "") return { ok: true };
+
+  const h = await headers();
+  const ip = h.get("x-forwarded-for")?.split(",")[0].trim() || h.get("x-real-ip") || "unknown";
+  if (!rateLimit(`waitlist:${ip}`, 5, 60_000)) return { error: "Too many attempts. Try again in a minute." };
+
+  const email = String(form.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  if (email.length > 254 || !EMAIL.test(email)) return { error: "Enter a valid email address." };
+
+  const s = db();
+  const programme = s.programmes.find((p) => p.slug === form.get("programme"));
+  if (!programme) return { error: "Pick a programme." };
+
+  // Same answer whether or not the email was already listed, so the form
+  // can't be used to find out who signed up.
+  const exists = s.waitlist.some((w) => w.email === email && w.programmeId === programme.id);
+  if (!exists && s.waitlist.length < MAX_WAITLIST) {
+    s.waitlist.push({ id: newId("wl"), email, programmeId: programme.id, createdAt: new Date() });
+  }
+  return { ok: true };
 }
 
 // ---------------------------------------------------------------------------

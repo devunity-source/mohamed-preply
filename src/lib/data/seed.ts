@@ -19,6 +19,7 @@ import type {
   Resource,
   Space,
   Submission,
+  WaitlistEntry,
 } from "@/lib/types";
 import { addDays, formatMonthYear, startOfWeek } from "@/lib/time";
 
@@ -43,6 +44,7 @@ export interface Store {
   reactions: Reaction[];
   notifications: Notification[];
   lessonProgress: LessonProgress[];
+  waitlist: WaitlistEntry[];
 }
 
 export const DEMO_USER_ID = "u_ahmed";
@@ -968,5 +970,6 @@ export function createSeed(now: Date = new Date()): Store {
     reactions,
     notifications,
     lessonProgress,
+    waitlist: [],
   };
 }

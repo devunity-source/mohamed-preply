@@ -195,6 +195,13 @@ export interface Notification {
   readAt: Date | null;
 }
 
+export interface WaitlistEntry {
+  id: string;
+  email: string;
+  programmeId: string;
+  createdAt: Date;
+}
+
 export interface LessonProgress {
   userId: string;
   lessonId: string;

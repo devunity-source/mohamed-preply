@@ -17,7 +17,7 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:3000**. You're signed in as Ahmed Hassan, a student in week 4 of the DevOps Engineer cohort.
+Open **http://localhost:3000** for the public landing page, or **http://localhost:3000/dashboard** to go straight into the app. In the app you're signed in as Ahmed Hassan, a student in week 4 of the DevOps Engineer cohort.
 
 That's it. There's nothing to configure for the demo.
 
@@ -34,6 +34,8 @@ That's it. There's nothing to configure for the demo.
 | Any other student | Same cohort, different progress. Sarah hasn't submitted assignment #3, John submitted it late. |
 
 **Things worth clicking:**
+
+- **Landing page (`/`):** join the waitlist (try a bad email too), click a programme's "Join waitlist" to preselect it
 
 - **Home:** next class, tasks, this week, progress
 - **Programmes → the cohort:** tabs for schedule, modules (mark lessons done and watch progress move), classes, labs (start and submit), assignments (submit a GitHub URL)
@@ -87,8 +89,9 @@ The app doesn't talk to a database yet (that's Phase 2), but the schema is ready
 supabase/
 ├── migrations/
 │   ├── 0001_init.sql                 27 tables, row level security on every one
-│   └── 0002_security_hardening.sql   fixes from the security review
-└── tests/rls.test.mjs                35 access-control checks
+│   ├── 0002_security_hardening.sql   fixes from the security review
+│   └── 0003_waitlist.sql             landing page waitlist
+└── tests/rls.test.mjs                44 access-control checks
 ```
 
 `npm run test:db` runs every migration on an in-process Postgres (PGlite), then acts as students, instructors, an admin, an outsider and an anonymous visitor to check who can read and write what. No Postgres install or Docker needed.
@@ -117,7 +120,8 @@ Review findings and their status are tracked in [PROGRESS.md](PROGRESS.md#securi
 ## Project layout
 
 ```
-src/app/(app)/        pages: dashboard, programmes, cohorts, community, calendar, resources, notifications, profile
+src/app/(marketing)/  public landing page at /
+src/app/(app)/        app pages: dashboard, programmes, cohorts, community, calendar, resources, notifications, profile
 src/components/       shared UI
 src/lib/actions.ts    every write (server actions)
 src/lib/data/repo.ts  every read (swap point for Supabase)

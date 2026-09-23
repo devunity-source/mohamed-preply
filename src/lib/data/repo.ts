@@ -39,6 +39,14 @@ export function listProgrammes(): Programme[] {
   return db().programmes;
 }
 
+/** The cohort a prospective student would join: the next upcoming one, else the one running now. */
+export function nextCohortFor(programmeId: string): Cohort | undefined {
+  const cohorts = db()
+    .cohorts.filter((c) => c.programmeId === programmeId && c.status !== "completed")
+    .sort((a, b) => a.startsOn.getTime() - b.startsOn.getTime());
+  return cohorts.find((c) => c.status === "upcoming") ?? cohorts.find((c) => c.status === "active");
+}
+
 // ---------------------------------------------------------------------------
 // Cohorts
 
