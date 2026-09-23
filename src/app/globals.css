@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f6f5f1;
+  --surface: #ffffff;
+  --ink: #0e0e0e;
+  --muted: #6b6a66;
+  --line: #e3e1da;
+  --accent: #ff5a1f;
+  --accent-ink: #ffffff;
+  --k-class: #7c5cff;
+  --k-lab: #2f6bff;
+  --k-office: #00a870;
+  --k-deadline: #e5484d;
+  --k-workshop: #e8930c;
+  --k-event: #0e0e0e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0c0c0c;
+    --surface: #151515;
+    --ink: #f2f1ed;
+    --muted: #9a9993;
+    --line: #2a2a28;
+    --accent: #ff6a33;
+    --accent-ink: #0c0c0c;
+    --k-class: #9a82ff;
+    --k-lab: #5b8cff;
+    --k-office: #2cc38c;
+    --k-deadline: #ff6b6f;
+    --k-workshop: #f5a524;
+    --k-event: #f2f1ed;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-k-class: var(--k-class);
+  --color-k-lab: var(--k-lab);
+  --color-k-office: var(--k-office);
+  --color-k-deadline: var(--k-deadline);
+  --color-k-workshop: var(--k-workshop);
+  --color-k-event: var(--k-event);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

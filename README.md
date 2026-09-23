@@ -1,5 +1,9 @@
-# Welcome to my Portfolio
+# AcadeMe
 
-# Here you can find all the projects that I worked on including the code of some of them
+Cohort-based digital university: programmes, live classes, labs, assignments, community.
 
+```bash
+npm install && npm run dev
+```
 
+Plan, decisions and progress: [PROGRESS.md](PROGRESS.md). Previous repo contents: [legacy/](legacy/).
