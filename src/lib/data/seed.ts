@@ -1,4 +1,5 @@
 import type {
+  Account,
   Assignment,
   Attendance,
   CampusEvent,
@@ -22,11 +23,14 @@ import type {
   Reaction,
   Resource,
   RubricCriterion,
+  Session,
   Space,
   Submission,
   WaitlistEntry,
 } from "@/lib/types";
 import { addDays, formatMonthYear, startOfWeek, zonedParts } from "@/lib/time";
+import { demoPassword } from "@/lib/auth/config";
+import { hashPasswordSync } from "@/lib/auth/password";
 
 const zonedYear = (d: Date) => zonedParts(d).year;
 
@@ -56,6 +60,8 @@ export interface Store {
   projectMembers: ProjectMember[];
   milestones: Milestone[];
   certificates: Certificate[];
+  accounts: Account[];
+  sessions: Session[];
 }
 
 export const DEMO_USER_ID = "u_ahmed";
@@ -1103,5 +1109,19 @@ export function createSeed(now: Date = new Date()): Store {
     projectMembers,
     milestones,
     certificates,
+    accounts: demoAccounts(),
+    sessions: [],
   };
+}
+
+/**
+ * Every seeded profile gets <handle>@academe.demo. They share one hash of the
+ * published demo password (hashing is deliberately slow); real accounts are
+ * hashed individually with their own salt. Without a demo password (production
+ * default) the accounts exist but can't sign in with a password.
+ */
+function demoAccounts(): Account[] {
+  const password = demoPassword();
+  const passwordHash = password ? hashPasswordSync(password) : null;
+  return profiles.map((p) => ({ userId: p.id, email: `${p.handle}@academe.demo`, passwordHash }));
 }

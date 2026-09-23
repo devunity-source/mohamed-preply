@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, newId } from "@/lib/data/store";
 import { canPost, isCohortMember, profileByHandle, spaceBySlug, visibleSpaces } from "@/lib/data/repo";
+import { isInternalPath } from "@/lib/paths";
 import { rateLimit } from "@/lib/rate-limit";
-import { currentUser, SESSION_COOKIE } from "@/lib/session";
+import { currentUser } from "@/lib/session";
 import type { LabStatus, Profile } from "@/lib/types";
 
 // Server actions are reachable by direct POST, so every one re-checks who the
@@ -32,11 +33,6 @@ function notifyMentions(body: string, author: Profile, spaceId: string, href: st
       notify(target.id, `${author.fullName.split(" ")[0]} mentioned you in “${where}”`, href);
     }
   }
-}
-
-/** In-app paths only: rejects absolute and protocol-relative URLs ("//evil", "/\\evil"). */
-function isInternalPath(href: string): boolean {
-  return href.startsWith("/") && !href.startsWith("//") && !href.startsWith("/\\");
 }
 
 function inProgrammeCohort(userId: string, programmeId: string): boolean {
@@ -250,19 +246,4 @@ export async function openNotification(id: string) {
   n.readAt ??= new Date();
   revalidatePath("/", "layout");
   redirect(isInternalPath(n.href) ? n.href : "/notifications");
-}
-
-/** Demo only: switch which seeded profile you're signed in as. */
-export async function switchDemoUser(form: FormData) {
-  if (process.env.NEXT_PUBLIC_SUPABASE_URL) return; // real auth is configured
-  const id = String(form.get("userId") ?? "");
-  if (!db().profiles.some((p) => p.id === id)) return;
-  (await cookies()).set(SESSION_COOKIE, id, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-  });
-  revalidatePath("/", "layout");
-  redirect("/dashboard");
 }

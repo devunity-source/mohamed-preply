@@ -1,9 +1,10 @@
 import clsx from "clsx";
-import { Check } from "lucide-react";
+import { Check, LogOut } from "lucide-react";
 import { Avatar, Button, Card, Label, PageHeader, ProgressBar } from "@/components/ui";
 import { achievementsFor, listProfiles, primaryCohort, progressFor } from "@/lib/data/repo";
-import { switchDemoUser } from "@/lib/actions";
-import { currentUser } from "@/lib/session";
+import { demoSignInForm, signOut } from "@/lib/auth-actions";
+import { demoLoginEnabled } from "@/lib/auth/config";
+import { accountEmail, currentUser } from "@/lib/session";
 
 export const metadata = { title: "Profile" };
 
@@ -87,26 +88,40 @@ export default async function Profile() {
             <p className="mt-4 text-sm">{user.headline}</p>
           </Card>
 
-          <Card title="Demo mode">
-            <p className="mb-4 text-sm text-muted">
-              No real sign-in yet. Switch profiles to see the platform as another student or the instructor.
+          <Card title="Account">
+            <p className="text-sm">
+              Signed in as <span className="font-mono">{accountEmail(user.id)}</span>
             </p>
-            <form action={switchDemoUser} className="space-y-3">
-              <select
-                name="userId"
-                defaultValue={user.id}
-                className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm"
-              >
-                {listProfiles().map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.fullName} ({p.role})
-                  </option>
-                ))}
-              </select>
-              <Button className="w-full">Switch profile</Button>
+            <form action={signOut} className="mt-4">
+              <Button variant="ghost" className="w-full">
+                <LogOut size={14} /> Sign out
+              </Button>
             </form>
-            <Label className="mt-4">Data resets when the server restarts</Label>
           </Card>
+
+          {demoLoginEnabled() && (
+            <Card title="Demo mode">
+              <p className="mb-4 text-sm text-muted">
+                Switch to another seeded account. Only available in local development (or with{" "}
+                <span className="font-mono">DEMO_LOGIN=true</span>).
+              </p>
+              <form action={demoSignInForm} className="space-y-3">
+                <select
+                  name="userId"
+                  defaultValue={user.id}
+                  className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm"
+                >
+                  {listProfiles().map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.fullName} ({p.role})
+                    </option>
+                  ))}
+                </select>
+                <Button className="w-full">Switch account</Button>
+              </form>
+              <Label className="mt-4">Data resets when the server restarts</Label>
+            </Card>
+          )}
         </div>
       </div>
     </>

@@ -1,10 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isProtectedPath, SESSION_COOKIE } from "@/lib/auth/cookie";
 
 // Per-request nonce Content Security Policy. Next.js reads the nonce from the
 // request's CSP header and applies it to its own scripts. Styles keep
 // 'unsafe-inline' because components use inline style attributes (avatar
 // colours), which nonces cannot cover.
 export function proxy(request: NextRequest) {
+  // Optimistic auth gate: no session cookie, no app. The authoritative check
+  // (is the token real and unexpired?) is currentUser() on the server, which
+  // also covers prefetches that skip this proxy.
+  const { pathname, search } = request.nextUrl;
+  if (isProtectedPath(pathname) && !request.cookies.has(SESSION_COOKIE)) {
+    const login = new URL("/login", request.url);
+    login.searchParams.set("next", pathname + search);
+    return NextResponse.redirect(login);
+  }
+
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const isDev = process.env.NODE_ENV === "development";
   const csp = [

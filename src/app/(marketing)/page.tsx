@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Avatar, KindMark, Label } from "@/components/ui";
 import { WaitlistForm } from "@/components/waitlist-form";
+import { demoLoginEnabled } from "@/lib/auth/config";
 import { cohortRoster, publishedProgrammes, modulesFor, nextCohortFor } from "@/lib/data/repo";
 import { ACADEMY_TZ, formatDate } from "@/lib/time";
 import type { CalendarKind } from "@/lib/types";
@@ -155,9 +156,11 @@ export default async function Landing({ searchParams }: PageProps<"/">) {
                 Next: {upcoming.title} · starts {formatDate(upcoming.cohort.startsOn)}
               </span>
             )}
-            <Link href="/dashboard" className="inline-flex items-center gap-1.5 font-medium hover:text-accent">
-              Explore the demo <ArrowRight size={14} />
-            </Link>
+            {demoLoginEnabled() && (
+              <Link href="/login" className="inline-flex items-center gap-1.5 font-medium hover:text-accent">
+                Explore the demo <ArrowRight size={14} />
+              </Link>
+            )}
           </div>
         </div>
         <CohortBoard />

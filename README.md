@@ -17,7 +17,7 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:3000** for the public landing page, or **http://localhost:3000/dashboard** to go straight into the app. In the app you're signed in as Ahmed Hassan, a student in week 4 of the DevOps Engineer cohort.
+Open **http://localhost:3000** for the public landing page, or **http://localhost:3000/login** to sign in. Locally the sign-in page has one-click demo accounts; pick **Ahmed Hassan** to see a student in week 4 of the DevOps Engineer cohort.
 
 That's it. There's nothing to configure for the demo.
 
@@ -25,7 +25,7 @@ That's it. There's nothing to configure for the demo.
 
 ## Trying it out
 
-**Switch users.** There's no real sign-in yet. Go to **Profile → Demo mode** and pick someone:
+**Sign in as anyone.** In local development, `/login` lists one-click demo accounts, and **Profile → Demo mode** switches between all of them. You can also sign in normally: every demo account is `<handle>@academe.demo` with password `academe-demo` (e.g. `ahmed@academe.demo`).
 
 | Profile | What you'll see |
 | --- | --- |
@@ -78,7 +78,9 @@ cp .env.example .env.local
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `ACADEMY_TIMEZONE` | `Europe/Amsterdam` | Timezone every class time and deadline is shown in. Any IANA name, e.g. `Europe/London`, `Asia/Dubai`. |
-| `NEXT_PUBLIC_SUPABASE_URL` and the rest | unset | Phase 2 (real backend). Setting the Supabase URL turns off the demo profile switcher. |
+| `DEMO_PASSWORD` | `academe-demo` in dev, **unset in production** | Password for the seeded demo accounts. In production, if unset, nobody can sign in as a seeded account. |
+| `DEMO_LOGIN` | on in dev, **off in production** | Set to `true` to allow one-click demo sign-in on a deployment. Only for throwaway demo instances: it lets anyone sign in as the admin. |
+| `NEXT_PUBLIC_SUPABASE_URL` and the rest | unset | Phase 2 (real backend). |
 
 `.env.local` is git-ignored. **Never commit real keys.**
 
@@ -114,8 +116,9 @@ supabase db push
 - The app sends a per-request Content Security Policy (`src/proxy.ts`) and standard security headers (`next.config.ts`).
 - Every server action re-checks who's calling and what they're allowed to touch. Never trust values passed from the browser, including arguments bound with `.bind()`.
 - The database enforces the same rules through row level security, covered by `npm run test:db`.
+- Sign-in: scrypt-hashed passwords, random 256-bit session tokens (only their SHA-256 is stored), `__Host-` cookie that is HttpOnly, Secure and SameSite=Lax, 14-day expiry, a fresh token on every sign-in, server-side sign-out, and lockout after 5 failed attempts per email or 20 per IP in 15 minutes. Wrong password and unknown email get the same message.
 
-> ⚠️ **Don't deploy the demo on a public URL.** Demo sign-in is a cookie holding a user ID, so anyone can become any user, including the admin. Real authentication arrives in Phase 2.
+> ⚠️ **Before a public deployment:** leave `DEMO_LOGIN` unset and don't set `DEMO_PASSWORD` (or set a strong one), otherwise anyone can sign in as the seeded admin. Sessions and accounts live in memory until Phase 2, so a restart signs everyone out.
 
 Review findings and their status are tracked in [PROGRESS.md](PROGRESS.md#security).
 

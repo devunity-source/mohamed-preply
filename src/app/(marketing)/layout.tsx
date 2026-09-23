@@ -24,8 +24,8 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            <Link href="/dashboard" className="hidden px-3 py-2 text-sm font-medium hover:text-accent sm:block">
-              Explore the demo
+            <Link href="/login" className="hidden px-3 py-2 text-sm font-medium hover:text-accent sm:block">
+              Sign in
             </Link>
             <Link
               href="/#waitlist"
@@ -52,8 +52,8 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
                 {l.label}
               </Link>
             ))}
-            <Link href="/dashboard" className="hover:text-ink">
-              Demo
+            <Link href="/login" className="hover:text-ink">
+              Sign in
             </Link>
           </nav>
           <p>© {new Date().getFullYear()} AcadeMe</p>

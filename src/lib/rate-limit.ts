@@ -18,3 +18,14 @@ export function rateLimit(key: string, limit: number, windowMs: number): boolean
   bucket.count += 1;
   return bucket.count <= limit;
 }
+
+/** True once `key` has `limit` or more recorded failures in its current window. */
+export function isLimited(key: string, limit: number): boolean {
+  const bucket = buckets.get(key);
+  return !!bucket && bucket.resetAt > Date.now() && bucket.count >= limit;
+}
+
+/** Record one failure against `key` (e.g. a wrong password). */
+export function recordFailure(key: string, windowMs: number): void {
+  rateLimit(key, Number.POSITIVE_INFINITY, windowMs);
+}

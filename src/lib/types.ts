@@ -245,6 +245,23 @@ export interface Certificate {
   revokedAt: Date | null;
 }
 
+// Sign-in credentials, kept apart from Profile so hashes and emails never ride
+// along when profiles are rendered for other users.
+export interface Account {
+  userId: string;
+  email: string;
+  // scrypt hash; null means the account can't sign in with a password.
+  passwordHash: string | null;
+}
+
+export interface Session {
+  // SHA-256 of the cookie token. The raw token only ever lives in the cookie.
+  tokenHash: string;
+  userId: string;
+  createdAt: Date;
+  expiresAt: Date;
+}
+
 export interface WaitlistEntry {
   id: string;
   email: string;

@@ -1,6 +1,6 @@
 import { waitlistRows } from "@/lib/data/admin";
 import { isAdmin } from "@/lib/authz";
-import { currentUser } from "@/lib/session";
+import { getSessionUser } from "@/lib/session";
 
 // Neutralise spreadsheet formulas (CSV injection): anything a visitor typed
 // that starts with = + - @ or a control character is prefixed with a quote.
@@ -10,8 +10,8 @@ function cell(value: string): string {
 }
 
 export async function GET() {
-  const user = await currentUser();
-  if (!isAdmin(user)) return new Response("Not found", { status: 404 });
+  const user = await getSessionUser();
+  if (!user || !isAdmin(user)) return new Response("Not found", { status: 404 });
 
   const lines = [
     ["email", "programme", "joined_at"].join(","),

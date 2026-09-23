@@ -35,7 +35,7 @@ This file is the single source of truth for what's planned, what's built, and wh
 | Timezone | All schedule times in `Europe/Amsterdam`, set via `ACADEMY_TIMEZONE` | **Assumption.** Pricing is in euros so I picked CET/CEST. Change the env var if you teach from elsewhere. |
 | Video | Zoom links for V1, LiveKit later | Brief says integrate first, build later. |
 | Design | Warm off-white paper, near-black ink, one signal-orange accent, mono uppercase labels, square geometry. Light + dark. | Matches "bold, geometric, minimalist". |
-| Auth (now) | Cookie picks a seeded profile. Default is Ahmed (student). Switch profiles on `/profile`. | Lets you see both student and instructor views. Disabled automatically once `NEXT_PUBLIC_SUPABASE_URL` is set. **Not safe on a public URL.** |
+| Auth (now) | Built-in email + password: scrypt hashes, server-side sessions, `__Host-` HttpOnly cookie. One-click demo sign-in only in dev or with `DEMO_LOGIN=true`. Sign-in required for everything but `/`, `/verify` and `/login`. | Replaced the cookie-holds-a-user-id demo auth (security review #1). Phase 2 swaps it for Supabase Auth behind the same `currentUser()`. |
 | Roles | `student`, `instructor` (acts only in cohorts they teach), `admin` (runs the academy). Rakan is seeded as `admin`. | Came out of the security review: "any instructor can edit everything" was too broad. |
 
 ---
@@ -144,7 +144,8 @@ legacy/                             previous repo contents, untouched
 Needs from you: a Supabase project, a Stripe account, a Resend account (see **Open questions**).
 
 - [ ] Supabase clients (`@supabase/ssr`, already installed) for server components and actions
-- [ ] Auth: email magic link + Google. Add the Supabase session refresh to the existing `src/proxy.ts` (keep the CSP). Replace `currentUser()`. Remove the demo profile switcher.
+- [ ] Auth: move to Supabase Auth (magic link + Google) behind the existing `currentUser()` / `getSessionUser()`; add its session refresh to `src/proxy.ts` next to the CSP and the sign-in gate. Accounts and sessions currently live in memory.
+- [ ] Password reset and sign-up flows (arrive with Supabase Auth + email)
 - [ ] Rate limiting on every write (posts, comments, reactions, submissions) (security review #9). The waitlist is already limited; move `src/lib/rate-limit.ts` to a shared store so limits hold across instances.
 - [ ] Waitlist: store in Supabase (`0003_waitlist.sql`), confirmation email via Resend, admin export, invite waitlisters when enrolment opens
 - [ ] Dependabot or Renovate for dependency updates (two Next.js security releases landed in Sep 2026 alone)
@@ -196,7 +197,7 @@ Review of the whole app on 2026-09-23. Every finding was reproduced by exploitin
 
 | # | Severity | Finding | Status |
 | --- | --- | --- | --- |
-| 1 | High | Demo sign-in is a cookie with a user ID, so anyone can be anyone | ⬜ Phase 2 (real auth). Don't deploy publicly until then. |
+| 1 | High | Demo sign-in is a cookie with a user ID, so anyone can be anyone | ✅ Real sign-in (see Decisions → Auth). Tested: forged/old cookies, replayed tokens after sign-out, session fixation, open redirect via `next`, lockout, cookie flags, and replaying a captured one-click demo sign-in against production (refused). |
 | 2 | High | Students could mark their own lab **passed** by editing the `.bind()` argument | ✅ Runtime check in `updateLab`. Exploit re-run: blocked. |
 | 3 | Medium | Authors could move their post into Announcements and pin it | ✅ `posts_guard` trigger + per-space moderation (0002) |
 | 4 | Medium | Students could backdate `submitted_at` and re-point submissions | ✅ `submissions_guard` trigger sets server time, locks owner/assignment/folder (0002) |
@@ -250,3 +251,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-23 | Security review and fixes (#2 to #8, #10), migration 0002, `npm run test:db` (35 checks), admin role, setup guide in README. |
 | 2026-09-23 | Landing page at `/` with waitlist, migration 0003, rate limiter, `test:db` now 44 checks. |
 | 2026-09-23 | Phase 3: admin area, grading, lab reviews, attendance, classes, projects, certificates + public verify, moderation, curriculum editor. Migration 0004, `test:db` 70 checks. Fixed forms losing input after a validation error (React 19 auto-reset). |
+| 2026-09-23 | Replaced cookie auth with email + password sign-in, server-side sessions and a sign-in gate; demo login limited to dev. 32 auth checks (27 attack, 4 demo toggle, 1 dev). |
