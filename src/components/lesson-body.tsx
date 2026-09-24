@@ -9,24 +9,34 @@ type Block =
   | { type: "ul"; items: string[] }
   | { type: "code"; text: string };
 
+/** Index of the fence that closes a code block opened before `from`, or the end. */
+function closingFence(lines: string[], from: number): number {
+  const end = lines.findIndex((l, j) => j >= from && l.startsWith("```"));
+  return end === -1 ? lines.length : end;
+}
+
+/** Ends the open paragraph or list, if any. */
+function flushInto(blocks: Block[], para: string[], list: string[]) {
+  if (para.length) blocks.push({ type: "p", text: para.join(" ") });
+  if (list.length) blocks.push({ type: "ul", items: [...list] });
+  para.length = 0;
+  list.length = 0;
+}
+
 function parse(src: string): Block[] {
   const blocks: Block[] = [];
   const lines = src.replace(/\r\n/g, "\n").split("\n");
-  let para: string[] = [];
-  let list: string[] = [];
-  const flush = () => {
-    if (para.length) blocks.push({ type: "p", text: para.join(" ") });
-    if (list.length) blocks.push({ type: "ul", items: list });
-    para = [];
-    list = [];
-  };
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+  const para: string[] = [];
+  const list: string[] = [];
+  const flush = () => flushInto(blocks, para, list);
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i++];
     if (line.startsWith("```")) {
       flush();
-      const code: string[] = [];
-      for (i++; i < lines.length && !lines[i].startsWith("```"); i++) code.push(lines[i]);
-      blocks.push({ type: "code", text: code.join("\n") });
+      const end = closingFence(lines, i);
+      blocks.push({ type: "code", text: lines.slice(i, end).join("\n") });
+      i = end + 1;
     } else if (line.startsWith("## ")) {
       flush();
       blocks.push({ type: "h", text: line.slice(3) });

@@ -273,57 +273,56 @@ export interface CalendarItem {
 export function calendarFor(userId: string, from: Date, to: Date): CalendarItem[] {
   const s = db();
   const cohortIds = new Set(myCohorts(userId).map((c) => c.cohort.id));
-  const inRange = (d: Date) => d >= from && d < to;
-  const items: CalendarItem[] = [];
+  // Campus-wide events have no cohort and show for everyone.
+  const shows = (cohortId: string | null, at: Date) =>
+    (cohortId === null || cohortIds.has(cohortId)) && at >= from && at < to;
 
-  for (const c of s.classes) {
-    if (!cohortIds.has(c.cohortId) || !inRange(c.startsAt)) continue;
-    items.push({
-      id: c.id,
-      kind: "class",
-      title: c.title,
-      startsAt: c.startsAt,
-      durationMin: c.durationMin,
-      href: `/cohorts/${c.cohortId}/classes/${c.id}`,
-      cohortId: c.cohortId,
-    });
-  }
-  for (const e of s.events) {
-    if ((e.cohortId && !cohortIds.has(e.cohortId)) || !inRange(e.startsAt)) continue;
-    items.push({
-      id: e.id,
-      kind: e.kind,
-      title: e.title,
-      startsAt: e.startsAt,
-      durationMin: e.durationMin,
-      href: e.kind === "lab" && e.cohortId ? `/cohorts/${e.cohortId}/labs` : null,
-      cohortId: e.cohortId,
-    });
-  }
-  for (const a of s.assignments) {
-    if (!cohortIds.has(a.cohortId) || !inRange(a.dueAt)) continue;
-    items.push({
-      id: `due_${a.id}`,
-      kind: "deadline",
-      title: `Due: ${a.title}`,
-      startsAt: a.dueAt,
-      durationMin: 0,
-      href: `/cohorts/${a.cohortId}/assignments/${a.id}`,
-      cohortId: a.cohortId,
-    });
-  }
-  for (const l of s.labs) {
-    if (!cohortIds.has(l.cohortId) || !inRange(l.dueAt)) continue;
-    items.push({
-      id: `due_${l.id}`,
-      kind: "deadline",
-      title: `Due: Lab #${String(l.number).padStart(2, "0")}`,
-      startsAt: l.dueAt,
-      durationMin: 0,
-      href: `/cohorts/${l.cohortId}/labs`,
-      cohortId: l.cohortId,
-    });
-  }
+  const items: CalendarItem[] = [
+    ...s.classes
+      .filter((c) => shows(c.cohortId, c.startsAt))
+      .map((c) => ({
+        id: c.id,
+        kind: "class" as const,
+        title: c.title,
+        startsAt: c.startsAt,
+        durationMin: c.durationMin,
+        href: `/cohorts/${c.cohortId}/classes/${c.id}`,
+        cohortId: c.cohortId,
+      })),
+    ...s.events
+      .filter((e) => shows(e.cohortId, e.startsAt))
+      .map((e) => ({
+        id: e.id,
+        kind: e.kind,
+        title: e.title,
+        startsAt: e.startsAt,
+        durationMin: e.durationMin,
+        href: e.kind === "lab" && e.cohortId ? `/cohorts/${e.cohortId}/labs` : null,
+        cohortId: e.cohortId,
+      })),
+    ...s.assignments
+      .filter((a) => shows(a.cohortId, a.dueAt))
+      .map((a) => ({
+        id: `due_${a.id}`,
+        kind: "deadline" as const,
+        title: `Due: ${a.title}`,
+        startsAt: a.dueAt,
+        durationMin: 0,
+        href: `/cohorts/${a.cohortId}/assignments/${a.id}`,
+        cohortId: a.cohortId,
+      })),
+    ...s.labs
+      .filter((l) => shows(l.cohortId, l.dueAt))
+      .map((l) => ({
+        id: `due_${l.id}`,
+        kind: "deadline" as const,
+        title: `Due: Lab #${String(l.number).padStart(2, "0")}`,
+        startsAt: l.dueAt,
+        durationMin: 0,
+        href: `/cohorts/${l.cohortId}/labs`,
+        cohortId: l.cohortId,
+      })),
+  ];
   return items.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 }
 

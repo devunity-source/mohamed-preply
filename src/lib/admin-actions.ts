@@ -185,6 +185,16 @@ export async function saveAttendance(_prev: FormState, form: FormData): Promise<
 
 const PROVIDERS: readonly MeetingProvider[] = ["zoom", "google_meet", "livekit"];
 
+/** The pasted link, or a fresh meeting from the provider's API when none was pasted. */
+async function meetingLink(provider: MeetingProvider, pasted: string): Promise<{ url: string } | { error: string }> {
+  if (pasted || !canCreateMeetings(provider)) return { url: pasted };
+  try {
+    return { url: await createMeeting(provider) };
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+}
+
 export async function saveClass(_prev: FormState, form: FormData): Promise<FormState> {
   const s = db();
   const cohortId = str(form, "cohortId", 100);
@@ -200,7 +210,7 @@ export async function saveClass(_prev: FormState, form: FormData): Promise<FormS
   const startsAt = parseWallTime(str(form, "date", 10), str(form, "time", 5));
   const durationMin = int(form.get("durationMin"), 15, 300);
   const provider = str(form, "provider", 20) as MeetingProvider;
-  let meetingUrl = str(form, "meetingUrl", 500);
+  const pastedUrl = str(form, "meetingUrl", 500);
   const recordingUrl = str(form, "recordingUrl", 500);
 
   if (!title) return { error: "Add a title." };
@@ -209,13 +219,9 @@ export async function saveClass(_prev: FormState, form: FormData): Promise<FormS
   if (!startsAt) return { error: "Enter a valid date and time." };
   if (durationMin === null) return { error: "Duration must be 15 to 300 minutes." };
   if (!PROVIDERS.includes(provider)) return { error: "Pick a video provider." };
-  if (!meetingUrl && canCreateMeetings(provider)) {
-    try {
-      meetingUrl = await createMeeting(provider);
-    } catch (e) {
-      return { error: (e as Error).message };
-    }
-  }
+  const link = await meetingLink(provider, pastedUrl);
+  if ("error" in link) return link;
+  const meetingUrl = link.url;
   if (!httpsUrl(meetingUrl)) return { error: "Paste the meeting link (https://…)." };
   if (recordingUrl && !httpsUrl(recordingUrl)) return { error: "Recording link must start with https://." };
 
@@ -449,6 +455,14 @@ function slugify(text: string): string {
     .slice(0, 60);
 }
 
+/** `base` if nothing has it yet, otherwise `base` + sep + the first free number from 2. */
+function firstFree(base: string, taken: (name: string) => boolean, sep = "-"): string {
+  let name = base;
+  let n = 2;
+  while (taken(name)) name = `${base}${sep}${n++}`;
+  return name;
+}
+
 /**
  * New programmes start as a draft with one empty module per week, so the
  * editor has something to fill in. Nothing is public until "Published" is ticked.
@@ -473,8 +487,7 @@ export async function createProgramme(_prev: FormState, form: FormData): Promise
   }
 
   const base = slugify(title) || "programme";
-  let slug = base;
-  for (let i = 2; s.programmes.some((p) => p.slug === slug); i++) slug = `${base}-${i}`;
+  const slug = firstFree(base, (name) => s.programmes.some((p) => p.slug === name));
 
   const id = newId("p");
   s.programmes.push({
@@ -533,8 +546,7 @@ export async function createCohort(_prev: FormState, form: FormData): Promise<Fo
   s.cohorts.push(cohort);
   s.cohortMembers.push({ cohortId: cohort.id, userId: instructor.id, role: "instructor" });
   for (const sp of COHORT_SPACES) {
-    let slug = `cohort-${num}-${sp.key}`;
-    for (let i = 2; s.spaces.some((x) => x.slug === slug); i++) slug = `cohort-${num}-${sp.key}-${i}`;
+    const slug = firstFree(`cohort-${num}-${sp.key}`, (name) => s.spaces.some((x) => x.slug === name));
     const space: Space = {
       id: newId("s"),
       slug,
@@ -553,6 +565,48 @@ export async function createCohort(_prev: FormState, form: FormData): Promise<Fo
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const AVATAR_COLORS = ["#FF5A1F", "#2F6BFF", "#00A870", "#8B5CF6", "#E5484D", "#F5A524"];
+
+/** An existing account can join as a student if it is one and isn't in the cohort yet. */
+function existingStudent(userId: string, cohortId: string): { student: Profile } | { error: string } {
+  const s = db();
+  const profile = s.profiles.find((p) => p.id === userId);
+  if (!profile) return { error: "That account is incomplete. Contact support." };
+  if (profile.role !== "student") {
+    const role = profile.role === "admin" ? "an admin" : "an instructor";
+    return { error: `${profile.fullName} is ${role}, not a student.` };
+  }
+  if (s.cohortMembers.some((m) => m.cohortId === cohortId && m.userId === profile.id)) {
+    return { error: `${profile.fullName} is already in this cohort.` };
+  }
+  return { student: profile };
+}
+
+/** A new student account with a random temporary password they must change. */
+async function createStudentAccount(email: string, fullName: string) {
+  const s = db();
+  const base =
+    email
+      .split("@")[0]
+      .replace(/[^a-z0-9]/g, "")
+      .slice(0, 20) || "student";
+  const student: Profile = {
+    id: newId("u"),
+    fullName,
+    handle: firstFree(base, (name) => s.profiles.some((p) => p.handle === name), ""),
+    role: "student",
+    headline: "",
+    avatarColor: AVATAR_COLORS[s.profiles.length % AVATAR_COLORS.length],
+  };
+  const tempPassword = randomBytes(9).toString("base64url");
+  s.profiles.push(student);
+  s.accounts.push({
+    userId: student.id,
+    email,
+    passwordHash: await hashPassword(tempPassword),
+    mustChangePassword: true,
+  });
+  return { student, tempPassword };
+}
 
 /**
  * Adds a student to a cohort by email. An existing student account is added
@@ -575,41 +629,12 @@ export async function addStudentToCohort(_prev: FormState, form: FormData): Prom
   let student: Profile;
   let tempPassword: string | null = null;
   if (account) {
-    const profile = s.profiles.find((p) => p.id === account.userId);
-    if (!profile) return { error: "That account is incomplete. Contact support." };
-    if (profile.role !== "student")
-      return {
-        error: `${profile.fullName} is ${profile.role === "admin" ? "an admin" : "an instructor"}, not a student.`,
-      };
-    if (s.cohortMembers.some((m) => m.cohortId === cohort.id && m.userId === profile.id)) {
-      return { error: `${profile.fullName} is already in this cohort.` };
-    }
-    student = profile;
+    const found = existingStudent(account.userId, cohort.id);
+    if ("error" in found) return found;
+    student = found.student;
   } else {
     if (!fullName) return { error: "New student: add their full name too." };
-    const base =
-      email
-        .split("@")[0]
-        .replace(/[^a-z0-9]/g, "")
-        .slice(0, 20) || "student";
-    let handle = base;
-    for (let i = 2; s.profiles.some((p) => p.handle === handle); i++) handle = `${base}${i}`;
-    student = {
-      id: newId("u"),
-      fullName,
-      handle,
-      role: "student",
-      headline: "",
-      avatarColor: AVATAR_COLORS[s.profiles.length % AVATAR_COLORS.length],
-    };
-    tempPassword = randomBytes(9).toString("base64url");
-    s.profiles.push(student);
-    s.accounts.push({
-      userId: student.id,
-      email,
-      passwordHash: await hashPassword(tempPassword),
-      mustChangePassword: true,
-    });
+    ({ student, tempPassword } = await createStudentAccount(email, fullName));
   }
 
   s.cohortMembers.push({ cohortId: cohort.id, userId: student.id, role: "student" });

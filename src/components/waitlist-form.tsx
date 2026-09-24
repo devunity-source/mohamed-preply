@@ -28,20 +28,7 @@ export function WaitlistForm({
       : "border-line bg-surface text-ink placeholder:text-muted focus:border-ink",
   );
 
-  if (state.ok) {
-    return (
-      <p
-        role="status"
-        className={clsx(
-          "flex items-center gap-3 rounded-md px-4 py-3.5 font-medium",
-          dark ? "bg-paper text-ink" : "bg-ink text-paper",
-        )}
-      >
-        <Check size={18} strokeWidth={3} className={clsx("shrink-0", dark ? "text-dusk" : "text-accent")} />
-        You&apos;re on the list. We&apos;ll email you before enrolment opens.
-      </p>
-    );
-  }
+  if (state.ok) return <Joined dark={dark} />;
 
   return (
     <form {...formProps} className="w-full">
@@ -87,15 +74,38 @@ export function WaitlistForm({
           {pending ? "Joining…" : "Join the waitlist"}
         </button>
       </div>
-      {state.error ? (
-        <p role="alert" className={clsx("mt-2 text-sm", dark ? "text-accent" : "text-k-deadline")}>
-          {state.error}
-        </p>
-      ) : (
-        <p className={clsx("mt-2 text-xs", dark ? "text-paper/60" : "text-muted")}>
-          We only email you about cohorts. No spam, unsubscribe any time.
-        </p>
-      )}
+      <Footnote dark={dark} error={state.error} />
     </form>
+  );
+}
+
+function Joined({ dark }: { dark: boolean }) {
+  return (
+    <p
+      role="status"
+      className={clsx(
+        "flex items-center gap-3 rounded-md px-4 py-3.5 font-medium",
+        dark ? "bg-paper text-ink" : "bg-ink text-paper",
+      )}
+    >
+      <Check size={18} strokeWidth={3} className={clsx("shrink-0", dark ? "text-dusk" : "text-accent")} />
+      You&apos;re on the list. We&apos;ll email you before enrolment opens.
+    </p>
+  );
+}
+
+/** The error when there is one, otherwise the no-spam line. */
+function Footnote({ dark, error }: { dark: boolean; error?: string }) {
+  if (error) {
+    return (
+      <p role="alert" className={clsx("mt-2 text-sm", dark ? "text-accent" : "text-k-deadline")}>
+        {error}
+      </p>
+    );
+  }
+  return (
+    <p className={clsx("mt-2 text-xs", dark ? "text-paper/60" : "text-muted")}>
+      We only email you about cohorts. No spam, unsubscribe any time.
+    </p>
   );
 }
