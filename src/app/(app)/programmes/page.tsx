@@ -33,7 +33,7 @@ export default async function Programmes() {
             >
               <div className="mb-6 flex items-center justify-between">
                 <Label>Cohort {cohort.code}</Label>
-                <Pill tone={cohort.status === "active" ? "accent" : "neutral"}>
+                <Pill tone={cohort.status === "active" ? "good" : "quiet"}>
                   {cohort.status === "active" ? `Week ${week}/${totalWeeks}` : cohort.status}
                 </Pill>
               </div>
@@ -65,7 +65,7 @@ export default async function Programmes() {
                 <ul className="mt-5 space-y-1.5 text-sm">
                   {p.includes.map((i) => (
                     <li key={i} className="flex items-center gap-2">
-                      <Check size={14} className="text-accent" strokeWidth={3} /> {i}
+                      <Check size={14} className="text-muted" strokeWidth={3} /> {i}
                     </li>
                   ))}
                 </ul>

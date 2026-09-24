@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Nav } from "@/components/nav";
 import { Avatar, Logo } from "@/components/ui";
 import { unreadCount } from "@/lib/data/repo";
-import { LogOut } from "lucide-react";
+import { Bell, LogOut } from "lucide-react";
+import { MobileNav } from "@/components/mobile-nav";
 import { signOut } from "@/lib/auth-actions";
 import { currentUser } from "@/lib/session";
 import { hasAdminArea } from "@/lib/authz";
@@ -21,7 +22,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <Logo className="size-7 text-ink" />
           <span className="text-lg font-semibold tracking-tight">AcadeMe</span>
         </Link>
-        <Nav unread={unread} orientation="vertical" showAdmin={showAdmin} />
+        <Nav unread={unread} showAdmin={showAdmin} />
         <div className="mt-auto flex items-center gap-1">
           <Link href="/profile" className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 hover:bg-line/60">
             <Avatar profile={user} />
@@ -49,12 +50,28 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             <Logo className="size-6 text-ink" />
             <span className="font-semibold tracking-tight">AcadeMe</span>
           </Link>
-          <Avatar profile={user} size={28} />
+          <div className="flex items-center gap-1">
+            <Link
+              href="/notifications"
+              aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
+              className="relative rounded-md p-2 text-muted hover:text-ink"
+            >
+              <Bell size={20} />
+              {unread > 0 && (
+                <span className="absolute top-1 right-0.5 rounded-[4px] bg-accent px-1 font-mono text-[10px] font-semibold text-accent-ink">
+                  {unread}
+                </span>
+              )}
+            </Link>
+            <Link href="/profile" aria-label="Profile" className="p-1">
+              <Avatar profile={user} size={28} />
+            </Link>
+          </div>
         </div>
-        <Nav unread={unread} orientation="horizontal" showAdmin={showAdmin} />
       </header>
+      <MobileNav unread={unread} showAdmin={showAdmin} />
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-10 md:py-12 print:max-w-none print:p-0">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-28 md:px-10 md:py-12 print:max-w-none print:p-0">
         <ToastProvider>{children}</ToastProvider>
       </main>
     </div>

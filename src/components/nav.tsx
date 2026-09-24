@@ -26,25 +26,11 @@ const ITEMS = [
 
 const ADMIN_ITEM = { href: "/admin", label: "Admin", icon: ShieldCheck, also: undefined };
 
-export function Nav({
-  unread,
-  orientation,
-  showAdmin,
-}: {
-  unread: number;
-  orientation: "vertical" | "horizontal";
-  showAdmin: boolean;
-}) {
+export function Nav({ unread, showAdmin }: { unread: number; showAdmin: boolean }) {
   const pathname = usePathname();
   const items = showAdmin ? [...ITEMS, ADMIN_ITEM] : ITEMS;
   return (
-    <nav
-      className={clsx(
-        orientation === "vertical"
-          ? "flex flex-col gap-0.5"
-          : "flex [scrollbar-width:none] gap-1 overflow-x-auto px-4 pb-3",
-      )}
-    >
+    <nav className="flex flex-col gap-0.5">
       {items.map(({ href, label, icon: Icon, also }) => {
         const active = pathname.startsWith(href) || (also && pathname.startsWith(also));
         return (
@@ -58,7 +44,7 @@ export function Nav({
             )}
           >
             <Icon size={16} strokeWidth={2} />
-            <span className={orientation === "horizontal" ? "hidden sm:inline" : undefined}>{label}</span>
+            <span>{label}</span>
             {href === "/notifications" && unread > 0 && (
               <span className="ml-auto rounded-[4px] bg-accent px-1.5 font-mono text-[11px] font-semibold text-accent-ink">
                 {unread}

@@ -107,6 +107,13 @@ export async function gradeSubmission(_prev: FormState, form: FormData): Promise
     `/cohorts/${assignment.cohortId}/assignments/${assignment.id}`,
   );
   done();
+
+  // "Save and next ungraded". Only a student in this cohort, so the target can't be steered elsewhere.
+  const next = form.get("next");
+  if (typeof next === "string" && cohortRoster(assignment.cohortId).students.some((p) => p.id === next)) {
+    const q = new URLSearchParams({ student: next, graded: sub.userId });
+    redirect(`/admin/cohorts/${assignment.cohortId}/grading/${assignment.id}?${q}`);
+  }
   return { ok: true };
 }
 

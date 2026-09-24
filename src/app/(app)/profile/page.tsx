@@ -1,8 +1,10 @@
+import Link from "next/link";
 import clsx from "clsx";
 import { Check, LogOut } from "lucide-react";
 import { Avatar, Card, Label, PageHeader, ProgressBar } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
-import { achievementsFor, listProfiles, primaryCohort, progressFor } from "@/lib/data/repo";
+import { achievementsFor, listProfiles, myCohorts, primaryCohort, progressFor } from "@/lib/data/repo";
+import { certificateFor } from "@/lib/data/admin";
 import { demoSignInForm, signOut } from "@/lib/auth-actions";
 import { demoLoginEnabled } from "@/lib/auth/config";
 import { accountEmail, currentUser } from "@/lib/session";
@@ -14,6 +16,10 @@ export default async function Profile() {
   const primary = primaryCohort(user.id);
   const isStudent = primary?.role === "student";
   const progress = primary && isStudent ? progressFor(user.id, primary.cohort) : null;
+  const certificates = myCohorts(user.id).flatMap(({ cohort, programme }) => {
+    const cert = certificateFor(user.id, cohort.id);
+    return cert && !cert.revokedAt ? [{ cert, programme: programme.title }] : [];
+  });
   const achievements = primary && isStudent ? achievementsFor(user.id, primary.cohort) : [];
 
   return (
@@ -70,10 +76,24 @@ export default async function Profile() {
             </Card>
           )}
 
-          <Card title="Portfolio and certificates">
-            <p className="text-sm text-muted">
-              Your capstone, graded assignments and certificates collect here once issued (Phase 3).
-            </p>
+          <Card title="Certificates">
+            {certificates.length ? (
+              <ul className="divide-y divide-line">
+                {certificates.map(({ cert, programme }) => (
+                  <li key={cert.id} className="flex flex-wrap items-center gap-3 py-2.5">
+                    <span className="flex-1 text-sm font-medium">{programme}</span>
+                    <Link href={`/verify/${cert.id}`} className="font-mono text-xs text-muted underline hover:text-ink">
+                      {cert.id}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted">
+                Finish a programme (lessons, labs, graded assignments and the capstone) and your certificate shows up
+                here with a public link employers can check.
+              </p>
+            )}
           </Card>
         </div>
 

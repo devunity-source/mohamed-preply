@@ -24,7 +24,7 @@ export default async function ProgrammesAdmin() {
                 <Label>
                   {p.durationWeeks} weeks · {formatMoney(p.priceCents, p.currency)}
                 </Label>
-                <Pill tone={p.published ? "good" : "neutral"}>{p.published ? "Published" : "Draft"}</Pill>
+                <Pill tone={p.published ? "good" : "quiet"}>{p.published ? "Published" : "Draft"}</Pill>
               </div>
               <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight group-hover:text-accent">
                 {p.title} <ArrowUpRight size={16} />

@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Tabs } from "@/components/tabs";
+import { CohortSwitcher } from "@/components/cohort-switcher";
 import { cohortById } from "@/lib/data/admin";
-import { programmeById } from "@/lib/data/repo";
-import { isAdmin, requireCohortManager } from "@/lib/authz";
+import { isAdmin, managedCohortIds, requireCohortManager } from "@/lib/authz";
 
 export default async function AdminCohortLayout({ children, params }: LayoutProps<"/admin/cohorts/[cohortId]">) {
   const { cohortId } = await params;
   const user = await requireCohortManager(cohortId);
   const cohort = cohortById(cohortId)!;
-  const programme = programmeById(cohort.programmeId)!;
+
+  const others = managedCohortIds(user).map((id) => ({ id, label: cohortById(id)!.name }));
 
   const items = [
     { href: "", label: "Dashboard" },
@@ -23,13 +24,24 @@ export default async function AdminCohortLayout({ children, params }: LayoutProp
 
   return (
     <>
-      <Link href="/admin" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
-        <ArrowLeft size={14} /> All cohorts
-      </Link>
-      <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{cohort.name}</h1>
-      <p className="mt-1 mb-6 font-mono text-xs tracking-wider text-muted uppercase">
-        {programme.title} · Cohort {cohort.code} · {cohort.status}
-      </p>
+      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
+          <ArrowLeft size={14} /> {isAdmin(user) ? "Admin" : "My cohorts"}
+        </Link>
+        <span className="text-line" aria-hidden>
+          /
+        </span>
+        {others.length > 1 ? (
+          <h1 className="min-w-0">
+            <CohortSwitcher current={cohort.id} cohorts={others} />
+          </h1>
+        ) : (
+          <h1 className="text-lg font-semibold tracking-tight">{cohort.name}</h1>
+        )}
+        <span className="text-sm text-muted">
+          Cohort {cohort.code} · {cohort.status}
+        </span>
+      </div>
       <Tabs base={`/admin/cohorts/${cohortId}`} items={items} />
       {children}
     </>

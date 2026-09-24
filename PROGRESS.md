@@ -226,7 +226,7 @@ Public page at `/`, the app moved behind it at `/dashboard`. Aimed at career swi
 
 ## UX pass
 
-From a review of the running app (24 Sep 2026). First batch done, the rest queued in priority order.
+From a review of the running app (24 Sep 2026). Two batches done; the small stuff is left.
 
 **Done**
 - [x] **Lessons you can actually take:** lesson pages at `/cohorts/…/modules/<module>/<lesson>` with real content, lesson N of M, prev/next, a module sidebar, and **Mark done and continue** (crosses into the next module). Week 4 (Kubernetes) has full lessons; other weeks show their summary until content is written. Video lessons show a placeholder until a video host is connected.
@@ -236,12 +236,14 @@ From a review of the running app (24 Sep 2026). First batch done, the rest queue
 - [x] **Real confirm dialogs** (native `<dialog>`, Esc cancels, Cancel focused first) for deleting posts, replies, lessons, classes and revoking certificates.
 - [x] Fixed horizontal scroll at 390px on 9 pages (grid columns growing to fit long text); all 32 main pages checked.
 
+- [x] **Less chrome:** cohort inner tabs get a one-line header instead of the big title block; inside an admin cohort there's one tab bar (not two) and a cohort switcher that keeps you on the same tab; community shows General plus your cohort, with topic spaces folded under "More spaces" (opens automatically when you're in one).
+- [x] **Phone navigation:** labelled bottom bar (Home, Learn, Community, Calendar, More). More holds Resources, Notifications, Profile, Admin and sign out. Bell with unread count in the top bar. Sideways-scrolling tab rows fade at the edge and keep the active tab in view.
+- [x] **Colour means something:** orange is for "act now" (live, next, this week, waiting on you) and the brand. Statuses got calmer: quiet outline for not started, grey for submitted or in progress, green/amber/red for outcomes.
+- [x] **Attendance starts blank.** Nothing is pre-marked present. "Mark remaining present" fills the unmarked rows and leaves late/absent alone; a counter shows who's still unmarked. Unmarked rows aren't saved.
+- [x] **Grading one at a time:** submission queue on the left (ungraded first, oldest first), one submission on the right with an Open repo button. **Save and next ungraded** saves and jumps to the next one (server-side redirect, works without JavaScript), then confirms whose grade was saved. `j`/`k` step through, ⌘/Ctrl+Enter saves.
+- [x] Profile shows your real certificates with their public verify links; removed two stale "Phase 3" notes.
+
 **Next**
-- [ ] Trim chrome: one-line cohort header on inner tabs, single admin tab bar with a cohort switcher, community spaces collapsed to your cohort + "More"
-- [ ] Mobile: bottom tab bar with labels (Home, Learn, Community, Calendar, More), scroll hint on tab rows
-- [ ] Colour semantics: orange only for "act now" and brand; calmer tones for statuses
-- [ ] Attendance starts blank with "Mark all present" instead of defaulting everyone to present
-- [ ] Grading one submission at a time: "Save and next ungraded", keyboard shortcuts
 - [ ] Smaller: explain the progress %, centred sign-in card with waitlist link, first-visit welcome, fewer mono labels, ⌘K search, unread counts per space
 
 ## Out of scope for V1 (on purpose)
@@ -273,3 +275,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-23 | Phase 3: admin area, grading, lab reviews, attendance, classes, projects, certificates + public verify, moderation, curriculum editor. Migration 0004, `test:db` 70 checks. Fixed forms losing input after a validation error (React 19 auto-reset). |
 | 2026-09-23 | Replaced cookie auth with email + password sign-in, server-side sessions and a sign-in gate; demo login limited to dev. 32 auth checks (27 attack, 4 demo toggle, 1 dev). |
 | 2026-09-24 | UX batch 1: lesson pages + continue learning, current work first, instant feedback with undo, confirm dialogs, mobile overflow fixes. 29 new browser checks. |
+| 2026-09-24 | UX batch 2: one-line cohort header, single admin tab bar + cohort switcher, folded community spaces, mobile bottom bar, calmer status colours, blank attendance + mark remaining, one-at-a-time grading with save and next. 35 new browser checks. |

@@ -1,3 +1,4 @@
+import type { PillTone } from "@/components/ui";
 import type { Assignment, Submission } from "@/lib/types";
 
 export type AssignmentState = "graded" | "submitted" | "late" | "overdue" | "open";
@@ -8,13 +9,10 @@ export function assignmentState(a: Assignment, sub: Submission | undefined, now:
   return a.dueAt < now ? "overdue" : "open";
 }
 
-export const STATE_META: Record<
-  AssignmentState,
-  { label: string; tone: "neutral" | "accent" | "good" | "warn" | "bad" }
-> = {
+export const STATE_META: Record<AssignmentState, { label: string; tone: PillTone }> = {
   graded: { label: "Graded", tone: "good" },
-  submitted: { label: "Submitted", tone: "accent" },
+  submitted: { label: "Submitted", tone: "neutral" },
   late: { label: "Late", tone: "warn" },
   overdue: { label: "Not submitted", tone: "bad" },
-  open: { label: "Not submitted", tone: "neutral" },
+  open: { label: "Not submitted", tone: "quiet" },
 };

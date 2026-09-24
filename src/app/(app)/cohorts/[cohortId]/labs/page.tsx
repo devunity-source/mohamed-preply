@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { Check, Clock, Play, Send } from "lucide-react";
-import { DoneGroup, Empty, Label, Pill } from "@/components/ui";
+import { DoneGroup, Empty, Label, Pill, type PillTone } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { OpenOnHash } from "@/components/open-on-hash";
 import { cohortLabs, labStatus } from "@/lib/data/repo";
@@ -9,10 +9,10 @@ import { formatShortDate, formatTime, relativeDay } from "@/lib/time";
 import type { Lab, LabStatus } from "@/lib/types";
 import { loadCohort } from "../load";
 
-const STATUS: Record<LabStatus, { label: string; tone: "neutral" | "warn" | "accent" | "good" }> = {
-  not_started: { label: "Not started", tone: "neutral" },
-  in_progress: { label: "In progress", tone: "warn" },
-  submitted: { label: "Submitted", tone: "accent" },
+const STATUS: Record<LabStatus, { label: string; tone: PillTone }> = {
+  not_started: { label: "Not started", tone: "quiet" },
+  in_progress: { label: "In progress", tone: "neutral" },
+  submitted: { label: "Submitted", tone: "neutral" },
   passed: { label: "Passed", tone: "good" },
 };
 

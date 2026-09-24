@@ -86,7 +86,7 @@ export default async function CohortOverview({ params }: PageProps<"/cohorts/[co
           <ul className="space-y-1.5 text-sm">
             {programme.includes.map((i) => (
               <li key={i} className="flex items-center gap-2">
-                <Check size={14} className="text-accent" strokeWidth={3} /> {i}
+                <Check size={14} className="text-muted" strokeWidth={3} /> {i}
               </li>
             ))}
           </ul>

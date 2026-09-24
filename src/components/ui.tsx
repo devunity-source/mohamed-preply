@@ -147,18 +147,20 @@ export function KindMark({ kind }: { kind: CalendarKind }) {
   );
 }
 
-export function Pill({
-  children,
-  tone = "neutral",
-}: {
-  children: React.ReactNode;
-  tone?: "neutral" | "accent" | "good" | "warn" | "bad";
-}) {
+/**
+ * Colour means something. accent (orange) is reserved for "act now": live,
+ * next up, due this week, waiting on you. Everything else is calmer: quiet
+ * for not started, neutral for in flight, good/warn/bad for outcomes.
+ */
+export type PillTone = "quiet" | "neutral" | "accent" | "good" | "warn" | "bad";
+
+export function Pill({ children, tone = "neutral" }: { children: React.ReactNode; tone?: PillTone }) {
   return (
     <span
       className={clsx(
         "inline-flex items-center gap-1 rounded-[4px] px-2 py-0.5 font-mono text-[11px] font-medium tracking-wider uppercase",
         {
+          quiet: "border border-line text-muted",
           neutral: "bg-line text-ink",
           accent: "bg-accent text-accent-ink",
           good: "bg-k-office/15 text-k-office",

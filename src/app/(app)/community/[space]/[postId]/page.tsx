@@ -44,7 +44,7 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
             <p className="text-sm font-medium">
               {author.fullName}
               {author.role !== "student" && (
-                <span className="ml-2 font-mono text-[11px] text-accent uppercase">{author.role}</span>
+                <span className="ml-2 font-mono text-[11px] text-muted uppercase">{author.role}</span>
               )}
             </p>
             <p className="text-xs text-muted">{timeAgo(post.createdAt, now)}</p>

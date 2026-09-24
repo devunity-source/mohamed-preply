@@ -1,15 +1,18 @@
 import { SpaceNav } from "@/components/space-nav";
-import { visibleSpaces } from "@/lib/data/repo";
+import { primaryCohort, visibleSpaces } from "@/lib/data/repo";
 import { currentUser } from "@/lib/session";
 
 export default async function CommunityLayout({ children }: LayoutProps<"/community">) {
   const user = await currentUser();
+  const mine = primaryCohort(user.id)?.cohort.id;
   const spaces = visibleSpaces(user.id).map((s) => ({
     slug: s.slug,
     name: s.name,
     group: s.group,
     readOnly: s.readOnly,
     cohortOnly: !!s.cohortId,
+    // Always shown: the academy-wide basics and your current cohort. Topic spaces fold under "More".
+    pinned: s.cohortId ? s.cohortId === mine : s.group === "General",
   }));
 
   return (

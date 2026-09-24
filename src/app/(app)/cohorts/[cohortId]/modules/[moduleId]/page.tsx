@@ -91,7 +91,7 @@ export default async function ModulePage({
                       {formatShortDate(c.startsAt)} {formatTime(c.startsAt)}
                     </span>
                     <span className="flex-1 font-medium">{c.title}</span>
-                    {c.startsAt < now ? <Pill>Recorded</Pill> : <Pill tone="accent">Upcoming</Pill>}
+                    {c.startsAt < now ? <Pill tone="quiet">Recorded</Pill> : <Pill>Upcoming</Pill>}
                   </Link>
                 </li>
               ))}

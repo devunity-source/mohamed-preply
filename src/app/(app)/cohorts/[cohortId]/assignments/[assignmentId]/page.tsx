@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Avatar, Card, Label, Pill } from "@/components/ui";
+import { Avatar, ButtonLink, Card, Label, Pill } from "@/components/ui";
 import { ResourceList } from "@/components/resource-list";
 import { SubmitAssignment } from "@/components/submit-assignment";
 import { cohortAssignments, cohortRoster, resourcesByIds, submissionFor } from "@/lib/data/repo";
@@ -107,7 +107,9 @@ function InstructorRoster({ cohortId, assignment, now }: { cohortId: string; ass
           );
         })}
       </ul>
-      <p className="mt-4 text-xs text-muted">Grading and feedback tools arrive with the admin area in Phase 3.</p>
+      <ButtonLink href={`/admin/cohorts/${cohortId}/grading/${assignment.id}`} variant="ghost" className="mt-4">
+        Open in grading
+      </ButtonLink>
     </Card>
   );
 }

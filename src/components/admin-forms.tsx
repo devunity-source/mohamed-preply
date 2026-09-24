@@ -33,8 +33,19 @@ export function ActionForm({
   resetOnSuccess?: boolean;
 }) {
   const { state, pending, formProps } = useFormAction(action, { resetOnSuccess });
+
   return (
-    <form {...formProps} className={clsx("space-y-3", className)}>
+    <form
+      {...formProps}
+      // Cmd/Ctrl+Enter saves from any field, including the feedback box.
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !pending) {
+          e.preventDefault();
+          e.currentTarget.requestSubmit();
+        }
+      }}
+      className={clsx("space-y-3", className)}
+    >
       {children}
       <div className="flex flex-wrap items-center gap-3">
         <Button disabled={pending}>{pending ? "Saving…" : submitLabel}</Button>
@@ -59,12 +70,15 @@ export function GradeForm({
   rubric,
   scores,
   feedback,
+  nextStudentId,
 }: {
   action: Action;
   submissionId: string;
   rubric: RubricCriterion[];
   scores: Record<string, number> | null;
   feedback: string | null;
+  /** "Save and next": the server redirects here after a successful save. */
+  nextStudentId?: string;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(rubric.map((c) => [c.id, scores?.[c.id] != null ? String(scores[c.id]) : ""])),
@@ -76,10 +90,11 @@ export function GradeForm({
   return (
     <ActionForm
       action={action}
-      submitLabel={scores ? "Update grade" : "Save grade"}
+      submitLabel={nextStudentId ? "Save and next ungraded" : scores ? "Update grade" : "Save grade"}
       savedLabel="Graded, student notified"
     >
       <input type="hidden" name="submissionId" value={submissionId} />
+      {nextStudentId && <input type="hidden" name="next" value={nextStudentId} />}
       <div className="grid gap-2 sm:grid-cols-2">
         {rubric.map((c) => (
           <label key={c.id} className="flex items-center gap-3 rounded-md border border-line px-3 py-2 text-sm">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import { Avatar, Card, Empty } from "@/components/ui";
 import { ActionForm } from "@/components/admin-forms";
+import { MarkRemaining } from "@/components/mark-remaining";
 import { attendanceFor } from "@/lib/data/admin";
 import { cohortClasses, cohortRoster } from "@/lib/data/repo";
 import { saveAttendance } from "@/lib/admin-actions";
@@ -32,6 +33,7 @@ export default async function AttendancePage({
 
   const selected = past.find((c) => c.id === sp.class) ?? past[past.length - 1];
   const marks = new Map(attendanceFor(selected.id).map((a) => [a.userId, a.status]));
+  const unmarked = students.filter((p) => !marks.has(p.id)).length;
   const byClass = new Map(past.map((c) => [c.id, new Map(attendanceFor(c.id).map((a) => [a.userId, a.status]))]));
 
   return (
@@ -61,6 +63,12 @@ export default async function AttendancePage({
         {/* key: remount with fresh defaults when switching class */}
         <ActionForm key={selected.id} action={saveAttendance} submitLabel="Save attendance">
           <input type="hidden" name="classId" value={selected.id} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted">
+              {unmarked === 0 ? "Everyone is marked." : `${unmarked} of ${students.length} not marked yet.`}
+            </p>
+            <MarkRemaining value="present" label="Mark remaining present" />
+          </div>
           <ul className="divide-y divide-line">
             {students.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center gap-3 py-2">
@@ -73,7 +81,7 @@ export default async function AttendancePage({
                         type="radio"
                         name={`att:${p.id}`}
                         value={o.value}
-                        defaultChecked={(marks.get(p.id) ?? "present") === o.value}
+                        defaultChecked={marks.get(p.id) === o.value}
                         className="peer sr-only"
                       />
                       <span

@@ -1,5 +1,6 @@
 import { Label } from "@/components/ui";
 import { Tabs } from "@/components/tabs";
+import { HideUnder } from "@/components/path-switch";
 import { isAdmin, requireAdminArea } from "@/lib/authz";
 
 export const metadata = { title: "Admin" };
@@ -21,8 +22,11 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
 
   return (
     <>
-      <Label className="mb-3">{isAdmin(user) ? "Academy admin" : "Instructor tools"}</Label>
-      <Tabs base="/admin" items={items} />
+      {/* Inside a cohort the cohort's own tab bar takes over: one row of tabs, not two. */}
+      <HideUnder prefix="/admin/cohorts/">
+        <Label className="mb-3">{isAdmin(user) ? "Academy admin" : "Instructor tools"}</Label>
+        <Tabs base="/admin" items={items} />
+      </HideUnder>
       {children}
     </>
   );

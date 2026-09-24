@@ -60,7 +60,7 @@ export default async function AdminOverview() {
                 <Label>
                   {s.programme.title} · Cohort {s.cohort.code}
                 </Label>
-                <Pill tone={s.cohort.status === "active" ? "accent" : "neutral"}>
+                <Pill tone={s.cohort.status === "active" ? "good" : "quiet"}>
                   {s.cohort.status === "active" ? `Week ${week}/${totalWeeks}` : s.cohort.status}
                 </Pill>
               </div>
