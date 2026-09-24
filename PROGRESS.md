@@ -89,8 +89,9 @@ supabase/migrations/0004_teaching_tools.sql       Phase 3: rubrics, milestones, 
 supabase/migrations/0005_ux_state.sql             onboarded_at, space_reads (unread counts)
 supabase/migrations/0006_usd_and_cert_prefix.sql  currency default USD
 supabase/migrations/0007_create_programmes_cohorts.sql  admin write on cohorts + members, unique cert code
+supabase/migrations/0008_office_hours.sql  office_hours, office_threads, office_messages, office_open()
 docs/refund-policy.md               refund policy draft (needs legal review)
-supabase/tests/rls.test.mjs         91 RLS checks on PGlite (npm run test:db)
+supabase/tests/rls.test.mjs         111 RLS checks on PGlite (npm run test:db)
 legacy/                             previous repo contents, untouched
 ```
 
@@ -178,6 +179,7 @@ Admin area at `/admin` (the **Admin** item in the sidebar). **Admins see everyth
 - [x] Curriculum editor: programme title/tagline/description/price/published, module titles, lessons (add, edit, reorder, delete). Unpublishing hides a programme from the landing page, catalogue and waitlist.
 - [x] **New programme** (admins): title, tagline, description, length in weeks, USD price, certificate code (unique, 2 to 5 letters), what's included. Starts as a draft with empty Week 1 to Week N modules. No delete by design: unpublish instead, so cohorts and certificates keep their history.
 - [x] **New cohort** (admins): programme, start date (today or later, UAE time) and instructor. Gets the next academy-wide number (#03…), an end date from the programme length, its own General / Announcements / Questions spaces, and notifies the instructor.
+- [x] **Office hours** (per cohort). Instructors set hours per weekday in UAE time (Admin → cohort → Office hours). During those hours students can message the cohort's instructors from the cohort's Office hours tab; outside them the box is greyed out and disabled, shows when it opens next, and the server refuses messages (also enforced in SQL by `office_open()`). One thread per student, private to the student and the cohort's staff. Instructors reply any time from an inbox with unread counts (shown on the tab); both sides get notifications; a Home card shows open/closed and new replies. Seeded: DevOps #01 open Mon to Fri 08:00 to 17:00, with one sample conversation.
 - [x] **Change password** (Profile → Password): needs the current password, at least 10 characters, limits wrong guesses (5 per 15 minutes), signs out every other session. Accounts created with a temporary password are flagged and nudged on the dashboard until changed.
 - [x] **Remove a student from a cohort** (admins, cohort dashboard, confirm dialog, not on finished cohorts): removes access and their capstone team membership; submissions and grades are kept so re-adding picks up where they left off.
 - [x] **Add a student to a cohort** (admins, on the cohort dashboard; not for finished cohorts): by email. An existing student account is added as is; a new email gets a student account with a random temporary password shown to the admin once (only the hash is stored). The student gets a welcome notification. Instructors and admins can't be added as students; duplicates are refused. No invite email yet (Phase 2 Resend).
@@ -303,3 +305,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-24 | Admins can create programmes (draft, empty weekly modules) and cohorts (instructor, spaces, notification). Migration 0007, `test:db` 91 checks, 24 new browser checks. |
 | 2026-09-24 | Admins can add students to a cohort by email (existing account, or a new one with a one-time temporary password). 20 new browser checks plus a replay test: an instructor replaying the admin action is refused. |
 | 2026-09-24 | Change password (with temporary-password nudge, other sessions signed out), remove student from cohort, landing redesign around the evening schedule (Dusk/Chalk/Lamp palette, Archivo, six-week strip). 17 new browser checks; fixed a mobile overflow from a screen-reader-only table header. |
+| 2026-09-24 | Office hours: per-weekday schedule, messaging only while open (UI + server + RLS), instructor inbox with replies, Home card. Migration 0008, `test:db` 111 checks, 30 new browser checks. Fixed the app's main column overflowing at tablet widths (768px) on every page. |

@@ -31,6 +31,8 @@ import { currentUser, mustChangePassword } from "@/lib/session";
 import type { Cohort, Profile } from "@/lib/types";
 import { hasAdminArea } from "@/lib/authz";
 import { Welcome } from "@/components/welcome";
+import { officeStatus, unreadRepliesFor } from "@/lib/data/office-hours";
+import { officeStatusText } from "@/components/office-hours-view";
 import { addDays, formatShortDate, formatTime, formatWeekday, greeting, relativeDay, zonedParts } from "@/lib/time";
 
 export const metadata = { title: "Home" };
@@ -159,6 +161,7 @@ export default async function Dashboard() {
 
         <div className="space-y-5">
           {role === "student" && <ProgressCard userId={user.id} cohort={cohort} week={week} totalWeeks={totalWeeks} />}
+          {role === "student" && <OfficeHoursCard userId={user.id} cohortId={cohort.id} now={now} />}
           {role !== "student" && (
             <Card title="Cohort week">
               <p className="text-4xl font-semibold tracking-tight">
@@ -222,6 +225,34 @@ function Hello({ name, now, subtitle }: { name: string; now: Date; subtitle: str
       </h1>
       <p className="mt-2 text-muted">{subtitle}</p>
     </header>
+  );
+}
+
+/** Open or closed at a glance, plus unread replies. The full page is the cohort's Office hours tab. */
+function OfficeHoursCard({ userId, cohortId, now }: { userId: string; cohortId: string; now: Date }) {
+  const status = officeStatus(cohortId, now);
+  if (!status.hasSchedule) return null;
+  const { title, detail } = officeStatusText(status, now);
+  const replies = unreadRepliesFor(cohortId, userId);
+  return (
+    <Card title="Office hours">
+      <p className="flex items-center gap-2 font-semibold">
+        <span className={clsx("size-2.5 rounded-full", status.open ? "bg-k-office" : "bg-muted/60")} aria-hidden />
+        {title}
+      </p>
+      <p className="mt-1 text-sm text-muted">{detail}</p>
+      {replies > 0 && (
+        <p className="mt-3 text-sm font-medium">
+          {replies === 1 ? "1 new reply" : `${replies} new replies`} from your instructor
+        </p>
+      )}
+      <Link
+        href={`/cohorts/${cohortId}/office-hours`}
+        className="mt-4 inline-block text-sm font-medium underline underline-offset-4"
+      >
+        {status.open ? "Message your instructor" : "See hours and messages"}
+      </Link>
+    </Card>
   );
 }
 

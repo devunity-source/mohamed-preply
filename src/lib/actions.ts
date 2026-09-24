@@ -4,7 +4,17 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, newId } from "@/lib/data/store";
-import { canPost, isCohortMember, lessonContext, profileByHandle, spaceBySlug, visibleSpaces } from "@/lib/data/repo";
+import {
+  canPost,
+  cohortRoster,
+  isCohortMember,
+  lessonContext,
+  profileByHandle,
+  spaceBySlug,
+  visibleSpaces,
+} from "@/lib/data/repo";
+import { officeStatus, threadById, threadFor } from "@/lib/data/office-hours";
+import { formatTime, formatWeekday } from "@/lib/time";
 import { isInternalPath } from "@/lib/paths";
 import { rateLimit } from "@/lib/rate-limit";
 import { currentUser } from "@/lib/session";
@@ -274,6 +284,83 @@ export async function markSpaceSeen(slug: string) {
   const existing = s.spaceReads.find((r) => r.userId === user.id && r.spaceId === space.id);
   if (existing) existing.lastSeenAt = new Date();
   else s.spaceReads.push({ userId: user.id, spaceId: space.id, lastSeenAt: new Date() });
+}
+
+// ---------------------------------------------------------------------------
+// Office hours
+
+/**
+ * A student writes to their cohort's instructors. Only while office hours are
+ * open: the page greys the form out, and this check makes that binding.
+ */
+export async function sendOfficeMessage(_prev: FormState, form: FormData): Promise<FormState> {
+  const user = await currentUser();
+  const s = db();
+  const cohortId = String(form.get("cohortId") ?? "");
+  const isStudent = s.cohortMembers.some(
+    (m) => m.cohortId === cohortId && m.userId === user.id && m.role === "student",
+  );
+  if (!isStudent) return { error: "Only students in this cohort can message its instructors." };
+
+  const now = new Date();
+  const status = officeStatus(cohortId, now);
+  if (!status.open) {
+    return {
+      error: status.next
+        ? `Office hours are closed. They open ${formatWeekday(status.next.at)} at ${formatTime(status.next.at)}.`
+        : "Office hours are closed.",
+    };
+  }
+  const body = String(form.get("body") ?? "")
+    .trim()
+    .slice(0, 2000);
+  if (!body) return { error: "Write your message first." };
+  if (!rateLimit(`office:${user.id}`, 20, 60 * 60_000)) {
+    return { error: "That's a lot of messages. Wait a bit, or bring it to the next class." };
+  }
+
+  let thread = threadFor(cohortId, user.id);
+  if (!thread) {
+    thread = {
+      id: newId("ot"),
+      cohortId,
+      studentId: user.id,
+      createdAt: now,
+      lastMessageAt: now,
+      instructorReadAt: null,
+      studentReadAt: now,
+    };
+    s.officeThreads.push(thread);
+  }
+  s.officeMessages.push({ id: newId("om"), threadId: thread.id, authorId: user.id, body, createdAt: now });
+  thread.lastMessageAt = now;
+  thread.studentReadAt = now;
+  for (const instructor of cohortRoster(cohortId).instructors) {
+    notify(
+      instructor.id,
+      `Office hours: ${user.fullName.split(" ")[0]} sent you a message`,
+      `/admin/cohorts/${cohortId}/office-hours?student=${user.id}`,
+    );
+  }
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Marks a conversation read for whoever is looking at it: its student, or the cohort's staff. */
+export async function markOfficeThreadRead(threadId: string) {
+  const user = await currentUser();
+  if (typeof threadId !== "string") return;
+  const thread = threadById(threadId);
+  if (!thread) return;
+  if (thread.studentId === user.id) thread.studentReadAt = new Date();
+  else if (canManage(user, thread.cohortId)) thread.instructorReadAt = new Date();
+}
+
+function canManage(user: Profile, cohortId: string) {
+  return (
+    user.role === "admin" ||
+    db().cohortMembers.some((m) => m.cohortId === cohortId && m.userId === user.id && m.role === "instructor")
+  );
 }
 
 export async function dismissWelcome() {

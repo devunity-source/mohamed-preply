@@ -74,7 +74,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       </header>
       <MobileNav unread={unread} showAdmin={showAdmin} />
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-28 md:px-10 md:py-12 print:max-w-none print:p-0">
+      <main className="mx-auto w-full max-w-6xl min-w-0 flex-1 px-4 pt-8 pb-28 md:px-10 md:py-12 print:max-w-none print:p-0">
         <ToastProvider>{children}</ToastProvider>
         <CommandPalette />
       </main>

@@ -1,3 +1,4 @@
+import { unreadInboxCount } from "@/lib/data/office-hours";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Tabs } from "@/components/tabs";
@@ -12,6 +13,7 @@ export default async function AdminCohortLayout({ children, params }: LayoutProp
 
   const others = managedCohortIds(user).map((id) => ({ id, label: cohortById(id)!.name }));
 
+  const unread = unreadInboxCount(cohortId);
   const items = [
     { href: "", label: "Dashboard" },
     { href: "grading", label: "Grading" },
@@ -19,6 +21,7 @@ export default async function AdminCohortLayout({ children, params }: LayoutProp
     { href: "attendance", label: "Attendance" },
     { href: "classes", label: "Classes" },
     { href: "projects", label: "Projects" },
+    { href: "office-hours", label: unread ? `Office hours (${unread})` : "Office hours" },
     ...(isAdmin(user) ? [{ href: "certificates", label: "Certificates" }] : []),
   ];
 

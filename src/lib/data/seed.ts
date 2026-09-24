@@ -28,6 +28,9 @@ import type {
   Submission,
   WaitlistEntry,
   SpaceRead,
+  OfficeHoursSlot,
+  OfficeThread,
+  OfficeMessage,
 } from "@/lib/types";
 import { addDays, formatMonthYear, startOfWeek, zonedParts } from "@/lib/time";
 import { demoPassword } from "@/lib/auth/config";
@@ -65,6 +68,9 @@ export interface Store {
   accounts: Account[];
   sessions: Session[];
   spaceReads: SpaceRead[];
+  officeHours: OfficeHoursSlot[];
+  officeThreads: OfficeThread[];
+  officeMessages: OfficeMessage[];
 }
 
 export const DEMO_USER_ID = "u_ahmed";
@@ -1117,6 +1123,35 @@ export function createSeed(now: Date = new Date()): Store {
     accounts: demoAccounts(),
     sessions: [],
     spaceReads: [],
+    // The active cohort's instructor takes messages on weekdays during working hours.
+    officeHours: [0, 1, 2, 3, 4].map((weekday) => ({ cohortId: "c_devops_01", weekday, start: "08:00", end: "17:00" })),
+    officeThreads: [
+      {
+        id: "ot_maria",
+        cohortId: "c_devops_01",
+        studentId: "u_maria",
+        createdAt: ago(26),
+        lastMessageAt: ago(25),
+        instructorReadAt: ago(25),
+        studentReadAt: ago(24),
+      },
+    ],
+    officeMessages: [
+      {
+        id: "om_1",
+        threadId: "ot_maria",
+        authorId: "u_maria",
+        body: "Quick one before the lab: should the hub VNet live in its own resource group, or with the spokes?",
+        createdAt: ago(26),
+      },
+      {
+        id: "om_2",
+        threadId: "ot_maria",
+        authorId: "u_rakan",
+        body: "Its own resource group. It has a different lifecycle and different owners than the spokes. We'll look at why in Thursday's class.",
+        createdAt: ago(25),
+      },
+    ],
   };
 }
 

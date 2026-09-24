@@ -190,6 +190,36 @@ export interface Post {
   locked: boolean;
 }
 
+/**
+ * A weekly window when students can message their cohort's instructors.
+ * Wall-clock times in the academy timezone; end is exclusive.
+ */
+export interface OfficeHoursSlot {
+  cohortId: string;
+  weekday: number; // 0 = Monday ... 6 = Sunday
+  start: string; // "HH:MM"
+  end: string; // "HH:MM"
+}
+
+/** One conversation per student per cohort, between the student and the cohort's instructors. */
+export interface OfficeThread {
+  id: string;
+  cohortId: string;
+  studentId: string;
+  createdAt: Date;
+  lastMessageAt: Date;
+  instructorReadAt: Date | null;
+  studentReadAt: Date | null;
+}
+
+export interface OfficeMessage {
+  id: string;
+  threadId: string;
+  authorId: string;
+  body: string;
+  createdAt: Date;
+}
+
 /** When someone last opened a community space. Drives the per-space unread counts. */
 export interface SpaceRead {
   userId: string;

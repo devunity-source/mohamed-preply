@@ -639,6 +639,52 @@ export async function removeStudentFromCohort(cohortId: string, userId: string) 
   done();
 }
 
+// ---------------------------------------------------------------------------
+// Office hours (cohort staff)
+
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Replace a cohort's weekly office hours. One window per weekday, start before end. */
+export async function saveOfficeHours(_prev: FormState, form: FormData): Promise<FormState> {
+  const cohortId = str(form, "cohortId", 100);
+  await managerOf(cohortId);
+  const s = db();
+  const slots: { cohortId: string; weekday: number; start: string; end: string }[] = [];
+  const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  for (let weekday = 0; weekday < 7; weekday++) {
+    if (form.get(`on:${weekday}`) !== "on") continue;
+    const start = str(form, `start:${weekday}`, 5);
+    const end = str(form, `end:${weekday}`, 5);
+    if (!HHMM.test(start) || !HHMM.test(end)) return { error: `${DAYS[weekday]}: enter times like 08:00.` };
+    if (start >= end) return { error: `${DAYS[weekday]}: the end time has to be after the start time.` };
+    slots.push({ cohortId, weekday, start, end });
+  }
+  s.officeHours = s.officeHours.filter((x) => x.cohortId !== cohortId).concat(slots);
+  done();
+  return { ok: true };
+}
+
+/** An instructor answers a student. Allowed any time; only students are held to the hours. */
+export async function replyOfficeMessage(_prev: FormState, form: FormData): Promise<FormState> {
+  const s = db();
+  const thread = s.officeThreads.find((t) => t.id === form.get("threadId"));
+  if (!thread) return { error: "Conversation not found." };
+  const user = await managerOf(thread.cohortId);
+  const body = str(form, "body", 2000);
+  if (!body) return { error: "Write your reply first." };
+  const now = new Date();
+  s.officeMessages.push({ id: newId("om"), threadId: thread.id, authorId: user.id, body, createdAt: now });
+  thread.lastMessageAt = now;
+  thread.instructorReadAt = now;
+  notify(
+    thread.studentId,
+    `${user.fullName.split(" ")[0]} replied to your office hours message`,
+    `/cohorts/${thread.cohortId}/office-hours`,
+  );
+  done();
+  return { ok: true };
+}
+
 export async function updateProgramme(_prev: FormState, form: FormData): Promise<FormState> {
   await admin();
   const programme = db().programmes.find((p) => p.id === form.get("programmeId"));

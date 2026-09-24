@@ -14,6 +14,7 @@ const TABS = [
   { href: "classes", label: "Classes" },
   { href: "labs", label: "Labs" },
   { href: "assignments", label: "Assignments" },
+  { href: "office-hours", label: "Office hours" },
   { href: "projects", label: "Projects" },
   { href: "certificate", label: "Certificate" },
 ];
