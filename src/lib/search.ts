@@ -69,8 +69,18 @@ export async function searchIndex(): Promise<SearchItem[]> {
         { label: "Students", hint: "Admin", href: "/admin/students", kind: "Admin" },
         { label: "Curriculum", hint: "Admin", href: "/admin/programmes", kind: "Admin" },
         { label: "Waitlist", hint: "Admin", href: "/admin/waitlist", kind: "Admin" },
-        { label: "New programme", hint: "Admin · create a draft programme", href: "/admin/programmes/new", kind: "Admin" },
-        { label: "New cohort", hint: "Admin · schedule a run of a programme", href: "/admin/cohorts/new", kind: "Admin" },
+        {
+          label: "New programme",
+          hint: "Admin · create a draft programme",
+          href: "/admin/programmes/new",
+          kind: "Admin",
+        },
+        {
+          label: "New cohort",
+          hint: "Admin · schedule a run of a programme",
+          href: "/admin/cohorts/new",
+          kind: "Admin",
+        },
       );
     }
     items.push({ label: "Moderation", hint: "Admin", href: "/admin/moderation", kind: "Admin" });
