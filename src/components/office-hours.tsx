@@ -93,9 +93,22 @@ export function OfficeReplyForm({
   );
 }
 
-export function MarkThreadRead({ threadId }: { threadId: string }) {
+/**
+ * Marks the open conversation read. Keyed on the newest message as well as the
+ * thread, so a reply that arrives while it's open is marked read too; skipped
+ * when nothing is unread, so it doesn't refresh the page for nothing.
+ */
+export function MarkThreadRead({
+  threadId,
+  latestId,
+  unread,
+}: {
+  threadId: string;
+  latestId: string | undefined;
+  unread: boolean;
+}) {
   useEffect(() => {
-    void markOfficeThreadRead(threadId);
-  }, [threadId]);
+    if (unread) void markOfficeThreadRead(threadId);
+  }, [threadId, latestId, unread]);
   return null;
 }

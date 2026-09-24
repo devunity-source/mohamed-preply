@@ -354,6 +354,9 @@ export async function markOfficeThreadRead(threadId: string) {
   if (!thread) return;
   if (thread.studentId === user.id) thread.studentReadAt = new Date();
   else if (canManage(user, thread.cohortId)) thread.instructorReadAt = new Date();
+  else return;
+  // Unread counts live in layouts (the admin tab label, the Home card), so refresh them.
+  revalidatePath("/", "layout");
 }
 
 function canManage(user: Profile, cohortId: string) {

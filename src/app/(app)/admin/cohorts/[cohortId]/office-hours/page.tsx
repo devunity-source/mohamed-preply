@@ -63,7 +63,7 @@ export default async function OfficeHoursAdmin({
             </ul>
             {thread && selected && (
               <div className="space-y-5">
-                <MarkThreadRead threadId={thread.id} />
+                <MarkThreadRead threadId={thread.id} latestId={messages.at(-1)?.id} unread={selected.unread} />
                 <p className="font-semibold">{selected.student.fullName}</p>
                 <Conversation messages={messages} viewerId={user.id} now={now} />
                 <OfficeReplyForm key={thread.id} action={replyOfficeMessage} threadId={thread.id} />

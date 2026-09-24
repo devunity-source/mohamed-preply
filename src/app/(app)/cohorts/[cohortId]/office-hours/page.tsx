@@ -2,7 +2,7 @@ import { ButtonLink, Card, Empty } from "@/components/ui";
 import { MarkThreadRead, OfficeMessageForm } from "@/components/office-hours";
 import { Conversation, OfficeStatusBanner, officeStatusText, WeeklySchedule } from "@/components/office-hours-view";
 import { cohortRoster } from "@/lib/data/repo";
-import { messagesIn, officeHoursFor, officeStatus, threadFor } from "@/lib/data/office-hours";
+import { messagesIn, officeHoursFor, officeStatus, threadFor, unreadRepliesFor } from "@/lib/data/office-hours";
 import { loadCohort } from "../load";
 
 export const metadata = { title: "Office hours" };
@@ -54,7 +54,13 @@ export default async function OfficeHours({ params }: PageProps<"/cohorts/[cohor
 
         {role === "student" && (
           <Card title="Your messages">
-            {thread && <MarkThreadRead threadId={thread.id} />}
+            {thread && (
+              <MarkThreadRead
+                threadId={thread.id}
+                latestId={messages.at(-1)?.id}
+                unread={unreadRepliesFor(cohort.id, user.id) > 0}
+              />
+            )}
             {messages.length ? (
               <Conversation messages={messages} viewerId={user.id} now={now} />
             ) : (
