@@ -5,6 +5,11 @@ import "server-only";
 const globalForLimits = globalThis as unknown as { __academeLimits?: Map<string, { count: number; resetAt: number }> };
 const buckets = (globalForLimits.__academeLimits ??= new Map());
 
+/** Forget every counter. Only reachable through the test hook. */
+export function resetRateLimits(): void {
+  buckets.clear();
+}
+
 /** Returns true if the call is allowed, false once `key` exceeds `limit` in the window. */
 export function rateLimit(key: string, limit: number, windowMs: number): boolean {
   const now = Date.now();

@@ -38,8 +38,16 @@ export function SubmitAssignment({
           className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-ink"
         />
       </label>
-      {state.error && <p className="text-sm text-k-deadline">{state.error}</p>}
-      {state.ok && <p className="text-sm text-k-office">Submitted. Your instructor has been notified.</p>}
+      {state.error && (
+        <p role="alert" className="text-sm text-k-deadline">
+          {state.error}
+        </p>
+      )}
+      {state.ok && (
+        <p role="status" className="text-sm text-k-office">
+          Submitted. Your instructor has been notified.
+        </p>
+      )}
       <Button disabled={pending}>
         {pending ? "Submitting…" : resubmit ? "Update submission" : "Submit assignment"}
       </Button>

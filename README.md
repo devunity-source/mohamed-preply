@@ -84,6 +84,35 @@ Before pushing, run: `npm run typecheck && npm run lint && npm run test:db && np
 
 ---
 
+## Testing
+
+| Command | What it checks |
+| --- | --- |
+| `npm run test:db` | Database security rules (RLS) on an in-process Postgres, 124 checks |
+| `npm run test:e2e` | Browser tests: every feature by role, permissions, tampered requests, and layout at desktop, tablet and phone sizes |
+| `npm run test:e2e:ui` | The same, in Playwright's UI to watch or debug a test |
+| `npm test` | Both |
+
+The first time, install the test browser: `npx playwright install chromium`.
+
+`test:e2e` builds the app and starts it on port 3210 with demo data, then runs everything in `tests/e2e/`. Each test starts from fresh seed data through a reset endpoint that only exists when the test runner starts the server with `E2E_TEST_HOOKS=1` and a random secret. Never set those in a real deployment. Add `E2E_SKIP_BUILD=1` to reuse an existing build.
+
+| Spec | Covers |
+| --- | --- |
+| `public.spec.ts` | Landing page, waitlist, certificate verification, sign-in redirect, security headers |
+| `auth.spec.ts` | Sign-in errors, session cookie, safe redirects, lockout, temporary passwords |
+| `student.spec.ts` | Welcome, progress, lessons, labs, assignments, search, calendar, notifications |
+| `community.spec.ts` | Posts, replies, reactions, mentions, unread counts, read-only spaces, XSS |
+| `teaching.spec.ts` | Grading, reminders, lab reviews, attendance, classes, projects, moderation |
+| `admin.spec.ts` | Certificates, pricing and publishing, new programmes and cohorts, adding and removing students, CSV export |
+| `office-hours.spec.ts` | Schedule, greyed-out outside hours, server enforcement, inbox, replies, unread counts, privacy |
+| `security.spec.ts` | Role boundaries and replayed or edited requests |
+| `layout.spec.ts` | 41 pages with no sideways scrolling, at 1440, 768 and 390 px |
+
+GitHub Actions (`.github/workflows/ci.yml`) runs typecheck, lint, formatting, the database tests, the build and the browser tests on every push and pull request. If a browser test fails, the report and screenshots are attached to the run.
+
+---
+
 ## Configuration
 
 Copy the example file and edit it if you need to:
@@ -95,6 +124,7 @@ cp .env.example .env.local
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `ACADEMY_TIMEZONE` | `Asia/Dubai` | Timezone every class time and deadline is shown in (UAE, UTC+4, no daylight saving). Any IANA name works, e.g. `Europe/London`. |
+| `app.academy_timezone` (database) | `Asia/Dubai` | Phase 2: the database's copy of the timezone, used to decide if office hours are open. Must match `ACADEMY_TIMEZONE`: `alter database postgres set app.academy_timezone = 'Asia/Dubai';` |
 | `DEMO_PASSWORD` | `academe-demo` in dev, **unset in production** | Password for the seeded demo accounts. In production, if unset, nobody can sign in as a seeded account. |
 | `DEMO_LOGIN` | on in dev, **off in production** | Set to `true` to allow one-click demo sign-in on a deployment. Only for throwaway demo instances: it lets anyone sign in as the admin. |
 | `NEXT_PUBLIC_SUPABASE_URL` and the rest | unset | Phase 2 (real backend). |
@@ -117,8 +147,9 @@ supabase/
 │   ├── 0005_ux_state.sql             welcome dismissal, per-space read times
 │   ├── 0006_usd_and_cert_prefix.sql  USD as the default currency
 │   ├── 0007_create_programmes_cohorts.sql  admins create programmes and cohorts
-│   └── 0008_office_hours.sql         weekly office hours, student ↔ instructor threads
-└── tests/rls.test.mjs                111 access-control checks
+│   ├── 0008_office_hours.sql         weekly office hours, student ↔ instructor threads
+│   └── 0009_office_hours_hardening.sql  review fixes: column-level updates, removed students, timezone setting
+└── tests/rls.test.mjs                124 access-control checks
 ```
 
 `npm run test:db` runs every migration on an in-process Postgres (PGlite), then acts as students, instructors, an admin, an outsider and an anonymous visitor to check who can read and write what. No Postgres install or Docker needed.

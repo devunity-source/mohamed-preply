@@ -90,8 +90,10 @@ supabase/migrations/0005_ux_state.sql             onboarded_at, space_reads (unr
 supabase/migrations/0006_usd_and_cert_prefix.sql  currency default USD
 supabase/migrations/0007_create_programmes_cohorts.sql  admin write on cohorts + members, unique cert code
 supabase/migrations/0008_office_hours.sql  office_hours, office_threads, office_messages, office_open()
+supabase/migrations/0009_office_hours_hardening.sql  code review fixes for 0008
+tests/e2e/                          Playwright suite (65 tests), playwright.config.ts, .github/workflows/ci.yml
 docs/refund-policy.md               refund policy draft (needs legal review)
-supabase/tests/rls.test.mjs         111 RLS checks on PGlite (npm run test:db)
+supabase/tests/rls.test.mjs         124 RLS checks on PGlite (npm run test:db)
 legacy/                             previous repo contents, untouched
 ```
 
@@ -168,7 +170,8 @@ Needs from you: a Supabase project, a Stripe account, a Resend account (see **Op
 - [ ] Checkout shows "Full refund until week 2 starts" next to Pay, linking to the published refund policy
 - [ ] Resend: welcome, class-starts-in-30-min, deadline-tomorrow, graded, mentioned
 - [ ] Realtime: live new posts/comments in spaces, notification badge
-- [ ] Deploy (Vercel + Supabase), preview environments per PR, CI running typecheck, lint, `test:db` and build
+- [x] CI on every push and PR: typecheck, lint, formatting, `test:db`, build, Playwright suite
+- [ ] Deploy (Vercel + Supabase), preview environments per PR
 
 ## Phase 3: Instructor and admin ✅
 
@@ -306,3 +309,5 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-24 | Admins can add students to a cohort by email (existing account, or a new one with a one-time temporary password). 20 new browser checks plus a replay test: an instructor replaying the admin action is refused. |
 | 2026-09-24 | Change password (with temporary-password nudge, other sessions signed out), remove student from cohort, landing redesign around the evening schedule (Dusk/Chalk/Lamp palette, Archivo, six-week strip). 17 new browser checks; fixed a mobile overflow from a screen-reader-only table header. |
 | 2026-09-24 | Office hours: per-weekday schedule, messaging only while open (UI + server + RLS), instructor inbox with replies, Home card. Migration 0008, `test:db` 111 checks, 30 new browser checks. Fixed the app's main column overflowing at tablet widths (768px) on every page. |
+| 2026-09-24 | Code review of 77bcabb (office hours), all four findings fixed: thread updates limited to each side's own read time (0009, column grants + trigger; last_message_at set by the database; server timestamps); removed students can't write in old threads; unread counts refresh without reload and new messages in an open thread get marked read; database timezone comes from `app.academy_timezone`. 13 new RLS checks (124). |
+| 2026-09-24 | QA: Playwright suite in `tests/e2e/` (65 tests: every feature by role, permissions, tampered requests, layout at 1440/768/390 px), secret-gated reset hook, GitHub Actions CI. Found and fixed: the assignment form's errors weren't announced to screen readers; reseeding reused already-edited seed objects. |
