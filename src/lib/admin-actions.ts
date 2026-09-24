@@ -8,9 +8,9 @@ import { cohortById, nextCertificateId, unassignedStudents } from "@/lib/data/ad
 import { canManageCohort, canModerate, isAdmin } from "@/lib/authz";
 import { canCreateMeetings, createMeeting } from "@/lib/integrations/video";
 import { currentUser } from "@/lib/session";
-import { wallTime, zonedParts } from "@/lib/time";
+import { addDays, formatMonthYear, wallTime, zonedParts } from "@/lib/time";
 import type { FormState } from "@/lib/actions";
-import type { Attendance, LessonKind, MeetingProvider, Profile } from "@/lib/types";
+import type { Attendance, Cohort, LessonKind, MeetingProvider, Profile, Space } from "@/lib/types";
 
 // Admin-area writes. Every action is reachable by direct POST, so each one
 // re-checks the caller and validates every input at runtime; TypeScript
@@ -429,6 +429,126 @@ export async function deleteComment(commentId: string) {
 // ---------------------------------------------------------------------------
 // Curriculum (admin only)
 
+const CERT_CODE = /^[A-Z]{2,5}$/;
+
+const parseIncludes = (text: string) =>
+  text
+    .split("\n")
+    .map((l) => l.trim().slice(0, 80))
+    .filter(Boolean)
+    .slice(0, 12);
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
+/**
+ * New programmes start as a draft with one empty module per week, so the
+ * editor has something to fill in. Nothing is public until "Published" is ticked.
+ */
+export async function createProgramme(_prev: FormState, form: FormData): Promise<FormState> {
+  await admin();
+  const s = db();
+  const title = str(form, "title", 100);
+  const tagline = str(form, "tagline", 200);
+  const description = str(form, "description", 2000);
+  const weeks = int(form.get("weeks"), 1, 52);
+  const priceDollars = int(form.get("price"), 0, 100_000);
+  const certCode = str(form, "certCode", 5).toUpperCase();
+  const includes = parseIncludes(str(form, "includes", 1000));
+
+  if (!title) return { error: "Add a title." };
+  if (weeks === null) return { error: "Length must be between 1 and 52 weeks." };
+  if (priceDollars === null) return { error: "Price must be a whole number of US dollars." };
+  if (!CERT_CODE.test(certCode)) return { error: "Certificate code: 2 to 5 letters, like DEV or AI." };
+  if (s.programmes.some((p) => p.certCode === certCode)) {
+    return { error: `Another programme already uses ${certCode} on its certificates. Pick a different code.` };
+  }
+
+  const base = slugify(title) || "programme";
+  let slug = base;
+  for (let i = 2; s.programmes.some((p) => p.slug === slug); i++) slug = `${base}-${i}`;
+
+  const id = newId("p");
+  s.programmes.push({
+    id,
+    slug,
+    title,
+    tagline,
+    description,
+    durationWeeks: weeks,
+    priceCents: priceDollars * 100,
+    currency: "USD",
+    includes,
+    certCode,
+    published: false,
+  });
+  for (let week = 1; week <= weeks; week++) {
+    s.modules.push({ id: newId("m"), programmeId: id, week, position: 1, title: `Week ${week}`, summary: "" });
+  }
+  done();
+  redirect(`/admin/programmes/${id}?created=1`);
+}
+
+const COHORT_SPACES = [
+  { key: "general", name: "General", description: "Your cohort's home.", readOnly: false },
+  { key: "announcements", name: "Announcements", description: "Schedule changes and cohort news.", readOnly: true },
+  { key: "questions", name: "Questions", description: "Stuck? Ask here. No question is too basic.", readOnly: false },
+];
+
+/** A cohort is one run of a programme: dates, an instructor and its own community spaces. */
+export async function createCohort(_prev: FormState, form: FormData): Promise<FormState> {
+  await admin();
+  const s = db();
+  const programme = s.programmes.find((p) => p.id === form.get("programmeId"));
+  if (!programme) return { error: "Pick a programme." };
+  const instructor = s.profiles.find(
+    (p) => p.id === form.get("instructorId") && (p.role === "instructor" || p.role === "admin"),
+  );
+  if (!instructor) return { error: "Pick an instructor." };
+  const startsOn = parseWallTime(str(form, "startsOn", 10), "00:00");
+  if (!startsOn) return { error: "Pick a start date." };
+  const today = zonedParts(new Date());
+  if (startsOn < wallTime(today.year, today.month, today.day)) return { error: "The start date can't be in the past." };
+
+  // Cohort numbers run across the whole academy: #00, #01, #02…
+  const next = Math.max(-1, ...s.cohorts.map((c) => Number(c.code.replace(/\D/g, "")) || 0)) + 1;
+  const num = String(next).padStart(2, "0");
+  const cohort: Cohort = {
+    id: newId("c"),
+    programmeId: programme.id,
+    code: `#${num}`,
+    name: `${programme.title} · ${formatMonthYear(startsOn)}`,
+    startsOn,
+    endsOn: addDays(startsOn, programme.durationWeeks * 7 - 1, "00:00"),
+    status: startsOn <= new Date() ? "active" : "upcoming",
+  };
+  s.cohorts.push(cohort);
+  s.cohortMembers.push({ cohortId: cohort.id, userId: instructor.id, role: "instructor" });
+  for (const sp of COHORT_SPACES) {
+    let slug = `cohort-${num}-${sp.key}`;
+    for (let i = 2; s.spaces.some((x) => x.slug === slug); i++) slug = `cohort-${num}-${sp.key}-${i}`;
+    const space: Space = {
+      id: newId("s"),
+      slug,
+      name: sp.name,
+      group: `Cohort #${num}`,
+      description: sp.description,
+      cohortId: cohort.id,
+      readOnly: sp.readOnly,
+    };
+    s.spaces.push(space);
+  }
+  notify(instructor.id, `You're teaching ${cohort.name} (cohort ${cohort.code})`, `/admin/cohorts/${cohort.id}`);
+  done();
+  redirect(`/admin/cohorts/${cohort.id}`);
+}
+
 export async function updateProgramme(_prev: FormState, form: FormData): Promise<FormState> {
   await admin();
   const programme = db().programmes.find((p) => p.id === form.get("programmeId"));
@@ -445,6 +565,7 @@ export async function updateProgramme(_prev: FormState, form: FormData): Promise
     description,
     priceCents: priceDollars * 100,
     published: form.get("published") === "on",
+    ...(form.has("includes") ? { includes: parseIncludes(str(form, "includes", 1000)) } : {}),
   });
   done();
   return { ok: true };

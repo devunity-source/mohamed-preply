@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
-import { Card, Label, PageHeader, Pill } from "@/components/ui";
+import { ArrowUpRight, Plus } from "lucide-react";
+import { ButtonLink, Card, Label, PageHeader, Pill } from "@/components/ui";
 import { cohortStats, waitlistRows } from "@/lib/data/admin";
 import { cohortWeek } from "@/lib/data/repo";
 import { isAdmin, managedCohortIds, requireAdminArea } from "@/lib/authz";
@@ -31,7 +31,13 @@ export default async function AdminOverview() {
 
   return (
     <>
-      <PageHeader eyebrow={admin ? "Overview" : "Your cohorts"} title={admin ? "Running the academy" : "Teaching"} />
+      <PageHeader eyebrow={admin ? "Overview" : "Your cohorts"} title={admin ? "Running the academy" : "Teaching"}>
+        {admin && (
+          <ButtonLink href="/admin/cohorts/new">
+            <Plus size={16} /> New cohort
+          </ButtonLink>
+        )}
+      </PageHeader>
 
       <dl className="mb-10 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line md:grid-cols-5">
         {kpis.map((k) => (

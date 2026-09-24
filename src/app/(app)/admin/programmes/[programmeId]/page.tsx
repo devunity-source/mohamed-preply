@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowDown, ArrowLeft, ArrowUp, FileText, PlayCircle, Trash2, Wrench } from "lucide-react";
-import { Card } from "@/components/ui";
+import { ArrowDown, ArrowLeft, ArrowUp, Check, FileText, PlayCircle, Trash2, Wrench } from "lucide-react";
+import { Card, Pill } from "@/components/ui";
+import { db } from "@/lib/data/store";
 import { ActionForm, field } from "@/components/admin-forms";
 import { modulesFor, programmeById } from "@/lib/data/repo";
 import { deleteLesson, moveLesson, saveLesson, updateModule, updateProgramme } from "@/lib/admin-actions";
@@ -13,12 +14,16 @@ import { ConfirmForm } from "@/components/confirm-form";
 const ICON = { reading: FileText, video: PlayCircle, exercise: Wrench };
 const iconButton = "rounded-md p-1.5 text-muted hover:bg-line/60 hover:text-ink disabled:opacity-30";
 
-export default async function ProgrammeEditor({ params }: PageProps<"/admin/programmes/[programmeId]">) {
+export default async function ProgrammeEditor({ params, searchParams }: PageProps<"/admin/programmes/[programmeId]">) {
   await requireAdmin();
   const { programmeId } = await params;
   const programme = programmeById(programmeId);
   if (!programme) notFound();
   const modules = modulesFor(programme.id);
+  const { created } = await searchParams;
+  const cohorts = db()
+    .cohorts.filter((c) => c.programmeId === programme.id)
+    .sort((a, b) => b.startsOn.getTime() - a.startsOn.getTime());
 
   return (
     <>
@@ -29,40 +34,83 @@ export default async function ProgrammeEditor({ params }: PageProps<"/admin/prog
         <ArrowLeft size={14} /> All programmes
       </Link>
       <h1 className="mb-6 text-3xl font-semibold tracking-tight">{programme.title}</h1>
+      {created && (
+        <p role="status" className="mb-6 flex items-start gap-2 rounded-md border border-ink bg-surface p-4 text-sm">
+          <Check size={16} strokeWidth={3} className="mt-0.5 shrink-0" />
+          <span>
+            Created as a draft with {modules.length} empty weeks. Rename each week and add its lessons, then tick
+            Published when it&apos;s ready. Add a cohort below so students have a start date.
+          </span>
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_2fr] [&>*]:min-w-0">
-        <Card title="Programme" className="self-start">
-          <ActionForm action={updateProgramme} submitLabel="Save programme">
-            <input type="hidden" name="programmeId" value={programme.id} />
-            <Text label="Title" name="title" defaultValue={programme.title} required />
-            <Text label="Tagline" name="tagline" defaultValue={programme.tagline} />
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Description</span>
-              <textarea name="description" rows={5} defaultValue={programme.description} className={field} />
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Price (USD)</span>
-              <input
-                name="price"
-                type="number"
-                min={0}
-                step={1}
-                required
-                defaultValue={programme.priceCents / 100}
-                className={field}
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="published"
-                defaultChecked={programme.published}
-                className="accent-[var(--accent)]"
-              />
-              Published (visible on the landing page waitlist)
-            </label>
-          </ActionForm>
-        </Card>
+        <div className="space-y-5 self-start">
+          <Card title="Programme">
+            <ActionForm action={updateProgramme} submitLabel="Save programme">
+              <input type="hidden" name="programmeId" value={programme.id} />
+              <Text label="Title" name="title" defaultValue={programme.title} required />
+              <Text label="Tagline" name="tagline" defaultValue={programme.tagline} />
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium">Description</span>
+                <textarea name="description" rows={5} defaultValue={programme.description} className={field} />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium">Price (USD)</span>
+                <input
+                  name="price"
+                  type="number"
+                  min={0}
+                  step={1}
+                  required
+                  defaultValue={programme.priceCents / 100}
+                  className={field}
+                />
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="published"
+                  defaultChecked={programme.published}
+                  className="accent-[var(--accent)]"
+                />
+                Published (visible on the landing page waitlist)
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium">What&apos;s included (one per line)</span>
+                <textarea name="includes" rows={5} defaultValue={programme.includes.join("\n")} className={field} />
+              </label>
+              <p className="text-xs text-muted">Certificate code: {programme.certCode}</p>
+            </ActionForm>
+          </Card>
+          <Card
+            title={`Cohorts · ${cohorts.length}`}
+            action={
+              <Link href={`/admin/cohorts/new?programme=${programme.id}`} className="text-sm font-medium underline">
+                New cohort
+              </Link>
+            }
+          >
+            {cohorts.length ? (
+              <ul className="divide-y divide-line">
+                {cohorts.map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      href={`/admin/cohorts/${c.id}`}
+                      className="flex items-center gap-3 py-2 text-sm hover:text-accent"
+                    >
+                      <span className="font-mono text-xs text-muted">{c.code}</span>
+                      <span className="flex-1">{c.name}</span>
+                      <Pill tone={c.status === "active" ? "good" : "quiet"}>{c.status}</Pill>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted">No cohorts yet. Students need one to enrol.</p>
+            )}
+          </Card>
+        </div>
 
         <div className="space-y-5">
           {modules.map(({ module, lessons }) => (

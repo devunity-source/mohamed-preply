@@ -87,8 +87,9 @@ supabase/migrations/0003_waitlist.sql             landing page waitlist
 supabase/migrations/0004_teaching_tools.sql       Phase 3: rubrics, milestones, attendance, certificates
 supabase/migrations/0005_ux_state.sql             onboarded_at, space_reads (unread counts)
 supabase/migrations/0006_usd_and_cert_prefix.sql  currency default USD
+supabase/migrations/0007_create_programmes_cohorts.sql  admin write on cohorts + members, unique cert code
 docs/refund-policy.md               refund policy draft (needs legal review)
-supabase/tests/rls.test.mjs         78 RLS checks on PGlite (npm run test:db)
+supabase/tests/rls.test.mjs         91 RLS checks on PGlite (npm run test:db)
 legacy/                             previous repo contents, untouched
 ```
 
@@ -174,6 +175,8 @@ Admin area at `/admin` (the **Admin** item in the sidebar). **Admins see everyth
 - [x] Admin shell: overview KPIs, students, curriculum, waitlist (+ CSV export), moderation; per-cohort tabs for dashboard, grading, lab reviews, attendance, classes, projects, certificates
 - [x] Cohort dashboard: students, week, attendance %, submission %, average progress, **estimated revenue** (admins only, labelled "est." until Stripe), what needs grading, upcoming, at-risk students with reasons, per-student table
 - [x] Curriculum editor: programme title/tagline/description/price/published, module titles, lessons (add, edit, reorder, delete). Unpublishing hides a programme from the landing page, catalogue and waitlist.
+- [x] **New programme** (admins): title, tagline, description, length in weeks, USD price, certificate code (unique, 2 to 5 letters), what's included. Starts as a draft with empty Week 1 to Week N modules. No delete by design: unpublish instead, so cohorts and certificates keep their history.
+- [x] **New cohort** (admins): programme, start date (today or later, UAE time) and instructor. Gets the next academy-wide number (#03…), an end date from the programme length, its own General / Announcements / Questions spaces, and notifies the instructor. Students still join through enrolment (Phase 2 Stripe).
 - [x] Class scheduler: create, edit, delete (future only), recording links. 🟡 Meeting links are pasted; `src/lib/integrations/video.ts` is where Zoom API creation plugs in once `ZOOM_*` keys exist.
 - [x] Grading: per-criterion rubric (default 40/25/20/15), live total, required feedback, re-grading, student notified with the grade, one-click reminder to everyone who hasn't submitted
 - [x] Lab reviews: queue of submitted labs with pass / return (student notified), full status matrix. Only instructors can pass a lab.
@@ -292,3 +295,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-24 | UX batch 2: one-line cohort header, single admin tab bar + cohort switcher, folded community spaces, mobile bottom bar, calmer status colours, blank attendance + mark remaining, one-at-a-time grading with save and next. 35 new browser checks. |
 | 2026-09-24 | UX batch 3: progress breakdown, sign-in card, first-visit welcome, sans labels, ⌘K search, unread counts per space. Migration 0005, `test:db` 78 checks, 24 new browser checks. |
 | 2026-09-24 | Owner answers: UAE timezone (`Asia/Dubai`), USD pricing, `ACM-` certificate IDs, sign-in = email + password + Google + LinkedIn. Refund policy drafted (`docs/refund-policy.md`). Migration 0006. |
+| 2026-09-24 | Admins can create programmes (draft, empty weekly modules) and cohorts (instructor, spaces, notification). Migration 0007, `test:db` 91 checks, 24 new browser checks. |

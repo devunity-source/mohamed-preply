@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
-import { Label, PageHeader, Pill } from "@/components/ui";
+import { ArrowUpRight, Plus } from "lucide-react";
+import { ButtonLink, Label, PageHeader, Pill } from "@/components/ui";
 import { listProgrammes, modulesFor } from "@/lib/data/repo";
 import { requireAdmin } from "@/lib/authz";
 import { formatMoney } from "@/lib/format";
@@ -9,7 +9,11 @@ export default async function ProgrammesAdmin() {
   await requireAdmin();
   return (
     <>
-      <PageHeader eyebrow="Curriculum" title="Programmes" />
+      <PageHeader eyebrow="Curriculum" title="Programmes">
+        <ButtonLink href="/admin/programmes/new">
+          <Plus size={16} /> New programme
+        </ButtonLink>
+      </PageHeader>
       <div className="grid gap-5 md:grid-cols-2">
         {listProgrammes().map((p) => {
           const modules = modulesFor(p.id);

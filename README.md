@@ -115,8 +115,9 @@ supabase/
 │   ├── 0003_waitlist.sql             landing page waitlist
 │   ├── 0004_teaching_tools.sql       grading, projects, attendance, certificates
 │   ├── 0005_ux_state.sql             welcome dismissal, per-space read times
-│   └── 0006_usd_and_cert_prefix.sql  USD as the default currency
-└── tests/rls.test.mjs                78 access-control checks
+│   ├── 0006_usd_and_cert_prefix.sql  USD as the default currency
+│   └── 0007_create_programmes_cohorts.sql  admins create programmes and cohorts
+└── tests/rls.test.mjs                91 access-control checks
 ```
 
 `npm run test:db` runs every migration on an in-process Postgres (PGlite), then acts as students, instructors, an admin, an outsider and an anonymous visitor to check who can read and write what. No Postgres install or Docker needed.
