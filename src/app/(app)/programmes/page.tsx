@@ -1,7 +1,8 @@
 import { formatMoney } from "@/lib/format";
 import Link from "next/link";
-import { Check } from "lucide-react";
-import { Card, Label, PageHeader, Pill, ProgressBar } from "@/components/ui";
+import { Check, Plus } from "lucide-react";
+import { ButtonLink, Card, Label, PageHeader, Pill, ProgressBar } from "@/components/ui";
+import { isAdmin } from "@/lib/authz";
 import { cohortWeek, publishedProgrammes, myCohorts, progressFor } from "@/lib/data/repo";
 import { currentUser } from "@/lib/session";
 import { formatShortDate } from "@/lib/time";
@@ -19,7 +20,13 @@ export default async function Programmes() {
 
   return (
     <>
-      <PageHeader eyebrow="My programmes" title="Programmes" />
+      <PageHeader eyebrow="My programmes" title="Programmes">
+        {isAdmin(user) && (
+          <ButtonLink href="/admin/programmes/new">
+            <Plus size={16} /> New programme
+          </ButtonLink>
+        )}
+      </PageHeader>
 
       <div className="grid gap-5 md:grid-cols-2">
         {mine.map(({ cohort, programme, role }) => {

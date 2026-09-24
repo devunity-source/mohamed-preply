@@ -33,9 +33,14 @@ export default async function AdminOverview() {
     <>
       <PageHeader eyebrow={admin ? "Overview" : "Your cohorts"} title={admin ? "Running the academy" : "Teaching"}>
         {admin && (
-          <ButtonLink href="/admin/cohorts/new">
-            <Plus size={16} /> New cohort
-          </ButtonLink>
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/admin/programmes/new" variant="ghost">
+              <Plus size={16} /> New programme
+            </ButtonLink>
+            <ButtonLink href="/admin/cohorts/new">
+              <Plus size={16} /> New cohort
+            </ButtonLink>
+          </div>
         )}
       </PageHeader>
 
