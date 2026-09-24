@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 export const metadata = { title: "Verify a certificate" };
 
-/** /verify?id=AM-DEV-2026-00001 → /verify/AM-DEV-2026-00001 */
+/** /verify?id=ACM-DEV-2026-00001 → /verify/ACM-DEV-2026-00001 */
 export default async function VerifyIndex({ searchParams }: PageProps<"/verify">) {
   const { id } = await searchParams;
   const clean =
@@ -26,7 +26,7 @@ export default async function VerifyIndex({ searchParams }: PageProps<"/verify">
           id="verify-id"
           name="id"
           required
-          placeholder="AM-DEV-2026-00001"
+          placeholder="ACM-DEV-2026-00001"
           className="h-11 flex-1 rounded-md border border-line bg-surface px-3 font-mono text-sm uppercase outline-none focus:border-ink"
         />
         <button className="rounded-md bg-ink px-4 text-sm font-medium text-paper hover:bg-accent hover:text-accent-ink">

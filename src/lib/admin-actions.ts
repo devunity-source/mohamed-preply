@@ -436,14 +436,14 @@ export async function updateProgramme(_prev: FormState, form: FormData): Promise
   const title = str(form, "title", 100);
   const tagline = str(form, "tagline", 200);
   const description = str(form, "description", 2000);
-  const priceEuros = int(form.get("price"), 0, 100_000);
+  const priceDollars = int(form.get("price"), 0, 100_000);
   if (!title) return { error: "Add a title." };
-  if (priceEuros === null) return { error: "Price must be a whole number of euros." };
+  if (priceDollars === null) return { error: "Price must be a whole number of US dollars." };
   Object.assign(programme, {
     title,
     tagline,
     description,
-    priceCents: priceEuros * 100,
+    priceCents: priceDollars * 100,
     published: form.get("published") === "on",
   });
   done();

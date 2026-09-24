@@ -35,15 +35,32 @@ That's it. There's nothing to configure for the demo.
 | Yara Saleh (graduate) | A finished student with an issued certificate. Open Programmes → the #00 cohort → Certificate to print it. |
 | Any other student | Same cohort, different progress. Sarah hasn't submitted assignment #3, John submitted it late. |
 
-**Things worth clicking:**
+**A 15-minute test run.** Each line says what should happen, so you can tell if something's off.
 
-- **Admin (as Rakan):** grade assignment #3 with the rubric, pass a lab, take attendance, tick a team milestone, issue Ines's certificate in cohort #00 and open its `/verify` link, lock a thread
-- **Landing page (`/`):** join the waitlist (try a bad email too), click a programme's "Join waitlist" to preselect it
+*As Ahmed (student):*
 
-- **Home:** next class, tasks, this week, progress
-- **Programmes → the cohort:** tabs for schedule, modules (mark lessons done and watch progress move), classes, labs (start and submit), assignments (submit a GitHub URL)
-- **Community:** post in a space, reply, react, mention someone with `@handle` (try `@rakan`, then switch to Rakan and check Notifications)
-- **Calendar:** click any day for details
+1. **Home.** A welcome card explains how it works. Click **Got it**; it stays gone after a reload. Your progress card shows 53% with the breakdown underneath (lessons, labs, assignments).
+2. **Continue where you left off** opens lesson 2 of week 4. Read it, click **Mark done and continue**, and you land on lesson 3. Back on Home, the percentage has gone up.
+3. **Press ⌘K (Mac) or Ctrl+K (Windows).** Type `pods`, press Enter, and you're on that lesson. Type `grading` and nothing comes up, because students can't see admin tools.
+4. **Labs tab.** Your open lab is first; finished ones are folded under "Completed". Start and submit a lab and its status changes straight away.
+5. **Assignments.** Submit a GitHub URL (try `not-a-url` first: you get an error and your text stays in the box).
+6. **Community.** Spaces with new posts show an orange count. Open one: the new posts are tagged **New** and the count disappears. Topic spaces (AWS, Azure…) sit under **More spaces**. Post something that mentions `@rakan`.
+7. **Calendar.** Class times are in UAE time (GMT+4).
+
+*As Rakan (admin), via Profile → Demo mode:*
+
+8. **Notifications** shows Ahmed's mention.
+9. **Admin → the DevOps cohort → Grading → assignment #3.** One submission at a time. Enter rubric scores and feedback, press **Ctrl+Enter** (or ⌘+Enter), and it saves and opens the next ungraded one. `j` and `k` move between submissions. Try a score above the maximum: it's rejected.
+10. **Attendance.** Pick a class, mark one student Absent, then **Mark remaining present**. The absent mark stays.
+11. **Use the cohort dropdown** at the top to jump to the AI cohort; you stay on the same tab.
+12. **Certificates** in cohort #00: issue Ines's certificate. It gets an `ACM-DEV-…` ID. Open its verify link in a private window: it works without signing in.
+13. **Curriculum:** change a price and check the landing page shows it (prices are in USD).
+
+*As Samira (instructor):* the Admin area only shows the AI Engineering cohort, and ⌘K only finds her own cohort's pages.
+
+*Phone layout:* in Chrome, open DevTools (F12) and click the phone icon (device toolbar), then pick an iPhone. You should get a bottom bar (Home, Learn, Community, Calendar, More) and no sideways scrolling on any page.
+
+*Signed out:* `/dashboard` sends you to `/login`, which has a **Join the waitlist** link. The landing page waitlist rejects a bad email and accepts a good one.
 
 **Demo data resets every time the server restarts.** The seed is anchored to today's date, so the cohort is always in week 4 of 6 whenever you start it.
 
@@ -77,7 +94,7 @@ cp .env.example .env.local
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `ACADEMY_TIMEZONE` | `Europe/Amsterdam` | Timezone every class time and deadline is shown in. Any IANA name, e.g. `Europe/London`, `Asia/Dubai`. |
+| `ACADEMY_TIMEZONE` | `Asia/Dubai` | Timezone every class time and deadline is shown in (UAE, UTC+4, no daylight saving). Any IANA name works, e.g. `Europe/London`. |
 | `DEMO_PASSWORD` | `academe-demo` in dev, **unset in production** | Password for the seeded demo accounts. In production, if unset, nobody can sign in as a seeded account. |
 | `DEMO_LOGIN` | on in dev, **off in production** | Set to `true` to allow one-click demo sign-in on a deployment. Only for throwaway demo instances: it lets anyone sign in as the admin. |
 | `NEXT_PUBLIC_SUPABASE_URL` and the rest | unset | Phase 2 (real backend). |
@@ -97,7 +114,8 @@ supabase/
 │   ├── 0002_security_hardening.sql   fixes from the security review
 │   ├── 0003_waitlist.sql             landing page waitlist
 │   ├── 0004_teaching_tools.sql       grading, projects, attendance, certificates
-│   └── 0005_ux_state.sql             welcome dismissal, per-space read times
+│   ├── 0005_ux_state.sql             welcome dismissal, per-space read times
+│   └── 0006_usd_and_cert_prefix.sql  USD as the default currency
 └── tests/rls.test.mjs                78 access-control checks
 ```
 

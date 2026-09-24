@@ -23,9 +23,9 @@ export interface Programme {
   description: string;
   durationWeeks: number;
   priceCents: number;
-  currency: "EUR";
+  currency: "USD";
   includes: string[];
-  // Used in certificate IDs, e.g. AM-DEV-2026-00001.
+  // Used in certificate IDs, e.g. ACM-DEV-2026-00001.
   certCode: string;
   published: boolean;
 }
@@ -245,7 +245,7 @@ export interface Milestone {
 }
 
 export interface Certificate {
-  // Public, e.g. AM-DEV-2026-00001.
+  // Public, e.g. ACM-DEV-2026-00001.
   id: string;
   userId: string;
   cohortId: string;

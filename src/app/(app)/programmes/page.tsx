@@ -1,3 +1,4 @@
+import { formatMoney } from "@/lib/format";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { Card, Label, PageHeader, Pill, ProgressBar } from "@/components/ui";
@@ -7,8 +8,7 @@ import { formatShortDate } from "@/lib/time";
 
 export const metadata = { title: "Programmes" };
 
-const price = (cents: number, currency: string) =>
-  new Intl.NumberFormat("en-IE", { style: "currency", currency, maximumFractionDigits: 0 }).format(cents / 100);
+const price = (cents: number, currency: string) => formatMoney(cents, currency);
 
 export default async function Programmes() {
   const user = await currentUser();

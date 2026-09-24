@@ -8,7 +8,7 @@ import { formatDate, formatMonthYear } from "@/lib/time";
 // Public: anyone with the link can check a certificate. Shows only what's
 // printed on the certificate itself (mirrors verify_certificate() in SQL).
 
-const ID = /^AM-[A-Z]{2,5}-\d{4}-\d{5}$/;
+const ID = /^ACM-[A-Z]{2,5}-\d{4}-\d{5}$/;
 
 export async function generateMetadata({ params }: PageProps<"/verify/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -41,7 +41,7 @@ export default async function Verify({ params }: PageProps<"/verify/[id]">) {
               ? `Issued by AcadeMe on ${formatDate(result.cert.issuedAt)}.`
               : result
                 ? "It is no longer valid. Contact AcadeMe if you have questions."
-                : "Check the ID. It looks like AM-DEV-2026-00001."}
+                : "Check the ID. It looks like ACM-DEV-2026-00001."}
           </p>
           <p className="mt-2 font-mono text-xs tracking-wider text-muted uppercase">{id}</p>
         </div>
@@ -63,7 +63,7 @@ export default async function Verify({ params }: PageProps<"/verify/[id]">) {
         <input
           id="verify-id"
           name="id"
-          placeholder="AM-DEV-2026-00001"
+          placeholder="ACM-DEV-2026-00001"
           className="h-11 flex-1 rounded-md border border-line bg-surface px-3 font-mono text-sm uppercase outline-none focus:border-ink"
         />
         <button className="rounded-md bg-ink px-4 text-sm font-medium text-paper hover:bg-accent hover:text-accent-ink">

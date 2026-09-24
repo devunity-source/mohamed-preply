@@ -30,7 +30,7 @@ await db.exec(`
   insert into spaces (id, slug, name, "group", cohort_id, read_only) values ('${ANN}','c-ann','Ann','C','${C1}',true),('${GEN}','c-gen','Gen','C','${C1}',false),
     ('${GEN2}','c2-gen','Gen2','C2','${C2}',false),('${GLOBAL_ANN}','ann','Announcements','General',null,true);
   insert into assignments (id, cohort_id, title, due_at) values ('${A1}','${C1}','A1', now() - interval '1 day');
-  insert into certificates (id, user_id, cohort_id) values ('AM-DEV-2026-00001','${st}','${C1}');
+  insert into certificates (id, user_id, cohort_id) values ('ACM-DEV-2026-00001','${st}','${C1}');
 `);
 async function as(uid, sql) {
   await db.exec(uid ? `set role authenticated; select set_config('request.jwt.sub','${uid}',false);` : `set role anon; select set_config('request.jwt.sub','',false);`);
@@ -85,7 +85,7 @@ await expect("student marks notification read", "ok", as(st, `update notificatio
 await db.exec(`insert into grades (submission_id, grade, graded_by) select id, 80, '${ins}' from assignment_submissions where user_id='${st2}'`);
 await expect("maria edits GRADED submission", "deny", as(st2, `update assignment_submissions set repo_url='https://github.com/x/y' where user_id='${st2}' returning id`));
 await expect("student uploads into own folder", "ok", as(st, `update assignment_submissions set file_path='${st}/work.zip' where user_id='${st}' returning file_path`));
-await expect("anon verifies certificate by id", "ok", as(null, `select * from verify_certificate('AM-DEV-2026-00001')`));
+await expect("anon verifies certificate by id", "ok", as(null, `select * from verify_certificate('ACM-DEV-2026-00001')`));
 await expect("student reads own certificate", "ok", as(st, `select * from certificates`));
 console.log("-- waitlist (0003)");
 await expect("anon joins waitlist", "ok", as(null, `insert into waitlist (email, programme_id) values ('new@example.com','${PROG}')`));
@@ -125,11 +125,11 @@ await expect("cohort instructor locks post", "ok", as(ins, `update posts set loc
 await expect("reply to locked post", "deny", as(st2, `insert into comments (post_id, author_id, body) values ('${lp.rows[0].id}','${st2}','hi')`));
 await expect("instructor gives rubric scores", "ok", as(ins, `insert into grades (submission_id, grade, graded_by, rubric_scores) select id, 90, '${ins}', '{"works":36}'::jsonb from assignment_submissions where user_id='${st}' returning grade`));
 
-await expect("admin issues certificate", "ok", as(adm, `insert into certificates (id, user_id, cohort_id, issued_by) values ('AM-DEV-2026-00002','${st2}','${C1}','${adm}') returning id`));
-await expect("instructor issues certificate", "deny", as(ins, `insert into certificates (id, user_id, cohort_id, issued_by) values ('AM-DEV-2026-00003','${st}','${C1}','${ins}')`));
+await expect("admin issues certificate", "ok", as(adm, `insert into certificates (id, user_id, cohort_id, issued_by) values ('ACM-DEV-2026-00002','${st2}','${C1}','${adm}') returning id`));
+await expect("instructor issues certificate", "deny", as(ins, `insert into certificates (id, user_id, cohort_id, issued_by) values ('ACM-DEV-2026-00003','${st}','${C1}','${ins}')`));
 await expect("student revokes own certificate", "none", as(st, `update certificates set revoked_at=now() where user_id='${st}' returning id`));
-await expect("admin revokes certificate", "ok", as(adm, `update certificates set revoked_at=now() where id='AM-DEV-2026-00002' returning revoked_at`));
-await expect("verify reports revocation", "ok", as(null, `select revoked_at from verify_certificate('AM-DEV-2026-00002') where revoked_at is not null`));
+await expect("admin revokes certificate", "ok", as(adm, `update certificates set revoked_at=now() where id='ACM-DEV-2026-00002' returning revoked_at`));
+await expect("verify reports revocation", "ok", as(null, `select revoked_at from verify_certificate('ACM-DEV-2026-00002') where revoked_at is not null`));
 
 console.log("-- 0005 ux state");
 await expect("student marks own space read", "ok", as(st, `insert into space_reads (user_id, space_id) values ('${st}','${GEN}') returning last_seen_at`));

@@ -32,7 +32,11 @@ This file is the single source of truth for what's planned, what's built, and wh
 | Frontend | Next.js 16 (App Router, server components, server actions), React 19, Tailwind 4 | Versions current as of 23 Sep 2026 (checked on npm). |
 | Backend (target) | Supabase: Postgres, Auth, Storage, Realtime, RLS | As proposed in the brief. |
 | Backend (now) | In-memory demo store seeded relative to today | No accounts yet. The UI is fully usable, and every page reads through one module (`src/lib/data/repo.ts`) so Phase 2 swaps implementations without touching pages. |
-| Timezone | All schedule times in `Europe/Amsterdam`, set via `ACADEMY_TIMEZONE` | **Assumption.** Pricing is in euros so I picked CET/CEST. Change the env var if you teach from elsewhere. |
+| Timezone | All schedule times in UAE time (`Asia/Dubai`, UTC+4, no daylight saving), set via `ACADEMY_TIMEZONE` | Confirmed by owner, 24 Sep 2026. |
+| Currency | Prices in **USD**: DevOps $670, AI Engineering $790 | Owner chose USD on 24 Sep 2026. Converted from €590 / €690 at that day's rate (1 EUR = 1.1379 USD) and rounded; owner to confirm the final numbers. |
+| Certificate IDs | `ACM-<programme>-<year>-<number>`, e.g. `ACM-DEV-2026-00001` | Owner's choice, 24 Sep 2026. |
+| Sign-in (target) | Email + password, Google, LinkedIn | Owner's choice, 24 Sep 2026. Google and LinkedIn arrive with Supabase Auth in Phase 2. |
+| Refunds | Full refund until week 2 starts; one free move to a later cohort before week 3 | Owner's choice, 24 Sep 2026. Draft in `docs/refund-policy.md`, needs legal review before publishing. |
 | Video | Zoom links for V1, LiveKit later | Brief says integrate first, build later. |
 | Design | Warm off-white paper, near-black ink, one signal-orange accent, mono uppercase labels, square geometry. Light + dark. | Matches "bold, geometric, minimalist". |
 | Auth (now) | Built-in email + password: scrypt hashes, server-side sessions, `__Host-` HttpOnly cookie. One-click demo sign-in only in dev or with `DEMO_LOGIN=true`. Sign-in required for everything but `/`, `/verify` and `/login`. | Replaced the cookie-holds-a-user-id demo auth (security review #1). Phase 2 swaps it for Supabase Auth behind the same `currentUser()`. |
@@ -82,6 +86,8 @@ supabase/migrations/0002_security_hardening.sql   review fixes
 supabase/migrations/0003_waitlist.sql             landing page waitlist
 supabase/migrations/0004_teaching_tools.sql       Phase 3: rubrics, milestones, attendance, certificates
 supabase/migrations/0005_ux_state.sql             onboarded_at, space_reads (unread counts)
+supabase/migrations/0006_usd_and_cert_prefix.sql  currency default USD
+docs/refund-policy.md               refund policy draft (needs legal review)
 supabase/tests/rls.test.mjs         78 RLS checks on PGlite (npm run test:db)
 legacy/                             previous repo contents, untouched
 ```
@@ -145,7 +151,7 @@ legacy/                             previous repo contents, untouched
 Needs from you: a Supabase project, a Stripe account, a Resend account (see **Open questions**).
 
 - [ ] Supabase clients (`@supabase/ssr`, already installed) for server components and actions
-- [ ] Auth: move to Supabase Auth (magic link + Google) behind the existing `currentUser()` / `getSessionUser()`; add its session refresh to `src/proxy.ts` next to the CSP and the sign-in gate. Accounts and sessions currently live in memory.
+- [ ] Auth: move to Supabase Auth (email + password, Google, LinkedIn) behind the existing `currentUser()` / `getSessionUser()`; add its session refresh to `src/proxy.ts` next to the CSP and the sign-in gate. Accounts and sessions currently live in memory.
 - [ ] Password reset and sign-up flows (arrive with Supabase Auth + email)
 - [ ] Rate limiting on every write (posts, comments, reactions, submissions) (security review #9). The waitlist is already limited; move `src/lib/rate-limit.ts` to a shared store so limits hold across instances.
 - [ ] Waitlist: store in Supabase (`0003_waitlist.sql`), confirmation email via Resend, admin export, invite waitlisters when enrolment opens
@@ -154,7 +160,9 @@ Needs from you: a Supabase project, a Stripe account, a Resend account (see **Op
 - [ ] Seed script that loads `seed.ts` data into Supabase for staging
 - [ ] Storage bucket `submissions` for ZIP uploads (RLS: owner + cohort instructors)
 - [ ] Stripe Checkout on "Enrol now" → webhook → create profile, enrollment, cohort membership, notifications, welcome email (one transaction)
-- [ ] Coupons, refunds (webhook sets payment `refunded`, removes membership)
+- [ ] Coupons, refunds (webhook sets payment `refunded`, removes membership, revokes any certificate), per `docs/refund-policy.md`
+- [ ] Admin actions: refund a student, move a student to a later cohort (keeps lesson, lab and grade history); record the refund policy version on each payment
+- [ ] Checkout shows "Full refund until week 2 starts" next to Pay, linking to the published refund policy
 - [ ] Resend: welcome, class-starts-in-30-min, deadline-tomorrow, graded, mentioned
 - [ ] Realtime: live new posts/comments in spaces, notification badge
 - [ ] Deploy (Vercel + Supabase), preview environments per PR, CI running typecheck, lint, `test:db` and build
@@ -260,12 +268,12 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 
 ## Open questions for you
 
-1. **Timezone.** I assumed `Europe/Amsterdam`. Correct?
+1. ~~**Timezone.**~~ Answered: UAE time (`Asia/Dubai`).
 2. **Phase 2 accounts.** When you're ready: Supabase project, Stripe account, Resend account. Add keys as environment secrets, never in the repo.
-3. **Sign-in methods.** Magic link + Google is my default. Want LinkedIn or GitHub too?
-4. **Certificate ID prefix.** Using `AM-` for AcadeMe. OK?
-5. **Refund policy.** Needed before Stripe goes live (e.g. full refund before week 2).
-6. **AI Engineering price.** The landing page shows **€690**. I made that number up in the seed data; the €590 DevOps price came from your brief. Confirm or change it in `src/lib/data/seed.ts`.
+3. ~~**Sign-in methods.**~~ Answered: email + password, Google, LinkedIn.
+4. ~~**Certificate ID prefix.**~~ Answered: `ACM-`. (Heads-up: ACM is also the Association for Computing Machinery. Fine for an ID, but worth knowing.)
+5. **Refund policy.** Rule decided (full refund until week 2). Draft in `docs/refund-policy.md`: fill in the [bracketed] details and get a UAE lawyer to check it before it's published.
+6. **Prices in USD.** Now **$670** (DevOps) and **$790** (AI Engineering), converted from euros and rounded. The AI price started as a number I made up. Confirm both, or change them in `src/lib/data/seed.ts`.
 7. **Landing page claims to confirm:** "8 to 10 hours a week" and "no cloud experience needed". (The certificate verification link now exists.) Edit the FAQ in `src/app/(marketing)/page.tsx` if any are wrong.
 8. **Instructor bio.** Currently name and role only. Send a few lines and a photo when you want them on the page.
 
@@ -283,3 +291,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-24 | UX batch 1: lesson pages + continue learning, current work first, instant feedback with undo, confirm dialogs, mobile overflow fixes. 29 new browser checks. |
 | 2026-09-24 | UX batch 2: one-line cohort header, single admin tab bar + cohort switcher, folded community spaces, mobile bottom bar, calmer status colours, blank attendance + mark remaining, one-at-a-time grading with save and next. 35 new browser checks. |
 | 2026-09-24 | UX batch 3: progress breakdown, sign-in card, first-visit welcome, sans labels, ⌘K search, unread counts per space. Migration 0005, `test:db` 78 checks, 24 new browser checks. |
+| 2026-09-24 | Owner answers: UAE timezone (`Asia/Dubai`), USD pricing, `ACM-` certificate IDs, sign-in = email + password + Google + LinkedIn. Refund policy drafted (`docs/refund-policy.md`). Migration 0006. |

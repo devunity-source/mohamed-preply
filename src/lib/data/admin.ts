@@ -205,9 +205,9 @@ export function cohortCertificates(cohortId: string) {
   }));
 }
 
-/** Next certificate id for a programme and year, e.g. AM-DEV-2026-00003. */
+/** Next certificate id for a programme and year, e.g. ACM-DEV-2026-00003. */
 export function nextCertificateId(certCode: string, year: number): string {
-  const prefix = `AM-${certCode}-${year}-`;
+  const prefix = `ACM-${certCode}-${year}-`;
   const max = db()
     .certificates.filter((c) => c.id.startsWith(prefix))
     .reduce((n, c) => Math.max(n, Number(c.id.slice(prefix.length))), 0);

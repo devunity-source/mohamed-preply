@@ -138,8 +138,8 @@ const programmes: Programme[] = [
     description:
       "A live cohort programme covering the full delivery path: Linux, Git, Azure, Terraform, CI/CD, Kubernetes, security and monitoring. You finish with a capstone platform you can show employers.",
     durationWeeks: 6,
-    priceCents: 59000,
-    currency: "EUR",
+    priceCents: 67000,
+    currency: "USD",
     certCode: "DEV",
     published: true,
     includes: [
@@ -160,8 +160,8 @@ const programmes: Programme[] = [
     description:
       "Build, evaluate and deploy AI features: prompting, retrieval, tool use, evals, and cost control. Taught live with weekly builds.",
     durationWeeks: 6,
-    priceCents: 69000,
-    currency: "EUR",
+    priceCents: 79000,
+    currency: "USD",
     certCode: "AIE",
     published: true,
     includes: ["12 live classes", "Weekly builds", "Final project", "Cohort community", "Certificate"],
@@ -1071,7 +1071,7 @@ export function createSeed(now: Date = new Date()): Store {
   const graduation = addDays(pastStart, 6 * 7 + 2, "12:00");
   const certificates: Certificate[] = [
     {
-      id: `AM-DEV-${zonedYear(graduation)}-00001`,
+      id: `ACM-DEV-${zonedYear(graduation)}-00001`,
       userId: "u_yara",
       cohortId: "c_devops_00",
       issuedAt: graduation,
@@ -1079,7 +1079,7 @@ export function createSeed(now: Date = new Date()): Store {
       revokedAt: null,
     },
     {
-      id: `AM-DEV-${zonedYear(graduation)}-00002`,
+      id: `ACM-DEV-${zonedYear(graduation)}-00002`,
       userId: "u_ben",
       cohortId: "c_devops_00",
       issuedAt: graduation,

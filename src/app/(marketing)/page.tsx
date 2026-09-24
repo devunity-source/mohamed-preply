@@ -1,3 +1,4 @@
+import { formatMoney } from "@/lib/format";
 import type { Metadata } from "next";
 import Link from "next/link";
 import clsx from "clsx";
@@ -32,8 +33,7 @@ export const metadata: Metadata = {
 
 const TZ_CITY = (ACADEMY_TZ.split("/").pop() ?? ACADEMY_TZ).replaceAll("_", " ");
 
-const price = (cents: number, currency: string) =>
-  new Intl.NumberFormat("en-IE", { style: "currency", currency, maximumFractionDigits: 0 }).format(cents / 100);
+const price = (cents: number, currency: string) => formatMoney(cents, currency);
 
 const FEATURES = [
   {

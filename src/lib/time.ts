@@ -1,5 +1,5 @@
 // All schedule times are wall-clock times in the academy's timezone.
-export const ACADEMY_TZ = process.env.ACADEMY_TIMEZONE ?? "Europe/Amsterdam";
+export const ACADEMY_TZ = process.env.ACADEMY_TIMEZONE ?? "Asia/Dubai";
 
 const DAY_MS = 86_400_000;
 

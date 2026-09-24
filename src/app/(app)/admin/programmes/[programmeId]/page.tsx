@@ -41,7 +41,7 @@ export default async function ProgrammeEditor({ params }: PageProps<"/admin/prog
               <textarea name="description" rows={5} defaultValue={programme.description} className={field} />
             </label>
             <label className="block text-sm">
-              <span className="mb-1 block font-medium">Price (EUR)</span>
+              <span className="mb-1 block font-medium">Price (USD)</span>
               <input
                 name="price"
                 type="number"
