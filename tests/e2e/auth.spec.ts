@@ -161,6 +161,8 @@ test.describe("with Supabase", () => {
   }) => {
     await page.goto("/login");
     await page.getByRole("link", { name: /forgot/i }).click();
+    // The sign-in page has an Email field too: wait for the reset page before typing.
+    await expect(page).toHaveURL(/\/forgot-password$/);
     const form = main(page).locator("form");
     await form.getByLabel("Email").fill("nobody.here@example.com");
     await form.getByRole("button", { name: /reset link/ }).click();
