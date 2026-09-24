@@ -13,7 +13,10 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test": "npm run test:db && npm run test:e2e",
-    "db:bundle": "node scripts/bundle-migrations.mjs"
+    "db:bundle": "node scripts/bundle-migrations.mjs",
+    "db:seed": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/seed-curriculum.ts",
+    "test:e2e:supabase": "bash scripts/e2e-supabase.sh",
+    "db:check": "tsx --env-file-if-exists=.env.local scripts/check-supabase.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -37,6 +40,7 @@
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   },
   "engines": {

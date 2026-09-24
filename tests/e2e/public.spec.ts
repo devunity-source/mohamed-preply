@@ -1,4 +1,4 @@
-import { main, resetData, signIn, expect, test } from "./helpers";
+import { main, resetData, signIn, expect, test, id } from "./helpers";
 
 test.beforeEach(async ({ request }) => resetData(request));
 
@@ -70,19 +70,19 @@ test.describe("certificate verification", () => {
     anon,
   }) => {
     await signIn(page, "yara");
-    await page.goto("/cohorts/c_devops_00/certificate");
-    const id = (await main(page).innerText()).match(/ACM-DEV-\d{4}-\d{5}/)![0];
+    await page.goto(`/cohorts/${id("c_devops_00")}/certificate`);
+    const certId = (await main(page).innerText()).match(/ACM-DEV-\d{4}-\d{5}/)![0];
 
     const visitor = await anon();
-    await visitor.goto(`/verify/${id}`);
+    await visitor.goto(`/verify/${certId}`);
     await expect(visitor.locator("main")).toContainText("Valid certificate");
     await expect(visitor.locator("main")).toContainText("Yara Saleh");
 
     await visitor.goto("/verify/NOT-A-REAL-ID");
     await expect(visitor.locator("main")).toContainText("Check the ID");
 
-    await visitor.goto(`/verify?id=${id.toLowerCase()}`);
-    await expect(visitor).toHaveURL(new RegExp(`/verify/${id}$`));
+    await visitor.goto(`/verify?id=${certId.toLowerCase()}`);
+    await expect(visitor).toHaveURL(new RegExp(`/verify/${certId}$`));
   });
 });
 

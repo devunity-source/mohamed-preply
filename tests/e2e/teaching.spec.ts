@@ -1,4 +1,4 @@
-import { main, resetData, signIn, expect, test } from "./helpers";
+import { main, resetData, signIn, expect, test, id, NEW_ID } from "./helpers";
 
 // Teaching tools, used here by Rakan, who teaches DevOps #01. Instructors get
 // the same tools for their own cohorts (see security.spec.ts for the limits).
@@ -9,7 +9,7 @@ test.beforeEach(async ({ page, request }) => {
 
 test.describe("grading", () => {
   test("rubric scores are checked, save-and-next moves on, and the student sees the grade", async ({ page, as }) => {
-    await page.goto("/admin/cohorts/c_devops_01/grading/a_3?student=u_ahmed");
+    await page.goto(`/admin/cohorts/${id("c_devops_01")}/grading/${id("a_3")}?student=${id("u_ahmed")}`);
     const form = main(page)
       .locator("form")
       .filter({ has: page.locator("textarea[name=feedback]") });
@@ -25,18 +25,18 @@ test.describe("grading", () => {
     await form.locator('input[name="score:works"]').fill("36");
     await expect(form).toContainText("86/100");
     await form.locator("textarea[name=feedback]").press("Control+Enter");
-    await expect(page).toHaveURL(/graded=u_ahmed/);
+    await expect(page).toHaveURL(new RegExp(`graded=${id("u_ahmed")}`));
     await expect(main(page).getByRole("status")).toContainText("Saved Ahmed Hassan's grade (86/100)");
     await expect(main(page).locator('a[aria-current="true"] [aria-label="Needs grading"]')).toHaveCount(1);
 
     const ahmed = await as("ahmed");
-    await ahmed.goto("/cohorts/c_devops_01/assignments/a_3");
+    await ahmed.goto(`/cohorts/${id("c_devops_01")}/assignments/${id("a_3")}`);
     await expect(ahmed.locator("main")).toContainText("86");
     await expect(ahmed.locator("main")).toContainText("Clean modules. Add remote state locking.");
   });
 
   test("j and k move between submissions", async ({ page }) => {
-    await page.goto("/admin/cohorts/c_devops_01/grading/a_3");
+    await page.goto(`/admin/cohorts/${id("c_devops_01")}/grading/${id("a_3")}`);
     const current = () => main(page).locator('a[aria-current="true"]').innerText();
     const first = await current();
     await page.keyboard.press("j");
@@ -46,7 +46,7 @@ test.describe("grading", () => {
   });
 
   test("a reminder reaches the student who hasn't submitted", async ({ page, as }) => {
-    await page.goto("/admin/cohorts/c_devops_01/grading/a_3");
+    await page.goto(`/admin/cohorts/${id("c_devops_01")}/grading/${id("a_3")}`);
     await page.getByRole("button", { name: /Send a reminder/ }).click();
     const sarah = await as("sarah");
     await sarah.goto("/notifications");
@@ -55,7 +55,7 @@ test.describe("grading", () => {
 });
 
 test("lab reviews: pass one and return one", async ({ page }) => {
-  await page.goto("/admin/cohorts/c_devops_01/labs");
+  await page.goto(`/admin/cohorts/${id("c_devops_01")}/labs`);
   const pass = page.getByRole("button", { name: "Pass" });
   const before = await pass.count();
   expect(before).toBeGreaterThanOrEqual(2);
@@ -66,7 +66,7 @@ test("lab reviews: pass one and return one", async ({ page }) => {
 });
 
 test("attendance starts from saved marks, fills the rest and saves", async ({ page }) => {
-  await page.goto("/admin/cohorts/c_devops_01/attendance");
+  await page.goto(`/admin/cohorts/${id("c_devops_01")}/attendance`);
   const form = main(page).locator("form").filter({ hasText: "Mark remaining present" });
   const first = form.locator("li").first();
   await first
@@ -83,7 +83,7 @@ test("attendance starts from saved marks, fills the rest and saves", async ({ pa
 });
 
 test("scheduling a class checks links and shows it to students", async ({ page, as }) => {
-  await page.goto("/admin/cohorts/c_devops_01/classes/new");
+  await page.goto(`/admin/cohorts/${id("c_devops_01")}/classes/new`);
   await page.fill("input[name=title]", "QA: Kubernetes Q&A");
   await page.fill("input[name=meetingUrl]", "https://zoom.us/j/123");
   await page.fill("input[name=recordingUrl]", "http://insecure.example");
@@ -96,12 +96,12 @@ test("scheduling a class checks links and shows it to students", async ({ page, 
   await expect(main(page)).toContainText("QA: Kubernetes Q&A");
 
   const ahmed = await as("ahmed");
-  await ahmed.goto("/cohorts/c_devops_01/classes");
+  await ahmed.goto(`/cohorts/${id("c_devops_01")}/classes`);
   await expect(ahmed.locator("main")).toContainText("QA: Kubernetes Q&A");
 });
 
 test("capstone teams and their milestones are listed", async ({ page }) => {
-  await page.goto("/admin/cohorts/c_devops_01/projects");
+  await page.goto(`/admin/cohorts/${id("c_devops_01")}/projects`);
   await expect(main(page)).toContainText("Team Aurora");
   const aurora = main(page).locator("section", { hasText: "Team Aurora" });
   await expect(aurora).toContainText("Architecture proposal");
@@ -111,7 +111,7 @@ test("capstone teams and their milestones are listed", async ({ page }) => {
 test("moderation: pin and lock a thread; students can't reply to a locked thread", async ({ page, as }) => {
   await page.goto("/community/cohort-01-questions");
   await main(page).locator('a[href^="/community/cohort-01-questions/"]').first().click();
-  await expect(page).toHaveURL(/\/community\/cohort-01-questions\/po_/);
+  await expect(page).toHaveURL(new RegExp(`/community/cohort-01-questions/${NEW_ID}`));
   const url = page.url();
   await main(page).getByRole("button", { name: "Pin", exact: true }).click();
   await expect(main(page).getByRole("button", { name: "Unpin" })).toBeVisible();

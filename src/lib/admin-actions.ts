@@ -2,17 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { db, newId } from "@/lib/data/store";
+import { db, newId, withData } from "@/lib/data/store";
+import { insert, notify, remove, removeWhere, update } from "@/lib/data/save";
 import { cohortRoster, programmeById, progressFor } from "@/lib/data/repo";
 import { cohortById, nextCertificateId, unassignedStudents } from "@/lib/data/admin";
 import { canManageCohort, canModerate, isAdmin } from "@/lib/authz";
 import { canCreateMeetings, createMeeting } from "@/lib/integrations/video";
 import { currentUser } from "@/lib/session";
 import { hashPassword } from "@/lib/auth/password";
+import { fromRow, TABLES } from "@/lib/data/schema";
 import { siteUrl } from "@/lib/auth/config";
 import { supabaseEnabled } from "@/lib/supabase/config";
 import { createAdminClient } from "@/lib/supabase/server";
-import { mirror, PROFILE_COLUMNS, type ProfileRow } from "@/lib/supabase/profiles";
 import { randomBytes } from "node:crypto";
 import { addDays, formatMonthYear, wallTime, zonedParts } from "@/lib/time";
 import type { FormState } from "@/lib/actions";
@@ -26,10 +27,6 @@ import type { Attendance, Cohort, LessonKind, MeetingProvider, Profile, Space } 
 // Helpers
 
 class Denied extends Error {}
-
-function notify(userId: string, text: string, href: string) {
-  db().notifications.push({ id: newId("n"), userId, text, href, createdAt: new Date(), readAt: null });
-}
 
 async function managerOf(cohortId: string): Promise<Profile> {
   const user = await currentUser();
@@ -81,7 +78,7 @@ function done(path = "/", kind: "layout" | "page" = "layout") {
 // ---------------------------------------------------------------------------
 // Grading
 
-export async function gradeSubmission(_prev: FormState, form: FormData): Promise<FormState> {
+export const gradeSubmission = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const s = db();
   const sub = s.submissions.find((x) => x.id === form.get("submissionId"));
   const assignment = sub && s.assignments.find((a) => a.id === sub.assignmentId);
@@ -100,14 +97,14 @@ export async function gradeSubmission(_prev: FormState, form: FormData): Promise
   if (!feedback) return { error: "Write some feedback. Students learn more from it than from the number." };
 
   const first = sub.grade == null;
-  Object.assign(sub, {
+  await update("submissions", sub, {
     rubricScores: scores,
     grade: total === 0 ? 0 : Math.round((earned / total) * 100),
     feedback,
     gradedBy: user.id,
     gradedAt: new Date(),
   });
-  notify(
+  await notify(
     sub.userId,
     `${first ? "Your" : "Updated grade on your"} assignment “${assignment.title}”: ${sub.grade}/100`,
     `/cohorts/${assignment.cohortId}/assignments/${assignment.id}`,
@@ -121,9 +118,9 @@ export async function gradeSubmission(_prev: FormState, form: FormData): Promise
     redirect(`/admin/cohorts/${assignment.cohortId}/grading/${assignment.id}?${q}`);
   }
   return { ok: true };
-}
+});
 
-export async function remindNonSubmitters(assignmentId: string) {
+export const remindNonSubmitters = withData(async (assignmentId: string) => {
   const s = db();
   const a = s.assignments.find((x) => x.id === assignmentId);
   if (!a) throw new Denied("Not found");
@@ -132,15 +129,19 @@ export async function remindNonSubmitters(assignmentId: string) {
     (p) => !s.submissions.some((x) => x.assignmentId === a.id && x.userId === p.id),
   );
   for (const p of missing) {
-    notify(p.id, `Reminder: “${a.title}” hasn't been submitted yet`, `/cohorts/${a.cohortId}/assignments/${a.id}`);
+    await notify(
+      p.id,
+      `Reminder: “${a.title}” hasn't been submitted yet`,
+      `/cohorts/${a.cohortId}/assignments/${a.id}`,
+    );
   }
   done();
-}
+});
 
 // ---------------------------------------------------------------------------
 // Labs
 
-export async function reviewLab(labId: string, userId: string, decision: "pass" | "return") {
+export const reviewLab = withData(async (labId: string, userId: string, decision: "pass" | "return") => {
   if (decision !== "pass" && decision !== "return") throw new Denied("Invalid decision");
   const s = db();
   const lab = s.labs.find((l) => l.id === labId);
@@ -149,23 +150,25 @@ export async function reviewLab(labId: string, userId: string, decision: "pass" 
   const attempt = s.labAttempts.find((a) => a.labId === labId && a.userId === userId);
   if (!attempt || attempt.status !== "submitted") throw new Denied("Only submitted labs can be reviewed");
 
-  attempt.status = decision === "pass" ? "passed" : "in_progress";
-  attempt.updatedAt = new Date();
+  await update("labAttempts", attempt, {
+    status: decision === "pass" ? "passed" : "in_progress",
+    updatedAt: new Date(),
+  });
   const label = `Lab #${String(lab.number).padStart(2, "0")}`;
-  notify(
+  await notify(
     userId,
     decision === "pass" ? `${label} marked as passed` : `${label} was returned. Check the objectives and resubmit.`,
     `/cohorts/${lab.cohortId}/labs#${lab.id}`,
   );
   done();
-}
+});
 
 // ---------------------------------------------------------------------------
 // Attendance
 
 const ATTENDANCE: readonly Attendance["status"][] = ["present", "late", "absent"];
 
-export async function saveAttendance(_prev: FormState, form: FormData): Promise<FormState> {
+export const saveAttendance = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const s = db();
   const cls = s.classes.find((c) => c.id === form.get("classId"));
   if (!cls) return { error: "Class not found." };
@@ -177,12 +180,16 @@ export async function saveAttendance(_prev: FormState, form: FormData): Promise<
     if (value === null) continue;
     if (!ATTENDANCE.includes(value as Attendance["status"])) return { error: "Invalid attendance value." };
     const existing = s.attendance.find((a) => a.classId === cls.id && a.userId === student.id);
-    if (existing) existing.status = value as Attendance["status"];
-    else s.attendance.push({ classId: cls.id, userId: student.id, status: value as Attendance["status"] });
+    const status = value as Attendance["status"];
+    if (existing) {
+      if (existing.status !== status) await update("attendance", existing, { status });
+    } else {
+      await insert("attendance", { classId: cls.id, userId: student.id, status });
+    }
   }
   done();
   return { ok: true };
-}
+});
 
 // ---------------------------------------------------------------------------
 // Classes
@@ -199,7 +206,7 @@ async function meetingLink(provider: MeetingProvider, pasted: string): Promise<{
   }
 }
 
-export async function saveClass(_prev: FormState, form: FormData): Promise<FormState> {
+export const saveClass = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const s = db();
   const cohortId = str(form, "cohortId", 100);
   const user = await managerOf(cohortId);
@@ -239,24 +246,21 @@ export async function saveClass(_prev: FormState, form: FormData): Promise<FormS
     meetingUrl,
     recordingUrl: recordingUrl || null,
   };
-  if (existing) {
-    Object.assign(existing, fields);
-  } else {
-    s.classes.push({ id: newId("cl"), cohortId, instructorId: user.id, ...fields });
-  }
+  if (existing) await update("classes", existing, fields);
+  else await insert("classes", { id: newId("cl"), cohortId, instructorId: user.id, ...fields });
   done();
   redirect(`/admin/cohorts/${cohortId}/classes`);
-}
+});
 
-export async function deleteClass(classId: string) {
+export const deleteClass = withData(async (classId: string) => {
   const s = db();
   const cls = s.classes.find((c) => c.id === classId);
   if (!cls) throw new Denied("Not found");
   await managerOf(cls.cohortId);
   if (cls.startsAt < new Date()) throw new Denied("Past classes can't be deleted; they hold attendance.");
-  s.classes.splice(s.classes.indexOf(cls), 1);
+  await remove("classes", cls);
   done();
-}
+});
 
 // ---------------------------------------------------------------------------
 // Projects
@@ -268,8 +272,7 @@ const DEFAULT_MILESTONES = [
   "Monitoring, security and demo",
 ];
 
-export async function createProject(_prev: FormState, form: FormData): Promise<FormState> {
-  const s = db();
+export const createProject = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const cohortId = str(form, "cohortId", 100);
   await managerOf(cohortId);
   const cohort = cohortById(cohortId)!;
@@ -283,23 +286,31 @@ export async function createProject(_prev: FormState, form: FormData): Promise<F
   if (!memberIds.every((id) => free.has(id))) return { error: "Each student can only be on one team." };
 
   const id = newId("pr");
-  s.projects.push({ id, cohortId, title, teamName, brief: str(form, "brief", 2000), repoUrl: null, presentsAt: null });
-  for (const userId of memberIds) s.projectMembers.push({ projectId: id, userId });
-  DEFAULT_MILESTONES.forEach((t, i) =>
-    s.milestones.push({
+  await insert("projects", {
+    id,
+    cohortId,
+    title,
+    teamName,
+    brief: str(form, "brief", 2000),
+    repoUrl: null,
+    presentsAt: null,
+  });
+  for (const userId of memberIds) await insert("projectMembers", { projectId: id, userId });
+  for (const [i, t] of DEFAULT_MILESTONES.entries()) {
+    await insert("milestones", {
       id: newId("ms"),
       projectId: id,
       position: i + 1,
       title: t,
       dueOn: cohort.endsOn,
       doneAt: null,
-    }),
-  );
+    });
+  }
   done();
   return { ok: true };
-}
+});
 
-export async function updateProject(_prev: FormState, form: FormData): Promise<FormState> {
+export const updateProject = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const s = db();
   const project = s.projects.find((p) => p.id === form.get("projectId"));
   if (!project) return { error: "Project not found." };
@@ -312,26 +323,25 @@ export async function updateProject(_prev: FormState, form: FormData): Promise<F
   const presentsAt = date || time ? parseWallTime(date, time) : null;
   if ((date || time) && !presentsAt) return { error: "Enter a valid presentation date and time." };
 
-  Object.assign(project, { teamName, presentsAt });
   const add = str(form, "addMember", 100);
-  if (add) {
-    if (!unassignedStudents(project.cohortId).some((p) => p.id === add))
-      return { error: "That student is already on a team." };
-    s.projectMembers.push({ projectId: project.id, userId: add });
+  if (add && !unassignedStudents(project.cohortId).some((p) => p.id === add)) {
+    return { error: "That student is already on a team." };
   }
+  await update("projects", project, { teamName, presentsAt });
+  if (add) await insert("projectMembers", { projectId: project.id, userId: add });
   done();
   return { ok: true };
-}
+});
 
-export async function removeProjectMember(projectId: string, userId: string) {
+export const removeProjectMember = withData(async (projectId: string, userId: string) => {
   const s = db();
   const project = s.projects.find((p) => p.id === projectId);
   if (!project) throw new Denied("Not found");
   await managerOf(project.cohortId);
-  const i = s.projectMembers.findIndex((m) => m.projectId === projectId && m.userId === userId);
-  if (i >= 0) s.projectMembers.splice(i, 1);
+  const member = s.projectMembers.find((m) => m.projectId === projectId && m.userId === userId);
+  if (member) await remove("projectMembers", member);
   done();
-}
+});
 
 /** Team members and cohort managers can tick milestones. */
 async function projectEditor(projectId: string) {
@@ -344,28 +354,28 @@ async function projectEditor(projectId: string) {
   return { project, user };
 }
 
-export async function toggleMilestone(milestoneId: string) {
+export const toggleMilestone = withData(async (milestoneId: string) => {
   const s = db();
   const ms = s.milestones.find((m) => m.id === milestoneId);
   if (!ms) throw new Denied("Not found");
   await projectEditor(ms.projectId);
-  ms.doneAt = ms.doneAt ? null : new Date();
+  await update("milestones", ms, { doneAt: ms.doneAt ? null : new Date() });
   done();
-}
+});
 
-export async function setProjectRepo(_prev: FormState, form: FormData): Promise<FormState> {
+export const setProjectRepo = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const { project } = await projectEditor(str(form, "projectId", 100));
   const repoUrl = str(form, "repoUrl", 500);
   if (repoUrl && !httpsUrl(repoUrl, REPO_HOSTS)) return { error: "Use a GitHub, GitLab or Azure DevOps https link." };
-  project.repoUrl = repoUrl || null;
+  await update("projects", project, { repoUrl: repoUrl || null });
   done();
   return { ok: true };
-}
+});
 
 // ---------------------------------------------------------------------------
 // Certificates (admin only)
 
-export async function issueCertificate(userId: string, cohortId: string) {
+export const issueCertificate = withData(async (userId: string, cohortId: string) => {
   const user = await admin();
   const s = db();
   const cohort = cohortById(cohortId);
@@ -377,19 +387,19 @@ export async function issueCertificate(userId: string, cohortId: string) {
 
   const programme = programmeById(cohort.programmeId)!;
   const id = nextCertificateId(programme.certCode, zonedParts(new Date()).year);
-  s.certificates.push({ id, userId, cohortId, issuedAt: new Date(), issuedBy: user.id, revokedAt: null });
-  notify(userId, `Your ${programme.title} certificate is ready`, `/cohorts/${cohortId}/certificate`);
+  await insert("certificates", { id, userId, cohortId, issuedAt: new Date(), issuedBy: user.id, revokedAt: null });
+  await notify(userId, `Your ${programme.title} certificate is ready`, `/cohorts/${cohortId}/certificate`);
   done();
-}
+});
 
-export async function setCertificateRevoked(certificateId: string, revoked: boolean) {
+export const setCertificateRevoked = withData(async (certificateId: string, revoked: boolean) => {
   await admin();
   if (typeof revoked !== "boolean") throw new Denied("Invalid value");
   const cert = db().certificates.find((c) => c.id === certificateId);
   if (!cert) throw new Denied("Not found");
-  cert.revokedAt = revoked ? new Date() : null;
+  await update("certificates", cert, { revokedAt: revoked ? new Date() : null });
   done();
-}
+});
 
 // ---------------------------------------------------------------------------
 // Moderation
@@ -403,40 +413,41 @@ async function moderatablePost(postId: string) {
   return { s, post, space, user, moderator: canModerate(user, space) };
 }
 
-export async function togglePin(postId: string) {
+export const togglePin = withData(async (postId: string) => {
   const { post, moderator } = await moderatablePost(postId);
   if (!moderator) throw new Denied("Not allowed");
-  post.pinned = !post.pinned;
+  await update("posts", post, { pinned: !post.pinned });
   done();
-}
+});
 
-export async function toggleLock(postId: string) {
+export const toggleLock = withData(async (postId: string) => {
   const { post, moderator } = await moderatablePost(postId);
   if (!moderator) throw new Denied("Not allowed");
-  post.locked = !post.locked;
+  await update("posts", post, { locked: !post.locked });
   done();
-}
+});
 
 /** Authors can delete their own post; moderators can delete any in their spaces. */
-export async function deletePost(postId: string) {
+export const deletePost = withData(async (postId: string) => {
   const { s, post, space, user, moderator } = await moderatablePost(postId);
   if (!moderator && post.authorId !== user.id) throw new Denied("Not allowed");
-  s.posts.splice(s.posts.indexOf(post), 1);
+  await remove("posts", post);
+  // The database deletes its comments and reactions with it; mirror that here.
   s.comments = s.comments.filter((c) => c.postId !== postId);
   s.reactions = s.reactions.filter((r) => r.postId !== postId);
   done();
   redirect(`/community/${space.slug}`);
-}
+});
 
-export async function deleteComment(commentId: string) {
+export const deleteComment = withData(async (commentId: string) => {
   const s = db();
   const comment = s.comments.find((c) => c.id === commentId);
   if (!comment) throw new Denied("Not found");
   const { user, moderator } = await moderatablePost(comment.postId);
   if (!moderator && comment.authorId !== user.id) throw new Denied("Not allowed");
-  s.comments.splice(s.comments.indexOf(comment), 1);
+  await remove("comments", comment);
   done();
-}
+});
 
 // ---------------------------------------------------------------------------
 // Curriculum (admin only)
@@ -471,7 +482,7 @@ function firstFree(base: string, taken: (name: string) => boolean, sep = "-"): s
  * New programmes start as a draft with one empty module per week, so the
  * editor has something to fill in. Nothing is public until "Published" is ticked.
  */
-export async function createProgramme(_prev: FormState, form: FormData): Promise<FormState> {
+export const createProgramme = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   await admin();
   const s = db();
   const title = str(form, "title", 100);
@@ -494,7 +505,7 @@ export async function createProgramme(_prev: FormState, form: FormData): Promise
   const slug = firstFree(base, (name) => s.programmes.some((p) => p.slug === name));
 
   const id = newId("p");
-  s.programmes.push({
+  await insert("programmes", {
     id,
     slug,
     title,
@@ -508,11 +519,11 @@ export async function createProgramme(_prev: FormState, form: FormData): Promise
     published: false,
   });
   for (let week = 1; week <= weeks; week++) {
-    s.modules.push({ id: newId("m"), programmeId: id, week, position: 1, title: `Week ${week}`, summary: "" });
+    await insert("modules", { id: newId("m"), programmeId: id, week, position: 1, title: `Week ${week}`, summary: "" });
   }
   done();
   redirect(`/admin/programmes/${id}?created=1`);
-}
+});
 
 const COHORT_SPACES = [
   { key: "general", name: "General", description: "Your cohort's home.", readOnly: false },
@@ -521,7 +532,7 @@ const COHORT_SPACES = [
 ];
 
 /** A cohort is one run of a programme: dates, an instructor and its own community spaces. */
-export async function createCohort(_prev: FormState, form: FormData): Promise<FormState> {
+export const createCohort = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   await admin();
   const s = db();
   const programme = s.programmes.find((p) => p.id === form.get("programmeId"));
@@ -547,8 +558,8 @@ export async function createCohort(_prev: FormState, form: FormData): Promise<Fo
     endsOn: addDays(startsOn, programme.durationWeeks * 7 - 1, "00:00"),
     status: startsOn <= new Date() ? "active" : "upcoming",
   };
-  s.cohorts.push(cohort);
-  s.cohortMembers.push({ cohortId: cohort.id, userId: instructor.id, role: "instructor" });
+  await insert("cohorts", cohort);
+  await insert("cohortMembers", { cohortId: cohort.id, userId: instructor.id, role: "instructor" });
   for (const sp of COHORT_SPACES) {
     const slug = firstFree(`cohort-${num}-${sp.key}`, (name) => s.spaces.some((x) => x.slug === name));
     const space: Space = {
@@ -560,12 +571,12 @@ export async function createCohort(_prev: FormState, form: FormData): Promise<Fo
       cohortId: cohort.id,
       readOnly: sp.readOnly,
     };
-    s.spaces.push(space);
+    await insert("spaces", space);
   }
-  notify(instructor.id, `You're teaching ${cohort.name} (cohort ${cohort.code})`, `/admin/cohorts/${cohort.id}`);
+  await notify(instructor.id, `You're teaching ${cohort.name} (cohort ${cohort.code})`, `/admin/cohorts/${cohort.id}`);
   done();
   redirect(`/admin/cohorts/${cohort.id}`);
-}
+});
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const AVATAR_COLORS = ["#FF5A1F", "#2F6BFF", "#00A870", "#8B5CF6", "#E5484D", "#F5A524"];
@@ -618,7 +629,7 @@ async function createStudentAccount(email: string, fullName: string) {
  * password, returned once so the admin can pass it on (there's no invite
  * email until Phase 2). Only the hash is stored.
  */
-export async function addStudentToCohort(_prev: FormState, form: FormData): Promise<FormState> {
+export const addStudentToCohort = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   await admin();
   const s = db();
   const cohort = s.cohorts.find((c) => c.id === form.get("cohortId"));
@@ -643,8 +654,8 @@ export async function addStudentToCohort(_prev: FormState, form: FormData): Prom
     ({ student, tempPassword } = await createStudentAccount(email, fullName));
   }
 
-  s.cohortMembers.push({ cohortId: cohort.id, userId: student.id, role: "student" });
-  notify(student.id, `Welcome to ${cohort.name}`, `/cohorts/${cohort.id}`);
+  await insert("cohortMembers", { cohortId: cohort.id, userId: student.id, role: "student" });
+  await notify(student.id, `Welcome to ${cohort.name}`, `/cohorts/${cohort.id}`);
   done();
   return {
     ok: true,
@@ -652,7 +663,7 @@ export async function addStudentToCohort(_prev: FormState, form: FormData): Prom
       ? `Created an account for ${student.fullName} (${email}) and added them. Temporary password: ${tempPassword}. Send it to them privately; it won't be shown again.`
       : `Added ${student.fullName} (${email}) to the cohort.`,
   };
-}
+});
 
 /**
  * Supabase version of adding a student: an existing account joins as is; a
@@ -678,24 +689,24 @@ async function inviteToCohort(cohort: Cohort, email: string, fullName: string): 
     invited = true;
   }
 
-  const { data: row } = await supabase
-    .from("profiles")
-    .select(PROFILE_COLUMNS)
-    .eq("id", userId)
-    .maybeSingle<ProfileRow>();
-  if (!row) return { error: "That account has no profile yet. Run migration 0010, then try again." };
-  mirror(row);
+  // A just-invited account isn't in this request's data yet.
+  if (!db().profiles.some((p) => p.id === userId)) {
+    const { data: row } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+    if (!row) return { error: "That account has no profile yet. Run migration 0010, then try again." };
+    db().profiles.push(fromRow(TABLES.profiles, row) as unknown as Profile);
+  }
   const found = existingStudent(userId, cohort.id);
   if ("error" in found) return found;
+  const row = found.student;
 
-  db().cohortMembers.push({ cohortId: cohort.id, userId, role: "student" });
-  notify(userId, `Welcome to ${cohort.name}`, `/cohorts/${cohort.id}`);
+  await insert("cohortMembers", { cohortId: cohort.id, userId, role: "student" });
+  await notify(userId, `Welcome to ${cohort.name}`, `/cohorts/${cohort.id}`);
   done();
   return {
     ok: true,
     message: invited
-      ? `Invited ${row.full_name} (${email}) and added them. They'll get an email to choose a password.`
-      : `Added ${row.full_name} (${email}) to the cohort.`,
+      ? `Invited ${row.fullName} (${email}) and added them. They'll get an email to choose a password.`
+      : `Added ${row.fullName} (${email}) to the cohort.`,
   };
 }
 
@@ -704,16 +715,16 @@ async function inviteToCohort(cohort: Cohort, email: string, fullName: string): 
  * spaces, and leave their capstone team. Their submissions, grades and posts
  * stay, so re-adding them later picks up where they left off.
  */
-export async function removeStudentFromCohort(cohortId: string, userId: string) {
+export const removeStudentFromCohort = withData(async (cohortId: string, userId: string) => {
   await admin();
   const s = db();
   const member = s.cohortMembers.find((m) => m.cohortId === cohortId && m.userId === userId);
   if (!member || member.role !== "student") throw new Denied("Not a student in this cohort");
-  s.cohortMembers.splice(s.cohortMembers.indexOf(member), 1);
+  await remove("cohortMembers", member);
   const teams = new Set(s.projects.filter((p) => p.cohortId === cohortId).map((p) => p.id));
-  s.projectMembers = s.projectMembers.filter((pm) => !(pm.userId === userId && teams.has(pm.projectId)));
+  await removeWhere("projectMembers", (pm) => pm.userId === userId && teams.has(pm.projectId));
   done();
-}
+});
 
 // ---------------------------------------------------------------------------
 // Office hours (cohort staff)
@@ -721,10 +732,9 @@ export async function removeStudentFromCohort(cohortId: string, userId: string) 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Replace a cohort's weekly office hours. One window per weekday, start before end. */
-export async function saveOfficeHours(_prev: FormState, form: FormData): Promise<FormState> {
+export const saveOfficeHours = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const cohortId = str(form, "cohortId", 100);
   await managerOf(cohortId);
-  const s = db();
   const slots: { cohortId: string; weekday: number; start: string; end: string }[] = [];
   const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   for (let weekday = 0; weekday < 7; weekday++) {
@@ -735,13 +745,14 @@ export async function saveOfficeHours(_prev: FormState, form: FormData): Promise
     if (start >= end) return { error: `${DAYS[weekday]}: the end time has to be after the start time.` };
     slots.push({ cohortId, weekday, start, end });
   }
-  s.officeHours = s.officeHours.filter((x) => x.cohortId !== cohortId).concat(slots);
+  await removeWhere("officeHours", (x) => x.cohortId === cohortId);
+  for (const slot of slots) await insert("officeHours", slot);
   done();
   return { ok: true };
-}
+});
 
 /** An instructor answers a student. Allowed any time; only students are held to the hours. */
-export async function replyOfficeMessage(_prev: FormState, form: FormData): Promise<FormState> {
+export const replyOfficeMessage = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const s = db();
   const thread = s.officeThreads.find((t) => t.id === form.get("threadId"));
   if (!thread) return { error: "Conversation not found." };
@@ -749,19 +760,20 @@ export async function replyOfficeMessage(_prev: FormState, form: FormData): Prom
   const body = str(form, "body", 2000);
   if (!body) return { error: "Write your reply first." };
   const now = new Date();
-  s.officeMessages.push({ id: newId("om"), threadId: thread.id, authorId: user.id, body, createdAt: now });
+  await insert("officeMessages", { id: newId("om"), threadId: thread.id, authorId: user.id, body, createdAt: now });
+  await update("officeThreads", thread, { instructorReadAt: now });
+  // The database moves last_message_at itself (0009); keep this request's copy in step.
   thread.lastMessageAt = now;
-  thread.instructorReadAt = now;
-  notify(
+  await notify(
     thread.studentId,
     `${user.fullName.split(" ")[0]} replied to your office hours message`,
     `/cohorts/${thread.cohortId}/office-hours`,
   );
   done();
   return { ok: true };
-}
+});
 
-export async function updateProgramme(_prev: FormState, form: FormData): Promise<FormState> {
+export const updateProgramme = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   await admin();
   const programme = db().programmes.find((p) => p.id === form.get("programmeId"));
   if (!programme) return { error: "Programme not found." };
@@ -771,7 +783,7 @@ export async function updateProgramme(_prev: FormState, form: FormData): Promise
   const priceDollars = int(form.get("price"), 0, 100_000);
   if (!title) return { error: "Add a title." };
   if (priceDollars === null) return { error: "Price must be a whole number of US dollars." };
-  Object.assign(programme, {
+  await update("programmes", programme, {
     title,
     tagline,
     description,
@@ -781,22 +793,22 @@ export async function updateProgramme(_prev: FormState, form: FormData): Promise
   });
   done();
   return { ok: true };
-}
+});
 
-export async function updateModule(_prev: FormState, form: FormData): Promise<FormState> {
+export const updateModule = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   await admin();
   const mod = db().modules.find((m) => m.id === form.get("moduleId"));
   if (!mod) return { error: "Module not found." };
   const title = str(form, "title", 140);
   if (!title) return { error: "Add a title." };
-  Object.assign(mod, { title, summary: str(form, "summary", 500) });
+  await update("modules", mod, { title, summary: str(form, "summary", 500) });
   done();
   return { ok: true };
-}
+});
 
 const LESSON_KINDS: readonly LessonKind[] = ["reading", "video", "exercise"];
 
-export async function saveLesson(_prev: FormState, form: FormData): Promise<FormState> {
+export const saveLesson = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   await admin();
   const s = db();
   const mod = s.modules.find((m) => m.id === form.get("moduleId"));
@@ -814,30 +826,30 @@ export async function saveLesson(_prev: FormState, form: FormData): Promise<Form
   const body = str(form, "body", 20_000);
 
   if (existing) {
-    Object.assign(existing, { title, kind, durationMin, body });
+    await update("lessons", existing, { title, kind, durationMin, body });
   } else {
     const position = Math.max(0, ...s.lessons.filter((l) => l.moduleId === mod.id).map((l) => l.position)) + 1;
-    s.lessons.push({ id: newId("l"), moduleId: mod.id, position, title, kind, durationMin, body });
+    await insert("lessons", { id: newId("l"), moduleId: mod.id, position, title, kind, durationMin, body });
   }
   done();
   return { ok: true };
-}
+});
 
-export async function deleteLesson(lessonId: string) {
+export const deleteLesson = withData(async (lessonId: string) => {
   await admin();
   const s = db();
   const lesson = s.lessons.find((l) => l.id === lessonId);
   if (!lesson) throw new Denied("Not found");
-  s.lessons.splice(s.lessons.indexOf(lesson), 1);
+  await remove("lessons", lesson);
+  // The database deletes progress on it too; mirror that here.
   s.lessonProgress = s.lessonProgress.filter((p) => p.lessonId !== lessonId);
-  s.lessons
-    .filter((l) => l.moduleId === lesson.moduleId)
-    .sort((a, b) => a.position - b.position)
-    .forEach((l, i) => (l.position = i + 1));
+  // Close the gap. Lowest first, so no two lessons ever share a position.
+  const rest = s.lessons.filter((l) => l.moduleId === lesson.moduleId).sort((a, b) => a.position - b.position);
+  for (const [i, l] of rest.entries()) if (l.position !== i + 1) await update("lessons", l, { position: i + 1 });
   done();
-}
+});
 
-export async function moveLesson(lessonId: string, direction: "up" | "down") {
+export const moveLesson = withData(async (lessonId: string, direction: "up" | "down") => {
   await admin();
   if (direction !== "up" && direction !== "down") throw new Denied("Invalid direction");
   const s = db();
@@ -847,6 +859,11 @@ export async function moveLesson(lessonId: string, direction: "up" | "down") {
   const i = siblings.indexOf(lesson);
   const j = direction === "up" ? i - 1 : i + 1;
   if (j < 0 || j >= siblings.length) return;
-  [siblings[i].position, siblings[j].position] = [siblings[j].position, siblings[i].position];
+  // Positions are unique per module, so swap through a free slot.
+  const [a, b] = [siblings[i], siblings[j]];
+  const [pa, pb] = [a.position, b.position];
+  await update("lessons", a, { position: 0 });
+  await update("lessons", b, { position: pa });
+  await update("lessons", a, { position: pb });
   done();
-}
+});

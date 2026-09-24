@@ -3,11 +3,10 @@ import { createHash, randomBytes } from "node:crypto";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/data/store";
+import { db, loadData } from "@/lib/data/store";
 import { SESSION_COOKIE, SESSION_TTL_MS } from "@/lib/auth/cookie";
 import { supabaseEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
-import { mirror, PROFILE_COLUMNS, type ProfileRow } from "@/lib/supabase/profiles";
 import type { Profile } from "@/lib/types";
 
 // Two ways to be signed in, same currentUser() / getSessionUser() for pages:
@@ -16,15 +15,18 @@ import type { Profile } from "@/lib/types";
 //   random 256-bit token; the store keeps only its SHA-256, so a leaked store
 //   can't be replayed as cookies.
 
-/** The verified Supabase user and their profile. Cached for one request. */
+/**
+ * The signed-in Supabase user and their profile, from this request's data
+ * (loaded here, so every page that checks who's signed in has its data).
+ * getUser() asks Supabase rather than only checking the token's signature,
+ * so a session that was signed out elsewhere (password change, "sign out")
+ * stops working at once instead of when its token expires.
+ */
 const supabaseUser = cache(async (): Promise<{ profile: Profile; email: string } | null> => {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
-  const uid = data?.claims?.sub;
-  if (!uid) return null;
-  const { data: row } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", uid).maybeSingle<ProfileRow>();
-  if (!row) return null;
-  return { profile: mirror(row), email: String(data.claims.email ?? "") };
+  const client = await createClient();
+  const [{ data }] = await Promise.all([client.auth.getUser(), loadData()]);
+  const profile = data.user ? db().profiles.find((p) => p.id === data.user!.id) : undefined;
+  return profile ? { profile, email: data.user?.email ?? "" } : null;
 });
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");

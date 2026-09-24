@@ -8,6 +8,18 @@ process.env.E2E_BASE_URL ??= `http://localhost:${PORT}`;
 process.env.E2E_TEST_SECRET ??= randomBytes(24).toString("hex");
 process.env.E2E_DEMO_PASSWORD ??= "e2e-demo-password";
 
+// Demo mode by default. With E2E_SUPABASE_URL (and its keys) set, the same
+// suite runs against that Supabase instead: only ever a throwaway local one
+// (npm run test:e2e:supabase), since every test wipes and reloads its data.
+const SUPABASE = process.env.E2E_SUPABASE_URL
+  ? {
+      NEXT_PUBLIC_SUPABASE_URL: process.env.E2E_SUPABASE_URL,
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.E2E_SUPABASE_PUBLISHABLE_KEY ?? "",
+      SUPABASE_SECRET_KEY: process.env.E2E_SUPABASE_SECRET_KEY ?? "",
+      SITE_URL: process.env.E2E_BASE_URL,
+    }
+  : null;
+
 // Layout checks run at every size; everything else runs once, on desktop.
 const LAYOUT = /layout\.spec\.ts/;
 
@@ -53,11 +65,12 @@ export default defineConfig({
       E2E_TEST_SECRET: process.env.E2E_TEST_SECRET,
       DEMO_PASSWORD: process.env.E2E_DEMO_PASSWORD,
       ACADEMY_TIMEZONE: "Asia/Dubai",
-      // Demo mode, always: set but empty beats a developer's .env.local, so
-      // the tests never touch a real Supabase project.
+      // Set, even when empty: that beats a developer's .env.local, so the
+      // tests never touch a real Supabase project by accident.
       NEXT_PUBLIC_SUPABASE_URL: "",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "",
       SUPABASE_SECRET_KEY: "",
+      ...SUPABASE,
     },
   },
 });

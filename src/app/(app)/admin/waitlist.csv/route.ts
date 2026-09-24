@@ -1,6 +1,7 @@
 import { waitlistRows } from "@/lib/data/admin";
 import { isAdmin } from "@/lib/authz";
 import { getSessionUser } from "@/lib/session";
+import { withData } from "@/lib/data/store";
 
 // Neutralise spreadsheet formulas (CSV injection): anything a visitor typed
 // that starts with = + - @ or a control character is prefixed with a quote.
@@ -9,7 +10,7 @@ function cell(value: string): string {
   return `"${safe.replaceAll('"', '""')}"`;
 }
 
-export async function GET() {
+export const GET = withData(async () => {
   const user = await getSessionUser();
   if (!user || !isAdmin(user)) return new Response("Not found", { status: 404 });
 
@@ -24,4 +25,4 @@ export async function GET() {
       "Cache-Control": "no-store",
     },
   });
-}
+});

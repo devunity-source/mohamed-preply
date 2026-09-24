@@ -30,7 +30,7 @@ jobs:
       - name: Lint
         run: npm run lint
       - name: Formatting
-        run: npx prettier --check src tests playwright.config.ts
+        run: npx prettier --check src tests scripts playwright.config.ts
       - name: Database security tests
         run: npm run test:db
       - name: Build
@@ -48,6 +48,36 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  supabase:
+    name: End-to-end tests on Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - name: Install the browser
+        run: npx playwright install --with-deps chromium
+      # Starts a throwaway local Supabase in Docker (database, auth, API and a
+      # mail catcher), applies the migrations, then runs the whole suite
+      # against it: every feature, plus invites and password resets by email.
+      - name: End-to-end tests on a local Supabase (desktop, tablet, phone)
+        run: npm run test:e2e:supabase
+
+      - name: Keep the report if something failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-supabase
           path: |
             playwright-report/
             test-results/

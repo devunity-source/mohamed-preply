@@ -12,3 +12,15 @@ export function supabaseConfig(): { url: string; key: string } | null {
 }
 
 export const supabaseEnabled = () => supabaseConfig() !== null;
+
+/**
+ * Auth cookies are HttpOnly: only the server reads them (the app has no
+ * browser-side Supabase client), so page scripts never can. @supabase/ssr
+ * leaves them readable by default for its browser client.
+ */
+export const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  path: "/",
+} as const;

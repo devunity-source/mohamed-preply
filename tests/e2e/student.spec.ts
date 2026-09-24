@@ -1,4 +1,4 @@
-import { main, resetData, signIn, expect, test } from "./helpers";
+import { main, resetData, signIn, expect, test, id } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await resetData(request);
@@ -29,16 +29,16 @@ test("progress explains what it's made of", async ({ page }) => {
 test("continue learning, mark done and move on; progress goes up", async ({ page }) => {
   const before = await progress(page);
   await page.getByRole("link", { name: /Continue where you left off/ }).click();
-  await expect(page).toHaveURL(/m_devops_4_l2$/);
+  await expect(page).toHaveURL(new RegExp(`${id("m_devops_4_l2")}$`));
   await expect(main(page)).toContainText(/Lesson 2 of 4/i);
   await page.getByRole("button", { name: /Mark done and continue/ }).click();
-  await expect(page).toHaveURL(/m_devops_4_l3$/);
+  await expect(page).toHaveURL(new RegExp(`${id("m_devops_4_l3")}$`));
   expect(await progress(page)).toBeGreaterThan(before);
 });
 
 test("a lab can be started and submitted", async ({ page }) => {
-  await page.goto("/cohorts/c_devops_01/labs");
-  const lab = page.locator("#lab_5");
+  await page.goto(`/cohorts/${id("c_devops_01")}/labs`);
+  const lab = page.locator(`[id="${id("lab_5")}"]`);
   await lab.getByRole("button", { name: /Start lab/ }).click();
   await expect(lab).toContainText(/In progress/i);
   await lab.getByRole("button", { name: /Submit lab/ }).click();
@@ -46,7 +46,7 @@ test("a lab can be started and submitted", async ({ page }) => {
 });
 
 test("an assignment rejects a non-repository link, keeps the text, then accepts a real one", async ({ page }) => {
-  await page.goto("/cohorts/c_devops_01/assignments");
+  await page.goto(`/cohorts/${id("c_devops_01")}/assignments`);
   await main(page)
     .getByRole("link", { name: /Deploy a microservice to AKS/ })
     .first()
@@ -68,7 +68,7 @@ test("search finds lessons and never shows admin tools to a student", async ({ p
   await box.fill("pods deploy");
   await expect(dialog.getByRole("option").first()).toContainText("Pods, Deployments and Services");
   await box.press("Enter");
-  await expect(page).toHaveURL(/m_devops_4_l2$/);
+  await expect(page).toHaveURL(new RegExp(`${id("m_devops_4_l2")}$`));
   await page.keyboard.press("/");
   await dialog.getByRole("combobox").fill("grading");
   await expect(dialog).toContainText("Nothing matches");

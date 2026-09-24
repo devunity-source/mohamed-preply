@@ -1,4 +1,4 @@
-import { main, resetData, signIn, expect, test } from "./helpers";
+import { main, resetData, signIn, expect, test, NEW_ID } from "./helpers";
 
 async function newPost(page: import("@playwright/test").Page, title: string, body: string) {
   await page.getByRole("button", { name: /Start a discussion/ }).click();
@@ -6,7 +6,7 @@ async function newPost(page: import("@playwright/test").Page, title: string, bod
   await page.locator("main textarea[name=body]").fill(body);
   await page.getByRole("button", { name: "Post", exact: true }).click();
   // Posting opens the new post.
-  await expect(page).toHaveURL(/\/community\/cohort-01-general\/po_/);
+  await expect(page).toHaveURL(new RegExp(`/community/cohort-01-general/${NEW_ID}`));
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
 }
 
@@ -37,6 +37,8 @@ test("spaces show unread counts; opening one marks its posts New once", async ({
   await expect(general.locator("span.bg-accent")).toBeVisible();
   await general.click();
   await expect(main(page).getByText("New", { exact: true }).first()).toBeVisible();
+  // Recording the visit is a background request; let it finish before leaving.
+  await page.waitForLoadState("networkidle");
   await page.goto("/community");
   await expect(page.locator('aside .lg\\:block a[href="/community/cohort-01-general"] span.bg-accent')).toHaveCount(0);
 });

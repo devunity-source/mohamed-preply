@@ -2,7 +2,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createPlainClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { supabaseConfig } from "./config";
+import { COOKIE_OPTIONS, supabaseConfig } from "./config";
 
 /**
  * Supabase client acting as the signed-in user (their session cookies, so row
@@ -12,6 +12,7 @@ export async function createClient() {
   const { url, key } = supabaseConfig()!;
   const jar = await cookies();
   return createServerClient(url, key, {
+    cookieOptions: COOKIE_OPTIONS,
     cookies: {
       getAll: () => jar.getAll(),
       setAll(toSet) {

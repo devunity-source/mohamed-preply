@@ -1,4 +1,7 @@
 import "server-only";
+import { supabaseEnabled } from "@/lib/supabase/config";
+import { createClient } from "@/lib/supabase/server";
+import { wallTime } from "@/lib/time";
 import { db } from "./store";
 import {
   cohortAssignments,
@@ -184,6 +187,39 @@ export function certificateFor(userId: string, cohortId: string): Certificate | 
 }
 
 /** Public details for /verify/[id]. Mirrors verify_certificate() in SQL. */
+export interface VerifiedCertificate {
+  cert: { id: string; issuedAt: Date; revokedAt: Date | null };
+  name: string;
+  programme: string;
+  cohort: { startsOn: Date; endsOn: Date };
+}
+
+/**
+ * The public /verify page. With Supabase this goes through
+ * verify_certificate(), which returns only what's printed on the
+ * certificate: visitors can't read the certificates table itself.
+ */
+export async function lookupCertificate(id: string): Promise<VerifiedCertificate | undefined> {
+  if (!supabaseEnabled()) return verifyCertificate(id);
+  const { data } = await (await createClient()).rpc("verify_certificate", { certificate_id: id });
+  const row = (data as Record<string, string | null>[] | null)?.[0];
+  if (!row) return undefined;
+  const day = (v: string) => {
+    const [y, m, d] = v.split("-").map(Number);
+    return wallTime(y, m, d);
+  };
+  return {
+    cert: {
+      id: row.id!,
+      issuedAt: new Date(row.issued_at!),
+      revokedAt: row.revoked_at ? new Date(row.revoked_at) : null,
+    },
+    name: row.full_name!,
+    programme: row.title!,
+    cohort: { startsOn: day(row.starts_on!), endsOn: day(row.ends_on!) },
+  };
+}
+
 export function verifyCertificate(id: string) {
   const cert = certificateById(id);
   if (!cert) return undefined;

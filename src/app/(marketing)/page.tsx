@@ -5,6 +5,7 @@ import { Avatar } from "@/components/ui";
 import { WaitlistForm } from "@/components/waitlist-form";
 import { demoLoginEnabled } from "@/lib/auth/config";
 import { cohortRoster, publishedProgrammes, modulesFor, nextCohortFor } from "@/lib/data/repo";
+import { loadData } from "@/lib/data/store";
 import { formatMoney } from "@/lib/format";
 import { ACADEMY_TZ, formatDate, formatShortDate } from "@/lib/time";
 import type { CalendarKind } from "@/lib/types";
@@ -102,6 +103,7 @@ const FAQ = [
 ];
 
 export default async function Landing({ searchParams }: PageProps<"/">) {
+  await loadData();
   const sp = await searchParams;
   const programmes = publishedProgrammes().map((p) => ({
     ...p,

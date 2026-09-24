@@ -9,6 +9,7 @@ import { isInternalPath } from "@/lib/paths";
 import { isLimited, recordFailure } from "@/lib/rate-limit";
 import { accountEmail, currentUser, endOtherSessions, endSession, getSessionUser, startSession } from "@/lib/session";
 import { supabaseEnabled } from "@/lib/supabase/config";
+import { withData } from "@/lib/data/store";
 import { createClient } from "@/lib/supabase/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import type { FormState } from "@/lib/actions";
@@ -96,7 +97,7 @@ const MIN_PASSWORD = 10;
  * laptop isn't enough), limits wrong guesses, and signs out every other
  * session so an old password can't keep someone logged in elsewhere.
  */
-export async function changePassword(_prev: FormState, form: FormData): Promise<FormState> {
+export const changePassword = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const user = await currentUser();
   const current = String(form.get("current") ?? "").slice(0, 200);
   const next = String(form.get("next") ?? "").slice(0, 200);
@@ -124,7 +125,7 @@ export async function changePassword(_prev: FormState, form: FormData): Promise<
     await endOtherSessions(user.id);
   }
   return { ok: true };
-}
+});
 
 async function currentPasswordMatches(userId: string, password: string): Promise<boolean> {
   if (supabaseEnabled()) {
@@ -184,7 +185,7 @@ export async function requestPasswordReset(_prev: FormState, form: FormData): Pr
  * the person in first. Doesn't ask for the old password: the link proved
  * they own the email.
  */
-export async function setNewPassword(_prev: FormState, form: FormData): Promise<FormState> {
+export const setNewPassword = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   if (!supabaseEnabled() || !(await getSessionUser())) {
     return { error: "This link has expired. Ask for a new one from the sign-in page." };
   }
@@ -197,7 +198,7 @@ export async function setNewPassword(_prev: FormState, form: FormData): Promise<
   if (error) return { error: supabaseProblem(error.message) };
   await supabase.auth.signOut({ scope: "others" });
   redirect("/dashboard");
-}
+});
 
 // Only the emails this app sends: invites and password resets.
 const LINK_TYPES: readonly EmailOtpType[] = ["invite", "recovery"];

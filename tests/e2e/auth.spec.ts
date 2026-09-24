@@ -1,4 +1,4 @@
-import { PASSWORD, main, resetData, signIn, expect, test } from "./helpers";
+import { PASSWORD, main, resetData, signIn, expect, test, id, SUPABASE, emailLink } from "./helpers";
 
 test.beforeEach(async ({ request }) => resetData(request));
 
@@ -19,7 +19,9 @@ test("a wrong password and an unknown email get the same message", async ({ page
 
 test("signing in sets a locked-down session cookie, and signing out ends the session", async ({ page, context }) => {
   await signIn(page, "ahmed");
-  const cookie = (await context.cookies()).find((c) => c.name.endsWith("academe_session"))!;
+  // Demo mode's own session cookie, or Supabase's auth cookie.
+  const name = SUPABASE ? /^sb-.*-auth-token/ : /academe_session$/;
+  const cookie = (await context.cookies()).find((c) => name.test(c.name))!;
   expect(cookie.httpOnly).toBe(true);
   expect(cookie.sameSite).toBe("Lax");
   await page.goto("/profile");
@@ -56,12 +58,13 @@ test("one-click demo sign-in is off in a production build", async ({ page }) => 
 });
 
 test.describe("temporary passwords", () => {
+  test.skip(SUPABASE, "With Supabase, new students get an invite and choose their own password (admin.spec.ts).");
   test("an admin-created student is nudged to change it, and changing it signs out other devices", async ({
     page,
     anon,
   }) => {
     await signIn(page, "rakan");
-    await page.goto("/admin/cohorts/c_ai_02");
+    await page.goto(`/admin/cohorts/${id("c_ai_02")}`);
     const add = page.locator("section", { hasText: "Add a student" }).locator("form");
     await add.getByLabel("Email").fill("temp.student@example.com");
     await add.getByLabel(/Full name/).fill("Temp Student");
@@ -113,6 +116,7 @@ test.describe("temporary passwords", () => {
 });
 
 test("without Supabase, the email-link pages stay off", async ({ page }) => {
+  test.skip(SUPABASE, "Supabase mode has these pages; see the password reset test.");
   // Password reset needs email: no page and no link to it in demo mode.
   expect((await page.goto("/forgot-password"))?.status()).toBe(404);
   await page.goto("/login");
@@ -127,4 +131,71 @@ test("without Supabase, the email-link pages stay off", async ({ page }) => {
   await signIn(page, "ahmed");
   await page.goto("/set-password");
   await expect(page).toHaveURL(/\/dashboard/);
+});
+
+test.describe("with Supabase", () => {
+  test.skip(!SUPABASE, "Supabase Auth only.");
+
+  test("changing your password signs out your other devices at once", async ({ page, anon }) => {
+    await signIn(page, "maria");
+    const phone = await anon();
+    await signIn(phone, "maria");
+
+    await page.goto("/profile#password");
+    const form = page.locator("#password form");
+    await form.getByLabel("Current password").fill(PASSWORD);
+    await form.getByLabel("New password", { exact: true }).fill("a-brand-new-pass");
+    await form.getByLabel("New password again").fill("a-brand-new-pass");
+    await form.getByRole("button", { name: "Change password" }).click();
+    await expect(form.getByRole("status")).toContainText("Password changed");
+
+    await page.goto("/dashboard");
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await phone.goto("/dashboard");
+    await expect(phone).toHaveURL(/\/login/);
+  });
+
+  test("forgot password: the email link sets a new one, works once, and the old password stops working", async ({
+    page,
+    anon,
+  }) => {
+    await page.goto("/login");
+    await page.getByRole("link", { name: /forgot/i }).click();
+    const form = main(page).locator("form");
+    await form.getByLabel("Email").fill("nobody.here@example.com");
+    await form.getByRole("button", { name: /reset link/ }).click();
+    const unknown = await main(page).getByRole("status").innerText();
+
+    await page.goto("/forgot-password");
+    await form.getByLabel("Email").fill("maria@academe.demo");
+    await form.getByRole("button", { name: /reset link/ }).click();
+    // Same answer either way, so the form doesn't reveal who has an account.
+    await expect(main(page).getByRole("status")).toHaveText(unknown);
+
+    const link = await emailLink(page.request, "maria@academe.demo");
+    // Opening the link (as a mail scanner would) doesn't use it up.
+    const scanner = await anon();
+    await scanner.goto(link);
+    await expect(scanner.getByRole("button", { name: "Continue" })).toBeVisible();
+
+    await page.goto(link);
+    await page.getByRole("button", { name: "Continue" }).click();
+    await expect(page).toHaveURL(/\/set-password/);
+    await page.getByLabel("New password", { exact: true }).fill("reset-new-password");
+    await page.getByLabel("New password again").fill("reset-new-password");
+    await page.getByRole("button", { name: "Save password" }).click();
+    await expect(page).toHaveURL(/\/dashboard$/);
+
+    await scanner.getByRole("button", { name: "Continue" }).click();
+    await expect(scanner).toHaveURL(/\/login\?link=expired/);
+
+    const other = await anon();
+    await signIn(other, "maria", "reset-new-password");
+    const old = await anon();
+    await old.goto("/login");
+    await old.getByLabel("Email").fill("maria@academe.demo");
+    await old.getByLabel("Password").fill(PASSWORD);
+    await old.getByRole("button", { name: "Sign in" }).click();
+    await expect(old.locator("main [role=alert]")).toContainText("incorrect");
+  });
 });

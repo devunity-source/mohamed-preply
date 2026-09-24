@@ -51,7 +51,9 @@ async function check(label, want, p) {
 }
 console.log("-- original checks");
 await check("student sees own cohort", "ok", as(st, `select * from cohorts`));
-await check("outsider sees no cohort", "none", as(out, `select * from cohorts`));
+// Since 0011, published cohorts and their instructors are a public catalogue;
+// the roster of students is what stays private.
+await check("outsider sees no cohort's students", "none", as(out, `select * from cohort_members where role='student'`));
 const post = await check("student posts in cohort general", "ok", as(st, `insert into posts (space_id, author_id, title, body) values ('${GEN}','${st}','t','b') returning id`));
 await check("student posts in cohort announcements", "deny", as(st, `insert into posts (space_id, author_id, title, body) values ('${ANN}','${st}','t','b')`));
 await check("cohort instructor posts in cohort announcements", "ok", as(ins, `insert into posts (space_id, author_id, title, body) values ('${ANN}','${ins}','t','b') returning id`));
@@ -72,7 +74,7 @@ await check("#4 student re-points submission to other user", "deny", as(st, `upd
 await check("#4 file_path outside own folder", "deny", as(st, `update assignment_submissions set file_path='${st2}/work.zip' where user_id='${st}'`));
 await check("#5 unrelated instructor sets price to 0", "deny", as(ins2, `update programmes set price_cents=0 returning price_cents`));
 await check("#5 cohort instructor sets price to 0", "deny", as(ins, `update programmes set price_cents=0 returning price_cents`));
-await check("#5 unrelated instructor reads other cohort roster", "none", as(ins2, `select * from cohort_members where cohort_id='${C1}'`));
+await check("#5 unrelated instructor reads other cohort roster", "none", as(ins2, `select * from cohort_members where cohort_id='${C1}' and role='student'`));
 await check("#5 unrelated instructor deletes student post", "none", as(ins2, `delete from posts where id='${pid}' returning id`));
 await check("#5 instructor posts in campus announcements", "deny", as(ins, `insert into posts (space_id, author_id, title, body) values ('${GLOBAL_ANN}','${ins}','t','b')`));
 await check("#5 instructor adds campus-wide resource", "deny", as(ins, `insert into resources (kind, title, url) values ('slides','x','https://x')`));
@@ -220,5 +222,30 @@ await check("student looks up an account by email", "deny", as(st, `select user_
 await check("admin (signed in) looks up an account by email", "deny", as(adm, `select user_id_by_email('sara.k@example.com')`));
 await check("server key finds account by email, any case", "ok", asService(`select 1 where user_id_by_email('SARA.K@example.com') = '${N1}'`));
 await check("unknown email finds nothing", "ok", asService(`select 1 where user_id_by_email('nobody@example.com') is null`));
+console.log("-- 0011 app data");
+await db.exec(`update programmes set published=true`);
+await check("admin (not a member) reads a cohort's assignments", "ok", as(adm, `select id from assignments where cohort_id='${C1}'`));
+await check("admin (not a member) reads cohort space posts", "ok", as(adm, `select p.id from posts p where p.space_id='${GEN}'`));
+await check("outsider still can't read cohort posts", "none", as(out, `select id from posts where space_id='${GEN}'`));
+await check("visitor sees published cohorts", "ok", as(null, `select id from cohorts where id='${C1}'`));
+await check("visitor sees the cohort's instructor", "ok", as(null, `select full_name from profiles where id='${ins}'`));
+await check("visitor can't see students", "none", as(null, `select id from profiles where id='${st}'`));
+await check("visitor can't see the student roster", "none", as(null, `select user_id from cohort_members where role='student'`));
+await check("student sees other cohorts' dates, not their members", "none", as(st, `select user_id from cohort_members where cohort_id='${C2}' and role='student'`));
+await db.exec(`update programmes set published=false`);
+await check("unpublished programme's cohorts are hidden from visitors", "none", as(null, `select id from cohorts`));
+await db.exec(`update programmes set published=true`);
+await check("snapshot: student gets own notifications only", "ok", as(st, `select 1 where not exists (select 1 from jsonb_array_elements(app_snapshot()->'notifications') n where n->>'user_id' <> '${st}')`));
+await check("snapshot: no posts from a cohort you're not in", "ok", as(st, `select 1 where not exists (select 1 from jsonb_array_elements(app_snapshot()->'posts') p where p->>'space_id' = '${GEN2}')`));
+await check("snapshot: outsider gets no submissions", "ok", as(out, `select 1 where jsonb_array_length(app_snapshot()->'assignment_submissions') = 0`));
+await check("snapshot: visitor gets no waitlist", "ok", as(null, `select 1 where jsonb_array_length(app_snapshot()->'waitlist') = 0`));
+await check("snapshot: admin gets every cohort's work", "ok", as(adm, `select 1 where jsonb_array_length(app_snapshot()->'assignment_submissions') > 0`));
+await db.exec(`insert into programme_modules (id, programme_id, week, title) values ('${U(61)}','${PROG}',1,'W1') on conflict do nothing`);
+await db.exec(`insert into lessons (id, module_id, position, title, kind) values ('${U(62)}','${U(61)}',9,'L2','reading') on conflict do nothing`);
+await check("student records own progress", "ok", as(st, `insert into lesson_progress (user_id, lesson_id) values ('${st}','${U(62)}') returning lesson_id`));
+await check("cohort instructor sees a student's progress", "ok", as(ins, `select lesson_id from lesson_progress where user_id='${st}'`));
+await check("admin sees a student's progress", "ok", as(adm, `select lesson_id from lesson_progress where user_id='${st}'`));
+await check("other cohort's instructor can't", "none", as(ins2, `select lesson_id from lesson_progress where user_id='${st}'`));
+await check("classmate can't", "none", as(st2, `select lesson_id from lesson_progress where user_id='${st}'`));
 console.log(fail ? `\n${fail} FAILED` : "\nALL PASSED");
 process.exit(fail ? 1 : 0);

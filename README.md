@@ -77,6 +77,9 @@ That's it. There's nothing to configure for the demo.
 | `npm run lint` | ESLint |
 | `npm run format` | Prettier, including Tailwind class ordering |
 | `npm run test:db` | Database security tests (see below) |
+| `npm run db:bundle` | All migrations as one file for Supabase's SQL Editor (`-- 0011` for just the newer ones) |
+| `npm run db:seed` | Load the curriculum into Supabase (adds what's missing, never overwrites) |
+| `npm run db:check` | Read-only check that the Supabase project is set up |
 
 Use a different port with `npm run dev -- -p 4000` or `npm start -- -p 4000`.
 
@@ -88,14 +91,15 @@ Before pushing, run: `npm run typecheck && npm run lint && npm run test:db && np
 
 | Command | What it checks |
 | --- | --- |
-| `npm run test:db` | Database security rules (RLS) on an in-process Postgres, 132 checks |
+| `npm run test:db` | Database security rules (RLS) on an in-process Postgres, 151 checks |
 | `npm run test:e2e` | Browser tests: every feature by role, permissions, tampered requests, and layout at desktop, tablet and phone sizes |
 | `npm run test:e2e:ui` | The same, in Playwright's UI to watch or debug a test |
+| `npm run test:e2e:supabase` | The same suite against a throwaway local Supabase in Docker, plus invite and password-reset emails |
 | `npm test` | Both |
 
 The first time, install the test browser: `npx playwright install chromium`.
 
-`test:e2e` builds the app and starts it on port 3210 with demo data, then runs everything in `tests/e2e/`. Each test starts from fresh seed data through a reset endpoint that only exists when the test runner starts the server with `E2E_TEST_HOOKS=1` and a random secret. Never set those in a real deployment. Add `E2E_SKIP_BUILD=1` to reuse an existing build.
+`test:e2e` builds the app and starts it on port 3210 with demo data, then runs everything in `tests/e2e/`. `test:e2e:supabase` does the same against a local Supabase that it starts with the Supabase CLI (needs Docker): real database, sign-in and a mail catcher, loaded with the demo before every test. It wipes that database each time, so it never points at a real project. CI runs both. Each test starts from fresh seed data through a reset endpoint that only exists when the test runner starts the server with `E2E_TEST_HOOKS=1` and a random secret. Never set those in a real deployment. Add `E2E_SKIP_BUILD=1` to reuse an existing build.
 
 | Spec | Covers |
 | --- | --- |
@@ -128,7 +132,7 @@ cp .env.example .env.local
 | `DEMO_PASSWORD` | `academe-demo` in dev, **unset in production** | Password for the seeded demo accounts. In production, if unset, nobody can sign in as a seeded account. |
 | `DEMO_LOGIN` | on in dev, **off in production** | Set to `true` to allow one-click demo sign-in on a deployment. Only for throwaway demo instances: it lets anyone sign in as the admin. |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | unset (demo mode) | Set both to sign in with Supabase Auth instead of the in-memory demo accounts. Setup: [`docs/supabase-setup.md`](docs/supabase-setup.md). |
-| `SUPABASE_SECRET_KEY` | unset | Server only. Lets admins invite students by email. Bypasses database security rules: never expose it. |
+| `SUPABASE_SECRET_KEY` | unset | Server only, **required with Supabase**: sends notifications and invites. Bypasses database security rules: never expose it. |
 | `SITE_URL` | `http://localhost:3000` | Public address of the app; invite and reset emails link here. |
 
 `.env.local` is git-ignored. **Never commit real keys.**
@@ -137,7 +141,7 @@ cp .env.example .env.local
 
 ## Database
 
-Sign-in uses Supabase when it's configured ([`docs/supabase-setup.md`](docs/supabase-setup.md)). The rest of the data moves over in the next step; the schema is ready and tested:
+With the Supabase keys set, all data lives in Supabase ([`docs/supabase-setup.md`](docs/supabase-setup.md)); without them, the app uses in-memory demo data.
 
 ```
 supabase/
@@ -151,8 +155,13 @@ supabase/
 │   ├── 0007_create_programmes_cohorts.sql  admins create programmes and cohorts
 │   ├── 0008_office_hours.sql         weekly office hours, student ↔ instructor threads
 │   ├── 0009_office_hours_hardening.sql  review fixes: column-level updates, removed students, timezone setting
-│   └── 0010_auth.sql                 a profile for every new account (always a student), email lookup for invites
-└── tests/rls.test.mjs                132 access-control checks
+│   ├── 0010_auth.sql                 a profile for every new account (always a student), email lookup for invites
+│   └── 0011_app_data.sql             app_snapshot(), admins read every cohort, public catalogue, staff see progress
+├── templates/                        invite and password reset emails
+├── config.toml                       the local Supabase the browser tests start
+└── tests/
+    ├── rls.test.mjs                  151 access-control checks
+    └── e2e-setup.sql                 test-only loader for the local Supabase
 ```
 
 `npm run test:db` runs every migration on an in-process Postgres (PGlite), then acts as students, instructors, an admin, an outsider and an anonymous visitor to check who can read and write what. No Postgres install or Docker needed.

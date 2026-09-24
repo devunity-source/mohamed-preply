@@ -164,13 +164,19 @@ Needs from you: a Supabase project, a Stripe account, a Resend account (see **Op
   - Email links land on `/auth/confirm`, which only uses the token when the person presses Continue (mail scanners open links in advance), and only continues to paths inside the app
   - Migration 0010: every new account gets a profile, always as a student (sign-up metadata can't pick a role); `user_id_by_email()` callable only with the secret key. 8 new database checks.
   - `npm run db:bundle`: all migrations as one transaction for the SQL Editor
-- [ ] Step 1 limits: demo data still shows next to real accounts, and cohort memberships added in Supabase mode are lost on restart (fixed by step 2)
+- [x] **Step 2, all data in Supabase** (same switch: demo mode without the keys)
+  - Reads: each request loads everything the person may see in one call (`app_snapshot()`, security invoker, so RLS decides); pages and their logic are unchanged. `db()` returns that request's copy (React `cache()` in pages, `withData()` around server actions and route handlers, where `cache()` doesn't apply)
+  - Writes: every action goes through `src/lib/data/save.ts`, which updates the database as the signed-in person (RLS checks each write again) and this request's copy. Updates and deletes that RLS silently skips are treated as failures. Notifications to other people use the secret key
+  - Migration 0011: `app_snapshot()`; admins read every cohort; public catalogue for visitors (published cohorts and their instructors, never students); staff read their students' lesson progress (was own-only: dashboards and certificate eligibility read 0%); instructors can link resources to assignments
+  - Auth hardening found on the way: Supabase session cookies are HttpOnly (the default leaves them script-readable); the server check uses `getUser()`, so "sign out other devices" takes effect at once instead of when the token expires
+  - `npm run db:seed` (curriculum only, never overwrites), `npm run db:check` (read-only project check), `npm run db:bundle -- 0011`
+  - `npm run test:e2e:supabase`: the whole browser suite against a local Supabase (Docker, via the Supabase CLI) with the demo loaded before each test, plus real invite and password-reset emails through the local mail catcher. Runs in CI as a second job
+  - Scaling note: loading everything per request suits a few hundred students; past a few thousand, move the busiest pages to targeted queries (only `src/lib/data/` changes)
 - [ ] Google and LinkedIn sign-in (owner creates the Google Cloud and LinkedIn apps, enables them in Supabase; then buttons + callback)
 - [ ] Rate limiting on every write (posts, comments, reactions, submissions) (security review #9). The waitlist is already limited; move `src/lib/rate-limit.ts` to a shared store so limits hold across instances.
 - [ ] Waitlist: store in Supabase (`0003_waitlist.sql`), confirmation email via Resend, admin export, invite waitlisters when enrolment opens
 - [ ] Dependabot or Renovate for dependency updates (two Next.js security releases landed in Sep 2026 alone)
-- [ ] Rewrite `repo.ts` and `actions.ts` bodies against Supabase; delete the demo store
-- [ ] Seed script that loads `seed.ts` data into Supabase for staging
+- [x] Seed script (`npm run db:seed`, curriculum only); demo store kept as demo mode by choice
 - [ ] Storage bucket `submissions` for ZIP uploads (RLS: owner + cohort instructors)
 - [ ] Stripe Checkout on "Enrol now" → webhook → create profile, enrollment, cohort membership, notifications, welcome email (one transaction)
 - [ ] Coupons, refunds (webhook sets payment `refunded`, removes membership, revokes any certificate), per `docs/refund-policy.md`
@@ -320,3 +326,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-24 | Code review of 77bcabb (office hours), all four findings fixed: thread updates limited to each side's own read time (0009, column grants + trigger; last_message_at set by the database; server timestamps); removed students can't write in old threads; unread counts refresh without reload and new messages in an open thread get marked read; database timezone comes from `app.academy_timezone`. 13 new RLS checks (124). |
 | 2026-09-24 | QA: Playwright suite in `tests/e2e/` (65 tests: every feature by role, permissions, tampered requests, layout at 1440/768/390 px), secret-gated reset hook, GitHub Actions CI. Found and fixed: the assignment form's errors weren't announced to screen readers; reseeding reused already-edited seed objects. |
 | 2026-09-24 | Phase 2 step 1: Supabase Auth for sign-in, password reset and student invites, with demo mode kept for development and tests. Migration 0010, `docs/supabase-setup.md`. |
+| 2026-09-24 | Phase 2 step 2: all data in Supabase (one RLS-filtered snapshot per request, writes as the signed-in person). Migration 0011. Whole browser suite passes against a local Supabase too (66 each mode), including real invite and reset emails; CI runs both. Found and fixed: staff couldn't see student progress; session cookies weren't HttpOnly; revoked sessions lived until token expiry. |

@@ -1,6 +1,16 @@
 import { test as base, expect, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
+import { seedUuid } from "../../src/lib/data/seed-ids";
 
 export const PASSWORD = process.env.E2E_DEMO_PASSWORD!;
+
+/** True when the suite runs against a local Supabase (see playwright.config.ts). */
+export const SUPABASE = !!process.env.E2E_SUPABASE_URL;
+
+/** A seed id ("c_devops_01") as the app sees it: the same in demo mode, a stable UUID in Supabase. */
+export const id = (seedId: string) => (SUPABASE ? seedUuid(seedId) : seedId);
+
+/** Matches an id the app just created: "po_xxxx" in demo mode, a UUID in Supabase. */
+export const NEW_ID = SUPABASE ? "[0-9a-f-]{36}" : "[a-z]+_[a-z0-9]+";
 
 /** Seeded accounts, by first name. Every one signs in as <handle>@academe.demo. */
 export const USERS = {
@@ -18,6 +28,24 @@ export type Who = keyof typeof USERS;
 export async function resetData(request: APIRequestContext) {
   const res = await request.post("/api/test/reset", { headers: { "x-e2e-secret": process.env.E2E_TEST_SECRET! } });
   expect(res.status(), "reset hook: is the server running with E2E_TEST_HOOKS=1?").toBe(200);
+  if (SUPABASE) await request.delete(`${process.env.E2E_MAILPIT_URL}/api/v1/messages`);
+}
+
+/**
+ * Supabase mode: the link in the newest email to `to`, from the local stack's
+ * mail catcher (Mailpit). Waits for it to arrive.
+ */
+export async function emailLink(request: APIRequestContext, to: string): Promise<string> {
+  const base = process.env.E2E_MAILPIT_URL!;
+  const find = async () => {
+    const res = await request.get(`${base}/api/v1/search?query=${encodeURIComponent(`to:"${to}"`)}`);
+    return ((await res.json()).messages ?? [])[0]?.ID as string | undefined;
+  };
+  await expect.poll(find, { message: `an email to ${to}`, timeout: 15_000 }).toBeTruthy();
+  const message = await (await request.get(`${base}/api/v1/message/${await find()}`)).json();
+  const href = String(message.HTML).match(/href="([^"]+)"/)?.[1];
+  expect(href, "a link in the email").toBeTruthy();
+  return href!.replaceAll("&amp;", "&");
 }
 
 export async function signIn(page: Page, who: Who, password = PASSWORD) {

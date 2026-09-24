@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { db, newId } from "@/lib/data/store";
+import { db, newId, withData } from "@/lib/data/store";
+import { insert, notify, remove, update } from "@/lib/data/save";
 import {
   canPost,
   cohortRoster,
@@ -30,19 +31,15 @@ export interface FormState {
   message?: string;
 }
 
-function notify(userId: string, text: string, href: string) {
-  db().notifications.push({ id: newId("n"), userId, text, href, createdAt: new Date(), readAt: null });
-}
-
 const MAX_MENTIONS = 10;
 
 /** Notify mentioned users, but only those who can see the space (no leaking private titles). */
-function notifyMentions(body: string, author: Profile, spaceId: string, href: string, where: string) {
+async function notifyMentions(body: string, author: Profile, spaceId: string, href: string, where: string) {
   const handles = [...new Set([...body.matchAll(/@([a-z0-9_]+)/gi)].map((m) => m[1].toLowerCase()))];
   for (const handle of handles.slice(0, MAX_MENTIONS)) {
     const target = profileByHandle(handle);
     if (target && target.id !== author.id && visibleSpaces(target.id).some((sp) => sp.id === spaceId)) {
-      notify(target.id, `${author.fullName.split(" ")[0]} mentioned you in “${where}”`, href);
+      await notify(target.id, `${author.fullName.split(" ")[0]} mentioned you in “${where}”`, href);
     }
   }
 }
@@ -54,18 +51,18 @@ function inProgrammeCohort(userId: string, programmeId: string): boolean {
 // ---------------------------------------------------------------------------
 // Learning
 
-export async function toggleLesson(lessonId: string) {
+export const toggleLesson = withData(async (lessonId: string) => {
   const user = await currentUser();
   const s = db();
   const lesson = s.lessons.find((l) => l.id === lessonId);
   const mod = lesson && s.modules.find((m) => m.id === lesson.moduleId);
   if (!lesson || !mod || !inProgrammeCohort(user.id, mod.programmeId)) throw new Error("Not found");
 
-  const i = s.lessonProgress.findIndex((p) => p.userId === user.id && p.lessonId === lessonId);
-  if (i >= 0) s.lessonProgress.splice(i, 1);
-  else s.lessonProgress.push({ userId: user.id, lessonId, completedAt: new Date() });
+  const done = s.lessonProgress.find((p) => p.userId === user.id && p.lessonId === lessonId);
+  if (done) await remove("lessonProgress", done);
+  else await insert("lessonProgress", { userId: user.id, lessonId, completedAt: new Date() });
   revalidatePath("/", "layout");
-}
+});
 
 const STUDENT_LAB_STATUSES: readonly LabStatus[] = ["in_progress", "submitted"];
 
@@ -74,7 +71,7 @@ const STUDENT_LAB_STATUSES: readonly LabStatus[] = ["in_progress", "submitted"];
  * to the next lesson. The destination is worked out here, never taken from
  * the client.
  */
-export async function completeLessonAndContinue(cohortId: string, lessonId: string) {
+export const completeLessonAndContinue = withData(async (cohortId: string, lessonId: string) => {
   const user = await currentUser();
   const s = db();
   const cohort = s.cohorts.find((c) => c.id === cohortId);
@@ -84,7 +81,7 @@ export async function completeLessonAndContinue(cohortId: string, lessonId: stri
     throw new Error("Not found");
   }
   if (!s.lessonProgress.some((p) => p.userId === user.id && p.lessonId === lessonId)) {
-    s.lessonProgress.push({ userId: user.id, lessonId, completedAt: new Date() });
+    await insert("lessonProgress", { userId: user.id, lessonId, completedAt: new Date() });
   }
   const next = lessonContext(cohort.programmeId, lessonId)?.next;
   revalidatePath("/", "layout");
@@ -93,9 +90,9 @@ export async function completeLessonAndContinue(cohortId: string, lessonId: stri
       ? `/cohorts/${cohortId}/modules/${next.moduleId}/${next.id}`
       : `/cohorts/${cohortId}/modules/${mod.id}?finished=1`,
   );
-}
+});
 
-export async function updateLab(labId: string, status: Extract<LabStatus, "in_progress" | "submitted">) {
+export const updateLab = withData(async (labId: string, status: Extract<LabStatus, "in_progress" | "submitted">) => {
   // Bound arguments arrive as plain JSON from the client, so the type above is
   // not a guarantee. Only instructors may set "passed".
   if (!STUDENT_LAB_STATUSES.includes(status)) throw new Error("Invalid status");
@@ -106,16 +103,12 @@ export async function updateLab(labId: string, status: Extract<LabStatus, "in_pr
 
   const attempt = s.labAttempts.find((a) => a.labId === labId && a.userId === user.id);
   if (attempt?.status === "passed") return;
-  if (attempt) {
-    attempt.status = status;
-    attempt.updatedAt = new Date();
-  } else {
-    s.labAttempts.push({ labId, userId: user.id, status, updatedAt: new Date() });
-  }
+  if (attempt) await update("labAttempts", attempt, { status, updatedAt: new Date() });
+  else await insert("labAttempts", { labId, userId: user.id, status, updatedAt: new Date() });
   revalidatePath("/", "layout");
-}
+});
 
-export async function submitAssignment(_prev: FormState, form: FormData): Promise<FormState> {
+export const submitAssignment = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const user = await currentUser();
   const s = db();
   const assignment = s.assignments.find((a) => a.id === form.get("assignmentId"));
@@ -138,9 +131,9 @@ export async function submitAssignment(_prev: FormState, form: FormData): Promis
   const existing = s.submissions.find((x) => x.assignmentId === assignment.id && x.userId === user.id);
   if (existing?.grade != null) return { error: "This submission has already been graded." };
   if (existing) {
-    Object.assign(existing, { repoUrl, note, submittedAt: new Date() });
+    await update("submissions", existing, { repoUrl, note, submittedAt: new Date() });
   } else {
-    s.submissions.push({
+    await insert("submissions", {
       id: newId("sub"),
       assignmentId: assignment.id,
       userId: user.id,
@@ -157,16 +150,16 @@ export async function submitAssignment(_prev: FormState, form: FormData): Promis
 
   const href = `/cohorts/${assignment.cohortId}/assignments/${assignment.id}`;
   for (const m of s.cohortMembers.filter((m) => m.cohortId === assignment.cohortId && m.role === "instructor")) {
-    notify(m.userId, `${user.fullName} submitted “${assignment.title}”`, href);
+    await notify(m.userId, `${user.fullName} submitted “${assignment.title}”`, href);
   }
   revalidatePath("/", "layout");
   return { ok: true };
-}
+});
 
 // ---------------------------------------------------------------------------
 // Community
 
-export async function createPost(_prev: FormState, form: FormData): Promise<FormState> {
+export const createPost = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const user = await currentUser();
   const space = spaceBySlug(String(form.get("space") ?? ""), user.id);
   if (!space) return { error: "Space not found." };
@@ -181,7 +174,7 @@ export async function createPost(_prev: FormState, form: FormData): Promise<Form
   if (!title || !body) return { error: "Add a title and some text." };
 
   const id = newId("po");
-  db().posts.push({
+  await insert("posts", {
     id,
     spaceId: space.id,
     authorId: user.id,
@@ -192,12 +185,12 @@ export async function createPost(_prev: FormState, form: FormData): Promise<Form
     locked: false,
   });
   const href = `/community/${space.slug}/${id}`;
-  notifyMentions(body, user, space.id, href, title);
+  await notifyMentions(body, user, space.id, href, title);
   revalidatePath("/", "layout");
   redirect(href);
-}
+});
 
-export async function addComment(_prev: FormState, form: FormData): Promise<FormState> {
+export const addComment = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const user = await currentUser();
   const s = db();
   const post = s.posts.find((p) => p.id === form.get("postId"));
@@ -209,31 +202,31 @@ export async function addComment(_prev: FormState, form: FormData): Promise<Form
     .slice(0, 5000);
   if (!body) return { error: "Write something first." };
 
-  s.comments.push({ id: newId("co"), postId: post.id, authorId: user.id, body, createdAt: new Date() });
+  await insert("comments", { id: newId("co"), postId: post.id, authorId: user.id, body, createdAt: new Date() });
   const space = s.spaces.find((sp) => sp.id === post.spaceId)!;
   const href = `/community/${space.slug}/${post.id}`;
   if (post.authorId !== user.id) {
-    notify(post.authorId, `${user.fullName.split(" ")[0]} commented on “${post.title}”`, href);
+    await notify(post.authorId, `${user.fullName.split(" ")[0]} commented on “${post.title}”`, href);
   }
-  notifyMentions(body, user, space.id, href, post.title);
+  await notifyMentions(body, user, space.id, href, post.title);
   revalidatePath("/", "layout");
   return { ok: true };
-}
+});
 
 const EMOJI = new Set(["👍", "🔥", "🎉", "💡", "❤️"]);
 
-export async function toggleReaction(postId: string, emoji: string) {
+export const toggleReaction = withData(async (postId: string, emoji: string) => {
   const user = await currentUser();
   const s = db();
   const post = s.posts.find((p) => p.id === postId);
   if (!post || !EMOJI.has(emoji) || !visibleSpaces(user.id).some((sp) => sp.id === post.spaceId)) {
     throw new Error("Not found");
   }
-  const i = s.reactions.findIndex((r) => r.postId === postId && r.userId === user.id && r.emoji === emoji);
-  if (i >= 0) s.reactions.splice(i, 1);
-  else s.reactions.push({ postId, userId: user.id, emoji });
+  const mine = s.reactions.find((r) => r.postId === postId && r.userId === user.id && r.emoji === emoji);
+  if (mine) await remove("reactions", mine);
+  else await insert("reactions", { postId, userId: user.id, emoji });
   revalidatePath("/", "layout");
-}
+});
 
 // ---------------------------------------------------------------------------
 // Public: waitlist (no sign-in)
@@ -241,7 +234,7 @@ export async function toggleReaction(postId: string, emoji: string) {
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MAX_WAITLIST = 50_000; // bounds the in-memory demo store
 
-export async function joinWaitlist(_prev: FormState, form: FormData): Promise<FormState> {
+export const joinWaitlist = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   // Honeypot: real people never see or fill this field. Pretend success for bots.
   if (String(form.get("company") ?? "") !== "") return { ok: true };
 
@@ -260,12 +253,18 @@ export async function joinWaitlist(_prev: FormState, form: FormData): Promise<Fo
 
   // Same answer whether or not the email was already listed, so the form
   // can't be used to find out who signed up.
+  // With Supabase, visitors can't read the list: a repeat sign-up just hits
+  // the unique (email, programme) rule, which is ignored.
   const exists = s.waitlist.some((w) => w.email === email && w.programmeId === programme.id);
   if (!exists && s.waitlist.length < MAX_WAITLIST) {
-    s.waitlist.push({ id: newId("wl"), email, programmeId: programme.id, createdAt: new Date() });
+    try {
+      await insert("waitlist", { id: newId("wl"), email, programmeId: programme.id, createdAt: new Date() });
+    } catch (e) {
+      if (!/duplicate key|unique/i.test((e as Error).message)) throw e;
+    }
   }
   return { ok: true };
-}
+});
 
 // ---------------------------------------------------------------------------
 // Notifications and demo session
@@ -275,16 +274,16 @@ export async function joinWaitlist(_prev: FormState, form: FormData): Promise<Fo
  * "New" markers from before the visit, and the sidebar hides the badge for
  * the space you're in.
  */
-export async function markSpaceSeen(slug: string) {
+export const markSpaceSeen = withData(async (slug: string) => {
   const user = await currentUser();
   if (typeof slug !== "string") return;
   const space = spaceBySlug(slug, user.id);
   if (!space) return;
   const s = db();
   const existing = s.spaceReads.find((r) => r.userId === user.id && r.spaceId === space.id);
-  if (existing) existing.lastSeenAt = new Date();
-  else s.spaceReads.push({ userId: user.id, spaceId: space.id, lastSeenAt: new Date() });
-}
+  if (existing) await update("spaceReads", existing, { lastSeenAt: new Date() });
+  else await insert("spaceReads", { userId: user.id, spaceId: space.id, lastSeenAt: new Date() });
+});
 
 // ---------------------------------------------------------------------------
 // Office hours
@@ -293,7 +292,7 @@ export async function markSpaceSeen(slug: string) {
  * A student writes to their cohort's instructors. Only while office hours are
  * open: the page greys the form out, and this check makes that binding.
  */
-export async function sendOfficeMessage(_prev: FormState, form: FormData): Promise<FormState> {
+export const sendOfficeMessage = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const user = await currentUser();
   const s = db();
   const cohortId = String(form.get("cohortId") ?? "");
@@ -330,13 +329,14 @@ export async function sendOfficeMessage(_prev: FormState, form: FormData): Promi
       instructorReadAt: null,
       studentReadAt: now,
     };
-    s.officeThreads.push(thread);
+    await insert("officeThreads", thread);
   }
-  s.officeMessages.push({ id: newId("om"), threadId: thread.id, authorId: user.id, body, createdAt: now });
+  await insert("officeMessages", { id: newId("om"), threadId: thread.id, authorId: user.id, body, createdAt: now });
+  await update("officeThreads", thread, { studentReadAt: now });
+  // The database moves last_message_at itself (0009); keep this request's copy in step.
   thread.lastMessageAt = now;
-  thread.studentReadAt = now;
   for (const instructor of cohortRoster(cohortId).instructors) {
-    notify(
+    await notify(
       instructor.id,
       `Office hours: ${user.fullName.split(" ")[0]} sent you a message`,
       `/admin/cohorts/${cohortId}/office-hours?student=${user.id}`,
@@ -344,20 +344,20 @@ export async function sendOfficeMessage(_prev: FormState, form: FormData): Promi
   }
   revalidatePath("/", "layout");
   return { ok: true };
-}
+});
 
 /** Marks a conversation read for whoever is looking at it: its student, or the cohort's staff. */
-export async function markOfficeThreadRead(threadId: string) {
+export const markOfficeThreadRead = withData(async (threadId: string) => {
   const user = await currentUser();
   if (typeof threadId !== "string") return;
   const thread = threadById(threadId);
   if (!thread) return;
-  if (thread.studentId === user.id) thread.studentReadAt = new Date();
-  else if (canManage(user, thread.cohortId)) thread.instructorReadAt = new Date();
+  if (thread.studentId === user.id) await update("officeThreads", thread, { studentReadAt: new Date() });
+  else if (canManage(user, thread.cohortId)) await update("officeThreads", thread, { instructorReadAt: new Date() });
   else return;
   // Unread counts live in layouts (the admin tab label, the Home card), so refresh them.
   revalidatePath("/", "layout");
-}
+});
 
 function canManage(user: Profile, cohortId: string) {
   return (
@@ -366,25 +366,26 @@ function canManage(user: Profile, cohortId: string) {
   );
 }
 
-export async function dismissWelcome() {
+export const dismissWelcome = withData(async () => {
   const user = await currentUser();
   const profile = db().profiles.find((p) => p.id === user.id);
-  if (profile) profile.onboardedAt ??= new Date();
+  if (profile && !profile.onboardedAt) await update("profiles", profile, { onboardedAt: new Date() });
   revalidatePath("/dashboard");
-}
+});
 
-export async function markAllRead() {
+export const markAllRead = withData(async () => {
   const user = await currentUser();
   const now = new Date();
-  for (const n of db().notifications) if (n.userId === user.id && !n.readAt) n.readAt = now;
+  const unread = db().notifications.filter((n) => n.userId === user.id && !n.readAt);
+  await Promise.all(unread.map((n) => update("notifications", n, { readAt: now })));
   revalidatePath("/", "layout");
-}
+});
 
-export async function openNotification(id: string) {
+export const openNotification = withData(async (id: string) => {
   const user = await currentUser();
   const n = db().notifications.find((x) => x.id === id && x.userId === user.id);
   if (!n) redirect("/notifications");
-  n.readAt ??= new Date();
+  if (!n.readAt) await update("notifications", n, { readAt: new Date() });
   revalidatePath("/", "layout");
   redirect(isInternalPath(n.href) ? n.href : "/notifications");
-}
+});

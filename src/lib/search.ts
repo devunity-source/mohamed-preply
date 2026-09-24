@@ -4,6 +4,7 @@ import { cohortAssignments, cohortClasses, cohortLabs, modulesFor, myCohorts, vi
 import { cohortById } from "@/lib/data/admin";
 import { hasAdminArea, isAdmin, managedCohortIds } from "@/lib/authz";
 import { currentUser } from "@/lib/session";
+import { withData } from "@/lib/data/store";
 import { formatShortDate } from "@/lib/time";
 import type { Cohort, Profile, Programme } from "@/lib/types";
 
@@ -19,7 +20,7 @@ export interface SearchItem {
  * queries as the pages themselves: you can only find what you could click to.
  * Loaded on first open rather than shipped with every page.
  */
-export async function searchIndex(): Promise<SearchItem[]> {
+export const searchIndex = withData(async (): Promise<SearchItem[]> => {
   const user = await currentUser();
   const items: SearchItem[] = [
     { label: "Home", hint: "Dashboard", href: "/dashboard", kind: "Page" },
@@ -37,7 +38,7 @@ export async function searchIndex(): Promise<SearchItem[]> {
   }
   if (hasAdminArea(user)) items.push(...staffItems(user));
   return items;
-}
+});
 
 /** A cohort's page plus its lessons, labs, assignments and classes. */
 function cohortItems(cohort: Cohort, programme: Programme): SearchItem[] {

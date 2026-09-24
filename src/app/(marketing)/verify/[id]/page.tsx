@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BadgeCheck, CircleX } from "lucide-react";
 import { Certificate } from "@/components/certificate";
-import { verifyCertificate } from "@/lib/data/admin";
+import { lookupCertificate } from "@/lib/data/admin";
 import { formatDate, formatMonthYear } from "@/lib/time";
 
 // Public: anyone with the link can check a certificate. Shows only what's
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: PageProps<"/verify/[id]">): P
 
 export default async function Verify({ params }: PageProps<"/verify/[id]">) {
   const { id } = await params;
-  const result = ID.test(id) ? verifyCertificate(id) : undefined;
+  const result = ID.test(id) ? await lookupCertificate(id) : undefined;
   const valid = result && !result.cert.revokedAt;
 
   return (
