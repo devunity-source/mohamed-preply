@@ -2,27 +2,24 @@ import "server-only";
 import { db } from "@/lib/data/store";
 import { supabaseEnabled } from "@/lib/supabase/config";
 import { createAdminClient } from "@/lib/supabase/server";
+import type { Key } from "@/lib/i18n/translate";
 import type { EmailKind } from "@/lib/types";
 
-export const EMAIL_KINDS: { kind: EmailKind; label: string; hint: string; noun: string }[] = [
+/** The kinds people can switch off, with message keys for their label, hint and "Stop X emails" noun. */
+export const EMAIL_KINDS: { kind: EmailKind; label: Key; hint: Key; noun: Key }[] = [
+  { kind: "grades", label: "email.kindGrades", hint: "email.kindGradesHint", noun: "email.kindGradesNoun" },
+  { kind: "community", label: "email.kindCommunity", hint: "email.kindCommunityHint", noun: "email.kindCommunityNoun" },
   {
-    kind: "grades",
-    label: "Grades and certificates",
-    hint: "Work graded, labs reviewed, certificates issued",
-    noun: "grade and certificate",
+    kind: "office_hours",
+    label: "email.kindOfficeHours",
+    hint: "email.kindOfficeHoursHint",
+    noun: "email.kindOfficeHoursNoun",
   },
-  {
-    kind: "community",
-    label: "Mentions and comments",
-    hint: "Someone @mentions you or comments on your post",
-    noun: "mention and comment",
-  },
-  { kind: "office_hours", label: "Office hours", hint: "Messages and replies", noun: "office hours" },
-  { kind: "reminders", label: "Reminders", hint: "Before live classes, and for work that's missing", noun: "reminder" },
+  { kind: "reminders", label: "email.kindReminders", hint: "email.kindRemindersHint", noun: "email.kindRemindersNoun" },
 ];
 
-/** "reminder", as in "Stop reminder emails". */
-export const kindNoun = (kind: EmailKind) => EMAIL_KINDS.find((k) => k.kind === kind)!.noun;
+/** The message key for "reminder", as in "Stop reminder emails". */
+export const kindNoun = (kind: EmailKind): Key => EMAIL_KINDS.find((k) => k.kind === kind)!.noun;
 
 /** The signed-in person's own settings (their row is in this request's data). */
 export function emailOff(userId: string): EmailKind[] {

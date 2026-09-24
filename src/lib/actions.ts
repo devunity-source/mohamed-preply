@@ -7,6 +7,8 @@ import { db, newId, withData } from "@/lib/data/store";
 import { insert, notify, remove, update } from "@/lib/data/save";
 import { sendLater } from "@/lib/email/send";
 import { waitlistEmail } from "@/lib/email/templates";
+import { getLocale } from "@/lib/i18n/server";
+import { loc } from "@/lib/i18n/content";
 import { EMAIL_KINDS, turnOffFromLink } from "@/lib/email/prefs";
 import { validUnsubscribe } from "@/lib/email/links";
 import {
@@ -43,7 +45,7 @@ async function notifyMentions(body: string, author: Profile, spaceId: string, hr
   for (const handle of handles.slice(0, MAX_MENTIONS)) {
     const target = profileByHandle(handle);
     if (target && target.id !== author.id && visibleSpaces(target.id).some((sp) => sp.id === spaceId)) {
-      await notify(target.id, `${author.fullName.split(" ")[0]} mentioned you in “${where}”`, href, "community");
+      await notify(target.id, "notify.mentioned", { name: author.fullName.split(" ")[0], where }, href, "community");
     }
   }
 }
@@ -154,7 +156,7 @@ export const submitAssignment = withData(async (_prev: FormState, form: FormData
 
   const href = `/cohorts/${assignment.cohortId}/assignments/${assignment.id}`;
   for (const m of s.cohortMembers.filter((m) => m.cohortId === assignment.cohortId && m.role === "instructor")) {
-    await notify(m.userId, `${user.fullName} submitted “${assignment.title}”`, href);
+    await notify(m.userId, "notify.submitted", { name: user.fullName, title: assignment.title }, href);
   }
   revalidatePath("/", "layout");
   return { ok: true };
@@ -210,7 +212,13 @@ export const addComment = withData(async (_prev: FormState, form: FormData): Pro
   const space = s.spaces.find((sp) => sp.id === post.spaceId)!;
   const href = `/community/${space.slug}/${post.id}`;
   if (post.authorId !== user.id) {
-    await notify(post.authorId, `${user.fullName.split(" ")[0]} commented on “${post.title}”`, href, "community");
+    await notify(
+      post.authorId,
+      "notify.commented",
+      { name: user.fullName.split(" ")[0], title: post.title },
+      href,
+      "community",
+    );
   }
   await notifyMentions(body, user, space.id, href, post.title);
   revalidatePath("/", "layout");
@@ -264,7 +272,9 @@ export const joinWaitlist = withData(async (_prev: FormState, form: FormData): P
     try {
       await insert("waitlist", { id: newId("wl"), email, programmeId: programme.id, createdAt: new Date() });
       // Only a new sign-up gets the confirmation, so resubmitting can't be used to spam someone.
-      sendLater(async () => ({ to: email, tag: "waitlist", ...waitlistEmail(programme.title) }));
+      // In the language they were browsing in.
+      const locale = await getLocale();
+      sendLater(async () => ({ to: email, tag: "waitlist", ...waitlistEmail(loc(programme, locale).title, locale) }));
     } catch (e) {
       if (!/duplicate key|unique/i.test((e as Error).message)) throw e;
     }
@@ -344,7 +354,8 @@ export const sendOfficeMessage = withData(async (_prev: FormState, form: FormDat
   for (const instructor of cohortRoster(cohortId).instructors) {
     await notify(
       instructor.id,
-      `Office hours: ${user.fullName.split(" ")[0]} sent you a message`,
+      "notify.officeMessage",
+      { name: user.fullName.split(" ")[0] },
       `/admin/cohorts/${cohortId}/office-hours?student=${user.id}`,
       "office_hours",
     );

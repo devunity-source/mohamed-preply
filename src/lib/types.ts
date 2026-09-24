@@ -4,6 +4,11 @@
 
 export type Role = "student" | "instructor" | "admin";
 
+export type Locale = "en" | "ar";
+
+/** Translations of an item's readable fields, e.g. { ar: { title: "..." } }. Missing ones fall back to the original. */
+export type Translations<T> = Partial<Record<Locale, Partial<T>>>;
+
 export interface Profile {
   id: string;
   fullName: string;
@@ -13,6 +18,8 @@ export interface Profile {
   avatarColor: string;
   /** Set when the first-visit welcome is dismissed. */
   onboardedAt?: Date | null;
+  /** The language they picked; null follows the browser. Emails use it. */
+  locale?: Locale | null;
 }
 
 export interface Programme {
@@ -28,6 +35,7 @@ export interface Programme {
   // Used in certificate IDs, e.g. ACM-DEV-2026-00001.
   certCode: string;
   published: boolean;
+  i18n?: Translations<Pick<Programme, "title" | "tagline" | "description" | "includes">>;
 }
 
 export interface Module {
@@ -37,6 +45,7 @@ export interface Module {
   position: number;
   title: string;
   summary: string;
+  i18n?: Translations<Pick<Module, "title" | "summary">>;
 }
 
 export type LessonKind = "reading" | "video" | "exercise";
@@ -49,6 +58,7 @@ export interface Lesson {
   kind: LessonKind;
   durationMin: number;
   body: string;
+  i18n?: Translations<Pick<Lesson, "title" | "body">>;
 }
 
 export type CohortStatus = "upcoming" | "active" | "completed";
@@ -176,6 +186,7 @@ export interface Space {
   cohortId: string | null;
   // Only instructors/admins may post (e.g. Announcements).
   readOnly: boolean;
+  i18n?: Translations<Pick<Space, "name" | "description" | "group">>;
 }
 
 export interface Post {
@@ -248,6 +259,9 @@ export interface Notification {
   href: string;
   createdAt: Date;
   readAt: Date | null;
+  /** Message key ("notify.graded") and its values, so each reader sees their own language. */
+  template?: string | null;
+  params?: Record<string, string | number>;
 }
 
 export interface Project {

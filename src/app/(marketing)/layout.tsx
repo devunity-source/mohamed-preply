@@ -1,17 +1,20 @@
 import Link from "next/link";
 import { Archivo } from "next/font/google";
 import { Logo } from "@/components/ui";
+import { LanguageToggle } from "@/components/language-toggle";
+import { getI18n } from "@/lib/i18n/server";
 
 // Variable width as well as weight: wide headlines, condensed week strip.
 const archivo = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-archivo", display: "swap" });
 
 const LINKS = [
-  { href: "/#week", label: "A week" },
-  { href: "/#programmes", label: "Programmes" },
-  { href: "/#faq", label: "FAQ" },
-];
+  { href: "/#week", label: "nav.aWeek" },
+  { href: "/#programmes", label: "nav.programmes" },
+  { href: "/#faq", label: "nav.faq" },
+] as const;
 
-export default function MarketingLayout({ children }: LayoutProps<"/">) {
+export default async function MarketingLayout({ children }: LayoutProps<"/">) {
+  const { t } = await getI18n();
   return (
     <div className={`marketing ${archivo.variable} min-h-dvh`}>
       <header className="sticky top-0 z-20 border-b border-line bg-paper/90 backdrop-blur">
@@ -23,19 +26,20 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
           <nav className="hidden items-center gap-7 text-sm text-muted md:flex">
             {LINKS.map((l) => (
               <Link key={l.href} href={l.href} className="hover:text-ink">
-                {l.label}
+                {t(l.label)}
               </Link>
             ))}
           </nav>
           <div className="flex items-center gap-2">
+            <LanguageToggle />
             <Link href="/login" className="hidden px-3 py-2 text-sm font-medium hover:text-muted sm:block">
-              Sign in
+              {t("nav.signIn")}
             </Link>
             <Link
               href="/#waitlist"
               className="rounded-md bg-ink px-4 py-2 text-sm font-medium text-paper transition-colors hover:bg-dusk"
             >
-              Join waitlist
+              {t("nav.joinWaitlist")}
             </Link>
           </div>
         </div>
@@ -49,15 +53,15 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
             <Logo className="size-6" />
             <span className="font-wide font-bold tracking-tight">AcadeMe</span>
           </div>
-          <p>Live cohorts for people switching into tech.</p>
+          <p>{t("nav.footerTagline")}</p>
           <nav className="flex flex-wrap gap-x-6 gap-y-2">
             {LINKS.map((l) => (
               <Link key={l.href} href={l.href} className="hover:text-ink">
-                {l.label}
+                {t(l.label)}
               </Link>
             ))}
             <Link href="/login" className="hover:text-ink">
-              Sign in
+              {t("nav.signIn")}
             </Link>
           </nav>
           <p>© {new Date().getFullYear()} AcadeMe</p>

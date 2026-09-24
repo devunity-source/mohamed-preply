@@ -23,6 +23,8 @@ const globalForStore = globalThis as unknown as { __academeStore?: Store };
 interface Box {
   store?: Store;
   loading?: Promise<Store>;
+  /** This request's language, once known (see src/lib/i18n/server.ts). */
+  locale?: "en" | "ar";
 }
 
 // Pages and layouts share one box per request through React's cache().
@@ -31,6 +33,9 @@ interface Box {
 const pageBox = cache((): Box => ({}));
 const actionBox = new AsyncLocalStorage<Box>();
 const box = () => actionBox.getStore() ?? pageBox();
+
+/** Per-request scratch space shared with other modules (the language, for now). */
+export const requestScope = (): Pick<Box, "locale"> => box();
 
 export function db(): Store {
   if (!supabaseEnabled()) {

@@ -52,9 +52,10 @@ const remind = withServiceData(async (now: Date) => {
           idempotencyKey: `class-reminder-${cls.id}-${userId}`,
           headers: { "List-Unsubscribe": `<${links.oneClick}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
           ...classReminderEmail({
+            locale: r.locale,
             firstName: r.firstName,
             title: cls.title,
-            when: formatTime(cls.startsAt),
+            when: formatTime(cls.startsAt, r.locale),
             href,
             unsubscribe: links.page,
           }),

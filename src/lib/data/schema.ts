@@ -27,7 +27,7 @@ export const TABLES = {
     table: "profiles",
     key: ["id"],
     fields: {
-      ...same("id", "handle", "role", "headline"),
+      ...same("id", "handle", "role", "headline", "locale"),
       fullName: "full_name",
       avatarColor: "avatar_color",
       onboardedAt: "onboarded_at",
@@ -38,7 +38,7 @@ export const TABLES = {
     table: "programmes",
     key: ["id"],
     fields: {
-      ...same("id", "slug", "title", "tagline", "description", "currency", "includes", "published"),
+      ...same("id", "slug", "title", "tagline", "description", "currency", "includes", "published", "i18n"),
       durationWeeks: "duration_weeks",
       priceCents: "price_cents",
       certCode: "cert_code",
@@ -47,12 +47,16 @@ export const TABLES = {
   modules: {
     table: "programme_modules",
     key: ["id"],
-    fields: { ...same("id", "week", "position", "title", "summary"), programmeId: "programme_id" },
+    fields: { ...same("id", "week", "position", "title", "summary", "i18n"), programmeId: "programme_id" },
   },
   lessons: {
     table: "lessons",
     key: ["id"],
-    fields: { ...same("id", "position", "title", "kind", "body"), moduleId: "module_id", durationMin: "duration_min" },
+    fields: {
+      ...same("id", "position", "title", "kind", "body", "i18n"),
+      moduleId: "module_id",
+      durationMin: "duration_min",
+    },
   },
   cohorts: {
     table: "cohorts",
@@ -153,7 +157,11 @@ export const TABLES = {
   spaces: {
     table: "spaces",
     key: ["id"],
-    fields: { ...same("id", "slug", "name", "group", "description"), cohortId: "cohort_id", readOnly: "read_only" },
+    fields: {
+      ...same("id", "slug", "name", "group", "description", "i18n"),
+      cohortId: "cohort_id",
+      readOnly: "read_only",
+    },
   },
   posts: {
     table: "posts",
@@ -180,7 +188,12 @@ export const TABLES = {
   notifications: {
     table: "notifications",
     key: ["id"],
-    fields: { ...same("id", "text", "href"), userId: "user_id", createdAt: "created_at", readAt: "read_at" },
+    fields: {
+      ...same("id", "text", "href", "template", "params"),
+      userId: "user_id",
+      createdAt: "created_at",
+      readAt: "read_at",
+    },
     kinds: { createdAt: "timestamp", readAt: "timestamp" },
   },
   lessonProgress: {

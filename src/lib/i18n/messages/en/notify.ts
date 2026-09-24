@@ -1,0 +1,15 @@
+export const notify = {
+  mentioned: "{name} mentioned you in “{where}”",
+  commented: "{name} commented on “{title}”",
+  submitted: "{name} submitted “{title}”",
+  officeMessage: "Office hours: {name} sent you a message",
+  officeReply: "{name} replied to your office hours message",
+  graded: "Your assignment “{title}”: {grade}/100",
+  regraded: "Updated grade on your assignment “{title}”: {grade}/100",
+  reminder: "Reminder: “{title}” hasn't been submitted yet",
+  labPassed: "Lab #{number} marked as passed",
+  labReturned: "Lab #{number} was returned. Check the objectives and resubmit.",
+  certificate: "Your {programme} certificate is ready",
+  teaching: "You're teaching {cohort} (cohort {code})",
+  welcome: "Welcome to {cohort}",
+};

@@ -1,0 +1,15 @@
+export const common = {
+  languageLabel: "Language",
+  switchTo: "العربية",
+  today: "Today",
+  tomorrow: "Tomorrow",
+  yesterday: "Yesterday",
+  justNow: "just now",
+  minutesAgo: "{count}m ago",
+  hoursAgo: "{count}h ago",
+  daysAgo: "{count}d ago",
+  goodMorning: "Good morning",
+  goodAfternoon: "Good afternoon",
+  goodEvening: "Good evening",
+  notAvailable: "n/a",
+};

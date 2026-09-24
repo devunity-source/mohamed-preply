@@ -4,6 +4,10 @@ import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { keyOf, TABLES, toRow, type Persisted, type TableMap } from "./schema";
 import { db, newId } from "./store";
 import { emailActivity, type ActivityKind } from "@/lib/email/notify";
+import { translate, type Key } from "@/lib/i18n/translate";
+import type { Vars } from "@/lib/i18n/format";
+
+export type NotifyKey = Extract<Key, `notify.${string}`>;
 import type { Store } from "./seed";
 import type { Assignment, Submission } from "@/lib/types";
 
@@ -131,17 +135,26 @@ async function saveResources(a: Assignment, opts?: Options) {
 
 /**
  * Notifies someone in the app and, when `email` says which kind it is, by
- * email too (unless they turned that kind off). In-app notifications are side
- * effects nobody may create directly, so with Supabase they use the secret
- * key. If that fails (say, the key isn't set), the action that triggered it
- * still counts: the failure is logged, not thrown.
+ * email too (unless they turned that kind off). The message is a key plus
+ * values, so each reader sees it in their own language; `text` keeps the
+ * English version. In-app notifications are side effects nobody may create
+ * directly, so with Supabase they use the secret key. If that fails (say, the
+ * key isn't set), the action that triggered it still counts: the failure is
+ * logged, not thrown.
  */
-export async function notify(userId: string, text: string, href: string, email?: ActivityKind): Promise<void> {
-  const item = { id: newId("n"), userId, text, href, createdAt: new Date(), readAt: null };
+export async function notify(
+  userId: string,
+  template: NotifyKey,
+  params: Vars,
+  href: string,
+  email?: ActivityKind,
+): Promise<void> {
+  const text = translate("en", template, params);
+  const item = { id: newId("n"), userId, text, href, createdAt: new Date(), readAt: null, template, params };
   try {
     await insert("notifications", item, { privileged: true });
   } catch (e) {
     console.error(`Notification not sent: ${(e as Error).message}`);
   }
-  if (email) emailActivity(userId, text, href, email);
+  if (email) emailActivity(userId, template, params, href, email);
 }
