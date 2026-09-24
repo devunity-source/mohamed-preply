@@ -268,6 +268,17 @@ export const TABLES = {
     fields: { ...same("id", "body"), threadId: "thread_id", authorId: "author_id", createdAt: "created_at" },
     kinds: { createdAt: "timestamp" },
   },
+  emailPrefs: {
+    table: "email_preferences",
+    key: ["userId"],
+    fields: { userId: "user_id", off: "off" },
+  },
+  remindersSent: {
+    table: "email_reminders",
+    key: ["classId", "userId"],
+    fields: { classId: "class_id", userId: "user_id", sentAt: "sent_at" },
+    kinds: { sentAt: "timestamp" },
+  },
 } satisfies Partial<Record<keyof Store, TableMap>>;
 
 export type Persisted = keyof typeof TABLES;

@@ -9,6 +9,8 @@ import { demoSignInForm, signOut } from "@/lib/auth-actions";
 import { demoLoginEnabled } from "@/lib/auth/config";
 import { accountEmail, currentUser, mustChangePassword } from "@/lib/session";
 import { ChangePasswordForm } from "@/components/change-password-form";
+import { EmailSettingsForm } from "@/components/email-settings-form";
+import { EMAIL_KINDS, emailOff } from "@/lib/email/prefs";
 
 export const metadata = { title: "Profile" };
 
@@ -122,6 +124,18 @@ export default async function Profile() {
               </SubmitButton>
             </form>
           </Card>
+
+          {email && (
+            <div id="email" className="scroll-mt-8">
+              <Card title="Email">
+                <p className="mb-4 text-sm text-muted">
+                  Everything also shows in your notifications. Choose what reaches{" "}
+                  <span className="font-mono">{email}</span>.
+                </p>
+                <EmailSettingsForm kinds={EMAIL_KINDS} off={emailOff(user.id)} />
+              </Card>
+            </div>
+          )}
 
           {email && (
             <div id="password" className="scroll-mt-8">

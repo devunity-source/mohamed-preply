@@ -7,6 +7,7 @@ const PORT = 3210;
 process.env.E2E_BASE_URL ??= `http://localhost:${PORT}`;
 process.env.E2E_TEST_SECRET ??= randomBytes(24).toString("hex");
 process.env.E2E_DEMO_PASSWORD ??= "e2e-demo-password";
+process.env.E2E_CRON_SECRET ??= randomBytes(24).toString("hex");
 
 // Demo mode by default. With E2E_SUPABASE_URL (and its keys) set, the same
 // suite runs against that Supabase instead: only ever a throwaway local one
@@ -63,6 +64,9 @@ export default defineConfig({
     env: {
       E2E_TEST_HOOKS: "1",
       E2E_TEST_SECRET: process.env.E2E_TEST_SECRET,
+      CRON_SECRET: process.env.E2E_CRON_SECRET,
+      // Emails go to the test outbox (test hooks on), never to Resend.
+      RESEND_API_KEY: "",
       DEMO_PASSWORD: process.env.E2E_DEMO_PASSWORD,
       ACADEMY_TIMEZONE: "Asia/Dubai",
       // Set, even when empty: that beats a developer's .env.local, so the

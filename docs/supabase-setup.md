@@ -7,7 +7,7 @@ With Supabase connected, everything lives in your project: accounts and sign-in,
 Four things, about 5 minutes:
 
 1. Add `SUPABASE_SECRET_KEY` to `.env.local`. It's required now: the server uses it to send notifications and invites.
-2. `npm run db:bundle -- 0011`, paste `supabase/all-migrations.sql` into **SQL Editor**, press **Run**.
+2. `npm run db:bundle -- 0011`, paste `supabase/all-migrations.sql` into **SQL Editor**, press **Run**. (That's 0011 and 0012 together.)
 3. `npm run db:seed` to load the curriculum.
 4. `npm run db:check` to confirm everything is in place.
 
@@ -79,7 +79,7 @@ Why: the default links only work in the browser that asked for them, and invites
 
 ## 5. Email sending
 
-Supabase's built-in email sends **2 emails an hour, only to members of your Supabase team**. Fine for trying invites on yourself; not for students. Before inviting real people, set up [custom SMTP](https://supabase.com/dashboard/project/_/auth/smtp). Resend works and is already planned for the app's own emails.
+Supabase's built-in email sends **2 emails an hour, only to members of your Supabase team**. Fine for trying invites on yourself; not for students. Before inviting real people, send it through Resend: [`docs/email-setup.md`](email-setup.md), step 4.
 
 ## 6. Who can create an account
 

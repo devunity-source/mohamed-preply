@@ -7,11 +7,12 @@ import { readdirSync, readFileSync } from "node:fs";
 const M = new URL("../migrations/", import.meta.url);
 const db = new PGlite();
 await db.exec(`
-  create role authenticated; create role anon; create role service_role;
+  create role authenticated; create role anon; create role service_role bypassrls;
   create schema auth; create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb not null default '{}');
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.sub', true), '')::uuid $$;
   grant usage on schema auth to authenticated, anon;
   grant usage on schema public to authenticated, anon, service_role;
+  alter default privileges in schema public grant all on tables to service_role;
   alter default privileges in schema public grant all on tables to authenticated, anon;
 `);
 for (const f of readdirSync(M).filter((f) => f.endsWith(".sql")).sort()) {
@@ -247,5 +248,15 @@ await check("cohort instructor sees a student's progress", "ok", as(ins, `select
 await check("admin sees a student's progress", "ok", as(adm, `select lesson_id from lesson_progress where user_id='${st}'`));
 await check("other cohort's instructor can't", "none", as(ins2, `select lesson_id from lesson_progress where user_id='${st}'`));
 await check("classmate can't", "none", as(st2, `select lesson_id from lesson_progress where user_id='${st}'`));
+console.log("-- 0012 email");
+await check("student saves own email settings", "ok", as(st, `insert into email_preferences (user_id, off) values ('${st}', '{reminders}') returning off`));
+await check("student can't save someone else's", "deny", as(st, `insert into email_preferences (user_id, off) values ('${st2}', '{grades}')`));
+await check("classmate can't read them", "none", as(st2, `select off from email_preferences where user_id='${st}'`));
+await check("admin (signed in) can't read them either", "none", as(adm, `select off from email_preferences where user_id='${st}'`));
+await check("unknown email kinds are refused", "deny", as(st, `update email_preferences set off='{everything}' where user_id='${st}'`));
+await check("snapshot has only your own settings", "ok", as(st2, `select 1 where jsonb_array_length(app_snapshot()->'email_preferences') = 0`));
+await check("signed-in people can't touch the reminder log", "deny", as(adm, `insert into email_reminders (class_id, user_id) select id, '${st}' from classes limit 1`));
+await check("server key records a reminder", "ok", asService(`insert into email_reminders (class_id, user_id) select id, '${st}' from classes limit 1 returning user_id`));
+await check("and nobody signed in can read it", "none", as(st, `select * from email_reminders`));
 console.log(fail ? `\n${fail} FAILED` : "\nALL PASSED");
 process.exit(fail ? 1 : 0);

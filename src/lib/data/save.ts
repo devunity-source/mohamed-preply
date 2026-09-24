@@ -3,6 +3,7 @@ import { supabaseEnabled } from "@/lib/supabase/config";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { keyOf, TABLES, toRow, type Persisted, type TableMap } from "./schema";
 import { db, newId } from "./store";
+import { emailActivity, type ActivityKind } from "@/lib/email/notify";
 import type { Store } from "./seed";
 import type { Assignment, Submission } from "@/lib/types";
 
@@ -129,16 +130,18 @@ async function saveResources(a: Assignment, opts?: Options) {
 }
 
 /**
- * Notifies someone. Notifications are side effects nobody may create
- * directly, so with Supabase they use the secret key. If that fails (say, the
- * key isn't set), the action that triggered it still counts: the failure is
- * logged, not thrown.
+ * Notifies someone in the app and, when `email` says which kind it is, by
+ * email too (unless they turned that kind off). In-app notifications are side
+ * effects nobody may create directly, so with Supabase they use the secret
+ * key. If that fails (say, the key isn't set), the action that triggered it
+ * still counts: the failure is logged, not thrown.
  */
-export async function notify(userId: string, text: string, href: string): Promise<void> {
+export async function notify(userId: string, text: string, href: string, email?: ActivityKind): Promise<void> {
   const item = { id: newId("n"), userId, text, href, createdAt: new Date(), readAt: null };
   try {
     await insert("notifications", item, { privileged: true });
   } catch (e) {
     console.error(`Notification not sent: ${(e as Error).message}`);
   }
+  if (email) emailActivity(userId, text, href, email);
 }

@@ -1,4 +1,3 @@
-import { timingSafeEqual } from "node:crypto";
 import { resetStore } from "@/lib/data/store";
 import { createSeed } from "@/lib/data/seed";
 import { loadDemo } from "@/lib/data/seed-supabase";
@@ -6,6 +5,8 @@ import { demoPassword } from "@/lib/auth/config";
 import { supabaseEnabled } from "@/lib/supabase/config";
 import { createAdminClient } from "@/lib/supabase/server";
 import { resetRateLimits } from "@/lib/rate-limit";
+import { clearOutbox } from "@/lib/email/send";
+import { testHookAllowed } from "@/lib/test-hooks";
 
 /**
  * Test hook for the end-to-end suite: reseeds the demo data so each test
@@ -14,11 +15,7 @@ import { resetRateLimits } from "@/lib/rate-limit";
  * must carry that secret. Never set these in a real deployment.
  */
 export async function POST(req: Request) {
-  const secret = process.env.E2E_TEST_SECRET ?? "";
-  const given = req.headers.get("x-e2e-secret") ?? "";
-  const enabled = process.env.E2E_TEST_HOOKS === "1" && secret.length >= 24;
-  const matches = given.length === secret.length && enabled && timingSafeEqual(Buffer.from(given), Buffer.from(secret));
-  if (!enabled || !matches) return new Response("Not found", { status: 404 });
+  if (!testHookAllowed(req)) return new Response("Not found", { status: 404 });
   if (supabaseEnabled()) {
     const sb = createAdminClient();
     if (!sb) return new Response("SUPABASE_SECRET_KEY is needed", { status: 500 });
@@ -27,5 +24,6 @@ export async function POST(req: Request) {
     resetStore();
   }
   resetRateLimits();
+  clearOutbox();
   return Response.json({ ok: true });
 }

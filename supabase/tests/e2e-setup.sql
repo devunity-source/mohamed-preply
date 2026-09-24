@@ -18,14 +18,14 @@ declare
     'assignment_resources', 'assignment_submissions', 'grades', 'events', 'spaces', 'posts',
     'comments', 'reactions', 'notifications', 'lesson_progress', 'waitlist', 'projects',
     'project_members', 'project_milestones', 'certificates', 'space_reads', 'office_hours',
-    'office_threads', 'office_messages'
+    'office_threads', 'office_messages', 'email_preferences', 'email_reminders'
   ];
 begin
   truncate profiles, programmes, programme_modules, lessons, cohorts, cohort_members, classes,
     class_attendance, labs, lab_attempts, assignments, assignment_resources, assignment_submissions,
     grades, resources, events, spaces, posts, comments, reactions, notifications, lesson_progress,
     waitlist, projects, project_members, project_milestones, certificates, space_reads, office_hours,
-    office_threads, office_messages, payments, enrollments cascade;
+    office_threads, office_messages, email_preferences, email_reminders, payments, enrollments cascade;
   -- Accounts made during a test (invites) go; the demo accounts stay.
   delete from auth.users where email not like '%@academe.demo';
 

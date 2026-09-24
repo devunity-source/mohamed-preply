@@ -108,6 +108,7 @@ export const gradeSubmission = withData(async (_prev: FormState, form: FormData)
     sub.userId,
     `${first ? "Your" : "Updated grade on your"} assignment “${assignment.title}”: ${sub.grade}/100`,
     `/cohorts/${assignment.cohortId}/assignments/${assignment.id}`,
+    "grades",
   );
   done();
 
@@ -133,6 +134,7 @@ export const remindNonSubmitters = withData(async (assignmentId: string) => {
       p.id,
       `Reminder: “${a.title}” hasn't been submitted yet`,
       `/cohorts/${a.cohortId}/assignments/${a.id}`,
+      "reminders",
     );
   }
   done();
@@ -159,6 +161,7 @@ export const reviewLab = withData(async (labId: string, userId: string, decision
     userId,
     decision === "pass" ? `${label} marked as passed` : `${label} was returned. Check the objectives and resubmit.`,
     `/cohorts/${lab.cohortId}/labs#${lab.id}`,
+    "grades",
   );
   done();
 });
@@ -388,7 +391,7 @@ export const issueCertificate = withData(async (userId: string, cohortId: string
   const programme = programmeById(cohort.programmeId)!;
   const id = nextCertificateId(programme.certCode, zonedParts(new Date()).year);
   await insert("certificates", { id, userId, cohortId, issuedAt: new Date(), issuedBy: user.id, revokedAt: null });
-  await notify(userId, `Your ${programme.title} certificate is ready`, `/cohorts/${cohortId}/certificate`);
+  await notify(userId, `Your ${programme.title} certificate is ready`, `/cohorts/${cohortId}/certificate`, "grades");
   done();
 });
 
@@ -573,7 +576,12 @@ export const createCohort = withData(async (_prev: FormState, form: FormData): P
     };
     await insert("spaces", space);
   }
-  await notify(instructor.id, `You're teaching ${cohort.name} (cohort ${cohort.code})`, `/admin/cohorts/${cohort.id}`);
+  await notify(
+    instructor.id,
+    `You're teaching ${cohort.name} (cohort ${cohort.code})`,
+    `/admin/cohorts/${cohort.id}`,
+    "cohort",
+  );
   done();
   redirect(`/admin/cohorts/${cohort.id}`);
 });
@@ -655,7 +663,7 @@ export const addStudentToCohort = withData(async (_prev: FormState, form: FormDa
   }
 
   await insert("cohortMembers", { cohortId: cohort.id, userId: student.id, role: "student" });
-  await notify(student.id, `Welcome to ${cohort.name}`, `/cohorts/${cohort.id}`);
+  await notify(student.id, `Welcome to ${cohort.name}`, `/cohorts/${cohort.id}`, "cohort");
   done();
   return {
     ok: true,
@@ -700,7 +708,8 @@ async function inviteToCohort(cohort: Cohort, email: string, fullName: string): 
   const row = found.student;
 
   await insert("cohortMembers", { cohortId: cohort.id, userId, role: "student" });
-  await notify(userId, `Welcome to ${cohort.name}`, `/cohorts/${cohort.id}`);
+  // A new person already gets the invite email; an existing one hears it here.
+  await notify(userId, `Welcome to ${cohort.name}`, `/cohorts/${cohort.id}`, invited ? undefined : "cohort");
   done();
   return {
     ok: true,
@@ -768,6 +777,7 @@ export const replyOfficeMessage = withData(async (_prev: FormState, form: FormDa
     thread.studentId,
     `${user.fullName.split(" ")[0]} replied to your office hours message`,
     `/cohorts/${thread.cohortId}/office-hours`,
+    "office_hours",
   );
   done();
   return { ok: true };

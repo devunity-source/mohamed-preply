@@ -3,7 +3,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import { cache } from "react";
 import { supabaseEnabled } from "@/lib/supabase/config";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { fromRow, TABLES, type TableMap } from "./schema";
 import { createSeed, type Store } from "./seed";
 
@@ -68,10 +68,24 @@ export function withData<A extends unknown[], R>(fn: (...args: A) => Promise<R>)
   };
 }
 
-type Row = Record<string, unknown>;
+/**
+ * For scheduled jobs, which act for no one in particular: db() holds all
+ * data, read with the secret key. Only for secret-protected routes.
+ */
+export function withServiceData<A extends unknown[], R>(fn: (...args: A) => Promise<R>): (...args: A) => Promise<R> {
+  return async (...args: A) => {
+    if (!supabaseEnabled()) return fn(...args);
+    const admin = createAdminClient();
+    if (!admin) throw new Error("SUPABASE_SECRET_KEY is needed");
+    return actionBox.run({ store: await fetchSnapshot(admin) }, () => fn(...args));
+  };
+}
 
-async function fetchSnapshot(): Promise<Store> {
-  const supabase = await createClient();
+type Row = Record<string, unknown>;
+type Client = Awaited<ReturnType<typeof createClient>> | NonNullable<ReturnType<typeof createAdminClient>>;
+
+async function fetchSnapshot(client?: Client): Promise<Store> {
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase.rpc("app_snapshot");
   if (error) throw new Error(`Couldn't load data from Supabase: ${error.message}`);
   const raw = data as Record<string, Row[]>;

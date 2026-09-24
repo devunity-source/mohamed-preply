@@ -31,6 +31,32 @@ export async function resetData(request: APIRequestContext) {
   if (SUPABASE) await request.delete(`${process.env.E2E_MAILPIT_URL}/api/v1/messages`);
 }
 
+export interface SentEmail {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  tag: string;
+  headers?: Record<string, string>;
+}
+
+/** Emails the app "sent" since the last reset (the test outbox; nothing leaves the machine). */
+export async function sentEmails(request: APIRequestContext, to?: string): Promise<SentEmail[]> {
+  const res = await request.get("/api/test/outbox", { headers: { "x-e2e-secret": process.env.E2E_TEST_SECRET! } });
+  expect(res.status(), "outbox hook").toBe(200);
+  const all = (await res.json()) as SentEmail[];
+  return to ? all.filter((e) => e.to === to) : all;
+}
+
+/** Runs the class reminder job, as the scheduler would. */
+export async function runClassReminders(request: APIRequestContext) {
+  const res = await request.get("/api/cron/class-reminders", {
+    headers: { authorization: `Bearer ${process.env.E2E_CRON_SECRET}` },
+  });
+  expect(res.status(), "class reminder job").toBe(200);
+  return (await res.json()) as { classes: number; reminders: number };
+}
+
 /**
  * Supabase mode: the link in the newest email to `to`, from the local stack's
  * mail catcher (Mailpit). Waits for it to arrive.

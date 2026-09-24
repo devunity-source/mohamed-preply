@@ -1,4 +1,6 @@
 import type {
+  EmailPrefs,
+  ReminderSent,
   Account,
   Assignment,
   Attendance,
@@ -71,6 +73,8 @@ export interface Store {
   officeHours: OfficeHoursSlot[];
   officeThreads: OfficeThread[];
   officeMessages: OfficeMessage[];
+  emailPrefs: EmailPrefs[];
+  remindersSent: ReminderSent[];
 }
 
 export const DEMO_USER_ID = "u_ahmed";
@@ -1152,6 +1156,8 @@ export function createSeed(now: Date = new Date()): Store {
         createdAt: ago(25),
       },
     ],
+    emailPrefs: [],
+    remindersSent: [],
   };
 }
 

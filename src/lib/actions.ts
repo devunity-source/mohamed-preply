@@ -5,6 +5,10 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, newId, withData } from "@/lib/data/store";
 import { insert, notify, remove, update } from "@/lib/data/save";
+import { sendLater } from "@/lib/email/send";
+import { waitlistEmail } from "@/lib/email/templates";
+import { EMAIL_KINDS, turnOffFromLink } from "@/lib/email/prefs";
+import { validUnsubscribe } from "@/lib/email/links";
 import {
   canPost,
   cohortRoster,
@@ -39,7 +43,7 @@ async function notifyMentions(body: string, author: Profile, spaceId: string, hr
   for (const handle of handles.slice(0, MAX_MENTIONS)) {
     const target = profileByHandle(handle);
     if (target && target.id !== author.id && visibleSpaces(target.id).some((sp) => sp.id === spaceId)) {
-      await notify(target.id, `${author.fullName.split(" ")[0]} mentioned you in “${where}”`, href);
+      await notify(target.id, `${author.fullName.split(" ")[0]} mentioned you in “${where}”`, href, "community");
     }
   }
 }
@@ -206,7 +210,7 @@ export const addComment = withData(async (_prev: FormState, form: FormData): Pro
   const space = s.spaces.find((sp) => sp.id === post.spaceId)!;
   const href = `/community/${space.slug}/${post.id}`;
   if (post.authorId !== user.id) {
-    await notify(post.authorId, `${user.fullName.split(" ")[0]} commented on “${post.title}”`, href);
+    await notify(post.authorId, `${user.fullName.split(" ")[0]} commented on “${post.title}”`, href, "community");
   }
   await notifyMentions(body, user, space.id, href, post.title);
   revalidatePath("/", "layout");
@@ -259,6 +263,8 @@ export const joinWaitlist = withData(async (_prev: FormState, form: FormData): P
   if (!exists && s.waitlist.length < MAX_WAITLIST) {
     try {
       await insert("waitlist", { id: newId("wl"), email, programmeId: programme.id, createdAt: new Date() });
+      // Only a new sign-up gets the confirmation, so resubmitting can't be used to spam someone.
+      sendLater(async () => ({ to: email, tag: "waitlist", ...waitlistEmail(programme.title) }));
     } catch (e) {
       if (!/duplicate key|unique/i.test((e as Error).message)) throw e;
     }
@@ -340,6 +346,7 @@ export const sendOfficeMessage = withData(async (_prev: FormState, form: FormDat
       instructor.id,
       `Office hours: ${user.fullName.split(" ")[0]} sent you a message`,
       `/admin/cohorts/${cohortId}/office-hours?student=${user.id}`,
+      "office_hours",
     );
   }
   revalidatePath("/", "layout");
@@ -389,3 +396,24 @@ export const openNotification = withData(async (id: string) => {
   revalidatePath("/", "layout");
   redirect(isInternalPath(n.href) ? n.href : "/notifications");
 });
+
+// ---------------------------------------------------------------------------
+// Email settings
+
+export const saveEmailPrefs = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const user = await currentUser();
+  const off = EMAIL_KINDS.map((k) => k.kind).filter((kind) => form.get(`on:${kind}`) !== "on");
+  const row = db().emailPrefs.find((p) => p.userId === user.id);
+  if (row) await update("emailPrefs", row, { off });
+  else await insert("emailPrefs", { userId: user.id, off });
+  revalidatePath("/profile");
+  return { ok: true };
+});
+
+/** From the unsubscribe page's button (the link alone changes nothing, so mail scanners can't). */
+export async function unsubscribeFromLink(form: FormData) {
+  const [u, k, t] = ["u", "k", "t"].map((f) => String(form.get(f) ?? "").slice(0, 200));
+  if (!validUnsubscribe(u, k, t)) redirect("/email/unsubscribe?invalid=1");
+  await turnOffFromLink(u, k);
+  redirect(`/email/unsubscribe?done=${k}`);
+}

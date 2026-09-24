@@ -16,7 +16,8 @@
     "db:bundle": "node scripts/bundle-migrations.mjs",
     "db:seed": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/seed-curriculum.ts",
     "test:e2e:supabase": "bash scripts/e2e-supabase.sh",
-    "db:check": "tsx --env-file-if-exists=.env.local scripts/check-supabase.ts"
+    "db:check": "tsx --env-file-if-exists=.env.local scripts/check-supabase.ts",
+    "email:test": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/send-test-email.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

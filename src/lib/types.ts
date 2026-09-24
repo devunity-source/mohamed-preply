@@ -310,6 +310,22 @@ export interface WaitlistEntry {
   createdAt: Date;
 }
 
+/** Email types a person can turn off. "cohort" emails (added to a cohort, teaching one) always go. */
+export type EmailKind = "grades" | "community" | "office_hours" | "reminders";
+
+export interface EmailPrefs {
+  userId: string;
+  /** Kinds this person turned off. No row means everything is on. */
+  off: EmailKind[];
+}
+
+/** A class reminder that went out, so the reminder job sends each only once. */
+export interface ReminderSent {
+  classId: string;
+  userId: string;
+  sentAt: Date;
+}
+
 export interface LessonProgress {
   userId: string;
   lessonId: string;

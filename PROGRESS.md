@@ -174,7 +174,8 @@ Needs from you: a Supabase project, a Stripe account, a Resend account (see **Op
   - Scaling note: loading everything per request suits a few hundred students; past a few thousand, move the busiest pages to targeted queries (only `src/lib/data/` changes)
 - [ ] Google and LinkedIn sign-in (owner creates the Google Cloud and LinkedIn apps, enables them in Supabase; then buttons + callback)
 - [ ] Rate limiting on every write (posts, comments, reactions, submissions) (security review #9). The waitlist is already limited; move `src/lib/rate-limit.ts` to a shared store so limits hold across instances.
-- [ ] Waitlist: store in Supabase (`0003_waitlist.sql`), confirmation email via Resend, admin export, invite waitlisters when enrolment opens
+- [x] Waitlist in Supabase, confirmation email, admin CSV export
+- [ ] Email waitlisters when enrolment opens
 - [ ] Dependabot or Renovate for dependency updates (two Next.js security releases landed in Sep 2026 alone)
 - [x] Seed script (`npm run db:seed`, curriculum only); demo store kept as demo mode by choice
 - [ ] Storage bucket `submissions` for ZIP uploads (RLS: owner + cohort instructors)
@@ -182,7 +183,8 @@ Needs from you: a Supabase project, a Stripe account, a Resend account (see **Op
 - [ ] Coupons, refunds (webhook sets payment `refunded`, removes membership, revokes any certificate), per `docs/refund-policy.md`
 - [ ] Admin actions: refund a student, move a student to a later cohort (keeps lesson, lab and grade history); record the refund policy version on each payment
 - [ ] Checkout shows "Full refund until week 2 starts" next to Pay, linking to the published refund policy
-- [ ] Resend: welcome, class-starts-in-30-min, deadline-tomorrow, graded, mentioned
+- [x] **Email through Resend** (`docs/email-setup.md`): waitlist confirmation, cohort welcome and teaching emails, and every activity notification by email (grades, mentions and comments, office hours, reminders), each kind switchable in Profile > Email and from a signed unsubscribe link (page with a button, plus RFC 8058 one-click). Class reminders by a secret-protected job (`/api/cron/class-reminders`), once per class and person. Sent after the response, one at a time under Resend's rate limit; skipped and logged without a key; a test outbox in the browser tests. Supabase's own invite and reset emails go through Resend SMTP (dashboard setting). Migration 0012.
+- [ ] Deadline-tomorrow reminders (the job can grow into it)
 - [ ] Realtime: live new posts/comments in spaces, notification badge
 - [x] CI on every push and PR: typecheck, lint, formatting, `test:db`, build, Playwright suite
 - [ ] Deploy (Vercel + Supabase), preview environments per PR
@@ -327,3 +329,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-24 | QA: Playwright suite in `tests/e2e/` (65 tests: every feature by role, permissions, tampered requests, layout at 1440/768/390 px), secret-gated reset hook, GitHub Actions CI. Found and fixed: the assignment form's errors weren't announced to screen readers; reseeding reused already-edited seed objects. |
 | 2026-09-24 | Phase 2 step 1: Supabase Auth for sign-in, password reset and student invites, with demo mode kept for development and tests. Migration 0010, `docs/supabase-setup.md`. |
 | 2026-09-24 | Phase 2 step 2: all data in Supabase (one RLS-filtered snapshot per request, writes as the signed-in person). Migration 0011. Whole browser suite passes against a local Supabase too (66 each mode), including real invite and reset emails; CI runs both. Found and fixed: staff couldn't see student progress; session cookies weren't HttpOnly; revoked sessions lived until token expiry. |
+| 2026-09-24 | Email through Resend: app emails with per-kind opt-out and signed unsubscribe, class reminder job, test outbox, `npm run email:test`. Migration 0012. Browser suite 70 in each mode. |
