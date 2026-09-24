@@ -5,6 +5,8 @@ import { Avatar, Card, Empty, KindMark, ProgressBar } from "@/components/ui";
 import { cohortStats } from "@/lib/data/admin";
 import { cohortWeek } from "@/lib/data/repo";
 import { isAdmin, requireCohortManager } from "@/lib/authz";
+import { AddStudentForm } from "@/components/admin-forms";
+import { addStudentToCohort } from "@/lib/admin-actions";
 import { formatMoney, formatPercent } from "@/lib/format";
 import { formatShortDate, formatTime, relativeDay } from "@/lib/time";
 
@@ -141,6 +143,16 @@ export default async function CohortDashboard({ params }: PageProps<"/admin/coho
         </div>
         {s.students.length === 0 && <Empty>No students enrolled yet.</Empty>}
       </Card>
+
+      {isAdmin(user) && s.cohort.status !== "completed" && (
+        <Card title="Add a student">
+          <p className="mb-4 text-sm text-muted">
+            Enter their email. Existing students are added straight away. For a new email, add their name too: an
+            account is created and you get a temporary password to send them.
+          </p>
+          <AddStudentForm action={addStudentToCohort} cohortId={s.cohort.id} />
+        </Card>
+      )}
       <p className="text-xs text-muted">
         Cohort runs {formatShortDate(s.cohort.startsOn)} to {formatShortDate(s.cohort.endsOn)}. Instructors:{" "}
         {s.instructors.map((i) => i.fullName).join(", ")}.

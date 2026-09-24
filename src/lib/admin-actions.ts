@@ -8,6 +8,8 @@ import { cohortById, nextCertificateId, unassignedStudents } from "@/lib/data/ad
 import { canManageCohort, canModerate, isAdmin } from "@/lib/authz";
 import { canCreateMeetings, createMeeting } from "@/lib/integrations/video";
 import { currentUser } from "@/lib/session";
+import { hashPassword } from "@/lib/auth/password";
+import { randomBytes } from "node:crypto";
 import { addDays, formatMonthYear, wallTime, zonedParts } from "@/lib/time";
 import type { FormState } from "@/lib/actions";
 import type { Attendance, Cohort, LessonKind, MeetingProvider, Profile, Space } from "@/lib/types";
@@ -547,6 +549,73 @@ export async function createCohort(_prev: FormState, form: FormData): Promise<Fo
   notify(instructor.id, `You're teaching ${cohort.name} (cohort ${cohort.code})`, `/admin/cohorts/${cohort.id}`);
   done();
   redirect(`/admin/cohorts/${cohort.id}`);
+}
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const AVATAR_COLORS = ["#FF5A1F", "#2F6BFF", "#00A870", "#8B5CF6", "#E5484D", "#F5A524"];
+
+/**
+ * Adds a student to a cohort by email. An existing student account is added
+ * as is. A new email gets a student account with a random temporary
+ * password, returned once so the admin can pass it on (there's no invite
+ * email until Phase 2). Only the hash is stored.
+ */
+export async function addStudentToCohort(_prev: FormState, form: FormData): Promise<FormState> {
+  await admin();
+  const s = db();
+  const cohort = s.cohorts.find((c) => c.id === form.get("cohortId"));
+  if (!cohort) return { error: "Cohort not found." };
+  if (cohort.status === "completed")
+    return { error: "This cohort has finished. Add them to a current or upcoming one." };
+  const email = str(form, "email", 254).toLowerCase();
+  const fullName = str(form, "fullName", 100);
+  if (!EMAIL.test(email)) return { error: "Enter a valid email address." };
+
+  const account = s.accounts.find((a) => a.email === email);
+  let student: Profile;
+  let tempPassword: string | null = null;
+  if (account) {
+    const profile = s.profiles.find((p) => p.id === account.userId);
+    if (!profile) return { error: "That account is incomplete. Contact support." };
+    if (profile.role !== "student")
+      return {
+        error: `${profile.fullName} is ${profile.role === "admin" ? "an admin" : "an instructor"}, not a student.`,
+      };
+    if (s.cohortMembers.some((m) => m.cohortId === cohort.id && m.userId === profile.id)) {
+      return { error: `${profile.fullName} is already in this cohort.` };
+    }
+    student = profile;
+  } else {
+    if (!fullName) return { error: "New student: add their full name too." };
+    const base =
+      email
+        .split("@")[0]
+        .replace(/[^a-z0-9]/g, "")
+        .slice(0, 20) || "student";
+    let handle = base;
+    for (let i = 2; s.profiles.some((p) => p.handle === handle); i++) handle = `${base}${i}`;
+    student = {
+      id: newId("u"),
+      fullName,
+      handle,
+      role: "student",
+      headline: "",
+      avatarColor: AVATAR_COLORS[s.profiles.length % AVATAR_COLORS.length],
+    };
+    tempPassword = randomBytes(9).toString("base64url");
+    s.profiles.push(student);
+    s.accounts.push({ userId: student.id, email, passwordHash: await hashPassword(tempPassword) });
+  }
+
+  s.cohortMembers.push({ cohortId: cohort.id, userId: student.id, role: "student" });
+  notify(student.id, `Welcome to ${cohort.name}`, `/cohorts/${cohort.id}`);
+  done();
+  return {
+    ok: true,
+    message: tempPassword
+      ? `Created an account for ${student.fullName} (${email}) and added them. Temporary password: ${tempPassword}. Send it to them privately; it won't be shown again.`
+      : `Added ${student.fullName} (${email}) to the cohort.`,
+  };
 }
 
 export async function updateProgramme(_prev: FormState, form: FormData): Promise<FormState> {

@@ -16,6 +16,8 @@ import type { LabStatus, Profile } from "@/lib/types";
 export interface FormState {
   error?: string;
   ok?: boolean;
+  /** Extra text to show after a successful save. */
+  message?: string;
 }
 
 function notify(userId: string, text: string, href: string) {
