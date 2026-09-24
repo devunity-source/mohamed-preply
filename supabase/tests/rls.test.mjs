@@ -7,11 +7,11 @@ import { readdirSync, readFileSync } from "node:fs";
 const M = new URL("../migrations/", import.meta.url);
 const db = new PGlite();
 await db.exec(`
-  create role authenticated; create role anon;
-  create schema auth; create table auth.users (id uuid primary key);
+  create role authenticated; create role anon; create role service_role;
+  create schema auth; create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb not null default '{}');
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.sub', true), '')::uuid $$;
   grant usage on schema auth to authenticated, anon;
-  grant usage on schema public to authenticated, anon;
+  grant usage on schema public to authenticated, anon, service_role;
   alter default privileges in schema public grant all on tables to authenticated, anon;
 `);
 for (const f of readdirSync(M).filter((f) => f.endsWith(".sql")).sort()) {
@@ -22,8 +22,10 @@ const [st, st2, ins, out, adm, ins2] = [1, 2, 3, 4, 11, 10].map(U);
 const [C1, C2, PROG, ANN, GEN, GEN2, GLOBAL_ANN, A1] = [8, 20, 9, 7, 6, 21, 22, 5].map(U);
 await db.exec(`
   insert into auth.users values ('${st}'),('${st2}'),('${ins}'),('${out}'),('${adm}'),('${ins2}');
+  -- The sign-up trigger (0010) already made student profiles; set the real details.
   insert into profiles (id, full_name, handle, role) values ('${st}','Ahmed','ahmed','student'),('${st2}','Maria','maria','student'),
-    ('${ins}','Rakan','rakan','instructor'),('${out}','Out','outsider','student'),('${adm}','Admin','admin','admin'),('${ins2}','Other','other','instructor');
+    ('${ins}','Rakan','rakan','instructor'),('${out}','Out','outsider','student'),('${adm}','Admin','admin','admin'),('${ins2}','Other','other','instructor')
+    on conflict (id) do update set full_name = excluded.full_name, handle = excluded.handle, role = excluded.role;
   insert into programmes (id, slug, title, duration_weeks, price_cents, published) values ('${PROG}','devops','DevOps',6,59000,true);
   insert into cohorts (id, programme_id, code, name, starts_on, ends_on, status) values ('${C1}','${PROG}','#01','C1','2026-08-31','2026-10-11','active'),('${C2}','${PROG}','#02','C2','2026-11-01','2026-12-01','upcoming');
   insert into cohort_members values ('${C1}','${st}','student'),('${C1}','${st2}','student'),('${C1}','${ins}','instructor'),('${C2}','${ins2}','instructor');
@@ -201,5 +203,22 @@ await check("student writes in own thread while enrolled", "ok", as(st2, `insert
 await db.exec(`delete from cohort_members where cohort_id='${C1}' and user_id='${st2}'`);
 await check("removed student can't write in old thread", "deny", as(st2, `insert into office_messages (thread_id, author_id, body) values ('${T2}','${st2}','still here?')`));
 await check("app timezone setting is used", "ok", as(st, `select 1 where academy_tz() = 'Asia/Dubai'`));
+console.log("-- 0010 auth hookup");
+const [N1, N2, N3] = [40, 41, 42].map(U);
+async function asService(sql) {
+  await db.exec(`set role service_role`);
+  try { return await db.query(sql); } catch (e) { return { error: e.message }; } finally { await db.exec(`reset role`); }
+}
+await db.exec(`insert into auth.users (id, email, raw_user_meta_data) values ('${N1}','Sara.K@Example.com','{"full_name":"Sara Khan","role":"admin"}')`);
+await check("new user gets a profile, always a student", "ok", db.query(`select 1 from profiles where id='${N1}' and role='student' and full_name='Sara Khan' and handle='sarak'`));
+await db.exec(`insert into auth.users (id, email) values ('${N2}','sara.k@other.com')`);
+await check("taken handle gets a number, name falls back", "ok", db.query(`select 1 from profiles where id='${N2}' and handle='sarak2' and full_name='sarak'`));
+await db.exec(`insert into auth.users (id, email) values ('${N3}','a@x.com')`);
+await check("too-short handle becomes user…", "ok", db.query(`select 1 from profiles where id='${N3}' and handle ~ '^user[0-9]*$'`));
+await check("anon looks up an account by email", "deny", as(null, `select user_id_by_email('sara.k@example.com')`));
+await check("student looks up an account by email", "deny", as(st, `select user_id_by_email('sara.k@example.com')`));
+await check("admin (signed in) looks up an account by email", "deny", as(adm, `select user_id_by_email('sara.k@example.com')`));
+await check("server key finds account by email, any case", "ok", asService(`select 1 where user_id_by_email('SARA.K@example.com') = '${N1}'`));
+await check("unknown email finds nothing", "ok", asService(`select 1 where user_id_by_email('nobody@example.com') is null`));
 console.log(fail ? `\n${fail} FAILED` : "\nALL PASSED");
 process.exit(fail ? 1 : 0);

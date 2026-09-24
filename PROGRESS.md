@@ -91,7 +91,7 @@ supabase/migrations/0006_usd_and_cert_prefix.sql  currency default USD
 supabase/migrations/0007_create_programmes_cohorts.sql  admin write on cohorts + members, unique cert code
 supabase/migrations/0008_office_hours.sql  office_hours, office_threads, office_messages, office_open()
 supabase/migrations/0009_office_hours_hardening.sql  code review fixes for 0008
-tests/e2e/                          Playwright suite (65 tests), playwright.config.ts, .github/workflows/ci.yml
+tests/e2e/                          Playwright suite (66 tests), playwright.config.ts, .github/workflows/ci.yml
 docs/refund-policy.md               refund policy draft (needs legal review)
 supabase/tests/rls.test.mjs         124 RLS checks on PGlite (npm run test:db)
 legacy/                             previous repo contents, untouched
@@ -155,9 +155,17 @@ legacy/                             previous repo contents, untouched
 
 Needs from you: a Supabase project, a Stripe account, a Resend account (see **Open questions**).
 
-- [ ] Supabase clients (`@supabase/ssr`, already installed) for server components and actions
-- [ ] Auth: move to Supabase Auth (email + password, Google, LinkedIn) behind the existing `currentUser()` / `getSessionUser()`; add its session refresh to `src/proxy.ts` next to the CSP and the sign-in gate. Accounts and sessions currently live in memory.
-- [ ] Password reset and sign-up flows (arrive with Supabase Auth + email)
+- [x] **Step 1, sign-in on Supabase Auth** (on when `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are set; demo mode otherwise, and always in the tests). Owner setup: `docs/supabase-setup.md`.
+  - Server-side clients in `src/lib/supabase/`; `src/proxy.ts` refreshes the session on every request before the sign-in gate
+  - `currentUser()` / `getSessionUser()` unchanged for pages: verified claims (`getClaims`), profile from the `profiles` table, mirrored into the in-memory store for the data that hasn't moved yet
+  - Sign-in, sign-out, password change (re-checks the current password, signs out other devices), same error message and rate limits as before
+  - Forgot password: email link, same answer for every email, rate limited
+  - Admin "add student": existing account joins; new email gets a Supabase invite to choose their own password (needs `SUPABASE_SECRET_KEY`); no temporary passwords
+  - Email links land on `/auth/confirm`, which only uses the token when the person presses Continue (mail scanners open links in advance), and only continues to paths inside the app
+  - Migration 0010: every new account gets a profile, always as a student (sign-up metadata can't pick a role); `user_id_by_email()` callable only with the secret key. 8 new database checks.
+  - `npm run db:bundle`: all migrations as one transaction for the SQL Editor
+- [ ] Step 1 limits: demo data still shows next to real accounts, and cohort memberships added in Supabase mode are lost on restart (fixed by step 2)
+- [ ] Google and LinkedIn sign-in (owner creates the Google Cloud and LinkedIn apps, enables them in Supabase; then buttons + callback)
 - [ ] Rate limiting on every write (posts, comments, reactions, submissions) (security review #9). The waitlist is already limited; move `src/lib/rate-limit.ts` to a shared store so limits hold across instances.
 - [ ] Waitlist: store in Supabase (`0003_waitlist.sql`), confirmation email via Resend, admin export, invite waitlisters when enrolment opens
 - [ ] Dependabot or Renovate for dependency updates (two Next.js security releases landed in Sep 2026 alone)
@@ -311,3 +319,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-24 | Office hours: per-weekday schedule, messaging only while open (UI + server + RLS), instructor inbox with replies, Home card. Migration 0008, `test:db` 111 checks, 30 new browser checks. Fixed the app's main column overflowing at tablet widths (768px) on every page. |
 | 2026-09-24 | Code review of 77bcabb (office hours), all four findings fixed: thread updates limited to each side's own read time (0009, column grants + trigger; last_message_at set by the database; server timestamps); removed students can't write in old threads; unread counts refresh without reload and new messages in an open thread get marked read; database timezone comes from `app.academy_timezone`. 13 new RLS checks (124). |
 | 2026-09-24 | QA: Playwright suite in `tests/e2e/` (65 tests: every feature by role, permissions, tampered requests, layout at 1440/768/390 px), secret-gated reset hook, GitHub Actions CI. Found and fixed: the assignment form's errors weren't announced to screen readers; reseeding reused already-edited seed objects. |
+| 2026-09-24 | Phase 2 step 1: Supabase Auth for sign-in, password reset and student invites, with demo mode kept for development and tests. Migration 0010, `docs/supabase-setup.md`. |

@@ -14,6 +14,7 @@ export const metadata = { title: "Profile" };
 
 export default async function Profile() {
   const user = await currentUser();
+  const email = await accountEmail(user.id);
   const primary = primaryCohort(user.id);
   const isStudent = primary?.role === "student";
   const progress = primary && isStudent ? progressFor(user.id, primary.cohort) : null;
@@ -113,7 +114,7 @@ export default async function Profile() {
 
           <Card title="Account">
             <p className="text-sm">
-              Signed in as <span className="font-mono">{accountEmail(user.id)}</span>
+              Signed in as <span className="font-mono">{email}</span>
             </p>
             <form action={signOut} className="mt-4">
               <SubmitButton variant="ghost" className="w-full">
@@ -122,7 +123,7 @@ export default async function Profile() {
             </form>
           </Card>
 
-          {accountEmail(user.id) && (
+          {email && (
             <div id="password" className="scroll-mt-8">
               <Card title="Password">
                 {mustChangePassword(user.id) && (

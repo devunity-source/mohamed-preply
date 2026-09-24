@@ -10,6 +10,7 @@ import { addStudentToCohort, removeStudentFromCohort } from "@/lib/admin-actions
 import { ConfirmForm } from "@/components/confirm-form";
 import { formatMoney, formatPercent } from "@/lib/format";
 import { formatShortDate, formatTime, relativeDay } from "@/lib/time";
+import { supabaseEnabled } from "@/lib/supabase/config";
 
 export default async function CohortDashboard({ params }: PageProps<"/admin/cohorts/[cohortId]">) {
   const { cohortId } = await params;
@@ -173,8 +174,10 @@ export default async function CohortDashboard({ params }: PageProps<"/admin/coho
       {isAdmin(user) && s.cohort.status !== "completed" && (
         <Card title="Add a student">
           <p className="mb-4 text-sm text-muted">
-            Enter their email. Existing students are added straight away. For a new email, add their name too: an
-            account is created and you get a temporary password to send them.
+            Enter their email. Existing students are added straight away. For a new email, add their name too:{" "}
+            {supabaseEnabled()
+              ? "they get an email invite to choose their own password."
+              : "an account is created and you get a temporary password to send them."}
           </p>
           <AddStudentForm action={addStudentToCohort} cohortId={s.cohort.id} />
         </Card>

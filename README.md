@@ -88,7 +88,7 @@ Before pushing, run: `npm run typecheck && npm run lint && npm run test:db && np
 
 | Command | What it checks |
 | --- | --- |
-| `npm run test:db` | Database security rules (RLS) on an in-process Postgres, 124 checks |
+| `npm run test:db` | Database security rules (RLS) on an in-process Postgres, 132 checks |
 | `npm run test:e2e` | Browser tests: every feature by role, permissions, tampered requests, and layout at desktop, tablet and phone sizes |
 | `npm run test:e2e:ui` | The same, in Playwright's UI to watch or debug a test |
 | `npm test` | Both |
@@ -127,7 +127,9 @@ cp .env.example .env.local
 | `app.academy_timezone` (database) | `Asia/Dubai` | Phase 2: the database's copy of the timezone, used to decide if office hours are open. Must match `ACADEMY_TIMEZONE`: `alter database postgres set app.academy_timezone = 'Asia/Dubai';` |
 | `DEMO_PASSWORD` | `academe-demo` in dev, **unset in production** | Password for the seeded demo accounts. In production, if unset, nobody can sign in as a seeded account. |
 | `DEMO_LOGIN` | on in dev, **off in production** | Set to `true` to allow one-click demo sign-in on a deployment. Only for throwaway demo instances: it lets anyone sign in as the admin. |
-| `NEXT_PUBLIC_SUPABASE_URL` and the rest | unset | Phase 2 (real backend). |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | unset (demo mode) | Set both to sign in with Supabase Auth instead of the in-memory demo accounts. Setup: [`docs/supabase-setup.md`](docs/supabase-setup.md). |
+| `SUPABASE_SECRET_KEY` | unset | Server only. Lets admins invite students by email. Bypasses database security rules: never expose it. |
+| `SITE_URL` | `http://localhost:3000` | Public address of the app; invite and reset emails link here. |
 
 `.env.local` is git-ignored. **Never commit real keys.**
 
@@ -135,7 +137,7 @@ cp .env.example .env.local
 
 ## Database
 
-The app doesn't talk to a database yet (that's Phase 2), but the schema is ready and tested:
+Sign-in uses Supabase when it's configured ([`docs/supabase-setup.md`](docs/supabase-setup.md)). The rest of the data moves over in the next step; the schema is ready and tested:
 
 ```
 supabase/
@@ -148,13 +150,14 @@ supabase/
 │   ├── 0006_usd_and_cert_prefix.sql  USD as the default currency
 │   ├── 0007_create_programmes_cohorts.sql  admins create programmes and cohorts
 │   ├── 0008_office_hours.sql         weekly office hours, student ↔ instructor threads
-│   └── 0009_office_hours_hardening.sql  review fixes: column-level updates, removed students, timezone setting
-└── tests/rls.test.mjs                124 access-control checks
+│   ├── 0009_office_hours_hardening.sql  review fixes: column-level updates, removed students, timezone setting
+│   └── 0010_auth.sql                 a profile for every new account (always a student), email lookup for invites
+└── tests/rls.test.mjs                132 access-control checks
 ```
 
 `npm run test:db` runs every migration on an in-process Postgres (PGlite), then acts as students, instructors, an admin, an outsider and an anonymous visitor to check who can read and write what. No Postgres install or Docker needed.
 
-When the Supabase project exists, apply the migrations with the [Supabase CLI](https://supabase.com/docs/guides/cli):
+To apply them, `npm run db:bundle` writes `supabase/all-migrations.sql` (one transaction) to paste into Supabase's SQL Editor. The [Supabase CLI](https://supabase.com/docs/guides/cli) works too:
 
 ```bash
 supabase link --project-ref <your-project-ref>

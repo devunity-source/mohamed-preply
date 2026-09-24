@@ -8,6 +8,7 @@ import { demoLoginEnabled, demoPassword } from "@/lib/auth/config";
 import { profileById } from "@/lib/data/repo";
 import { isInternalPath } from "@/lib/paths";
 import { getSessionUser } from "@/lib/session";
+import { supabaseEnabled } from "@/lib/supabase/config";
 import { SubmitButton } from "@/components/submit-button";
 
 export const metadata = { title: "Sign in", robots: { index: false } };
@@ -32,7 +33,19 @@ export default async function Login({ searchParams }: PageProps<"/login">) {
       <div className="rounded-md border border-line bg-surface p-6 md:p-8">
         <h1 className="mb-1 text-3xl font-semibold tracking-tight">Sign in</h1>
         <p className="mb-6 text-sm text-muted">Welcome back. Pick up where you left off.</p>
+        {sp.link === "expired" && (
+          <p role="alert" className="mb-5 rounded-md border border-k-deadline/40 bg-k-deadline/10 p-3 text-sm">
+            That link has expired or was already used. Sign in, or ask for a new reset link.
+          </p>
+        )}
         <SignInForm next={next} />
+        {supabaseEnabled() && (
+          <p className="mt-4 text-sm">
+            <Link href="/forgot-password" className="text-muted underline underline-offset-4 hover:text-ink">
+              Forgot your password?
+            </Link>
+          </p>
+        )}
         <p className="mt-6 border-t border-line pt-5 text-sm text-muted">
           Not a student yet?{" "}
           <Link href="/#waitlist" className="font-medium text-ink underline underline-offset-4 hover:text-accent">

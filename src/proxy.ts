@@ -1,19 +1,28 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isProtectedPath, SESSION_COOKIE } from "@/lib/auth/cookie";
+import { supabaseEnabled } from "@/lib/supabase/config";
+import { refreshSession } from "@/lib/supabase/proxy";
 
 // Per-request nonce Content Security Policy. Next.js reads the nonce from the
 // request's CSP header and applies it to its own scripts. Styles keep
 // 'unsafe-inline' because components use inline style attributes (avatar
 // colours), which nonces cannot cover.
-export function proxy(request: NextRequest) {
-  // Optimistic auth gate: no session cookie, no app. The authoritative check
-  // (is the token real and unexpired?) is currentUser() on the server, which
-  // also covers prefetches that skip this proxy.
+export async function proxy(request: NextRequest) {
+  // With Supabase, refresh the session first: it may rewrite the auth cookies,
+  // and both the gate below and the page render need the fresh ones.
+  const supabase = supabaseEnabled() ? await refreshSession(request) : null;
+
+  // Optimistic auth gate: no session, no app. The authoritative check is
+  // currentUser() on the server, which also covers prefetches that skip this
+  // proxy.
   const { pathname, search } = request.nextUrl;
-  if (isProtectedPath(pathname) && !request.cookies.has(SESSION_COOKIE)) {
+  const signedIn = supabase ? supabase.signedIn : request.cookies.has(SESSION_COOKIE);
+  if (isProtectedPath(pathname) && !signedIn) {
     const login = new URL("/login", request.url);
     login.searchParams.set("next", pathname + search);
-    return NextResponse.redirect(login);
+    const redirect = NextResponse.redirect(login);
+    for (const c of supabase?.cookies ?? []) redirect.cookies.set(c.name, c.value, c.options);
+    return redirect;
   }
 
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
@@ -37,6 +46,7 @@ export function proxy(request: NextRequest) {
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("Content-Security-Policy", csp);
+  for (const c of supabase?.cookies ?? []) response.cookies.set(c.name, c.value, c.options);
   return response;
 }
 

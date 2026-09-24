@@ -9,6 +9,10 @@ import { canManageCohort, canModerate, isAdmin } from "@/lib/authz";
 import { canCreateMeetings, createMeeting } from "@/lib/integrations/video";
 import { currentUser } from "@/lib/session";
 import { hashPassword } from "@/lib/auth/password";
+import { siteUrl } from "@/lib/auth/config";
+import { supabaseEnabled } from "@/lib/supabase/config";
+import { createAdminClient } from "@/lib/supabase/server";
+import { mirror, PROFILE_COLUMNS, type ProfileRow } from "@/lib/supabase/profiles";
 import { randomBytes } from "node:crypto";
 import { addDays, formatMonthYear, wallTime, zonedParts } from "@/lib/time";
 import type { FormState } from "@/lib/actions";
@@ -625,6 +629,8 @@ export async function addStudentToCohort(_prev: FormState, form: FormData): Prom
   const fullName = str(form, "fullName", 100);
   if (!EMAIL.test(email)) return { error: "Enter a valid email address." };
 
+  if (supabaseEnabled()) return inviteToCohort(cohort, email, fullName);
+
   const account = s.accounts.find((a) => a.email === email);
   let student: Profile;
   let tempPassword: string | null = null;
@@ -645,6 +651,51 @@ export async function addStudentToCohort(_prev: FormState, form: FormData): Prom
     message: tempPassword
       ? `Created an account for ${student.fullName} (${email}) and added them. Temporary password: ${tempPassword}. Send it to them privately; it won't be shown again.`
       : `Added ${student.fullName} (${email}) to the cohort.`,
+  };
+}
+
+/**
+ * Supabase version of adding a student: an existing account joins as is; a
+ * new email gets an invite to choose their own password, so nobody ever
+ * handles a temporary one. Needs SUPABASE_SECRET_KEY (server only).
+ */
+async function inviteToCohort(cohort: Cohort, email: string, fullName: string): Promise<FormState> {
+  const supabase = createAdminClient();
+  if (!supabase) return { error: "Inviting students needs SUPABASE_SECRET_KEY on the server. See README." };
+
+  const { data: foundId, error: lookupError } = await supabase.rpc("user_id_by_email", { lookup: email });
+  if (lookupError) return { error: "Couldn't reach the account service. Try again." };
+  let userId = foundId as string | null;
+  let invited = false;
+  if (!userId) {
+    if (!fullName) return { error: "New student: add their full name too." };
+    const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+      data: { full_name: fullName },
+      redirectTo: `${siteUrl()}/auth/confirm?type=invite&next=${encodeURIComponent("/set-password?welcome=1")}`,
+    });
+    if (error || !data.user) return { error: `Couldn't send the invite: ${error?.message ?? "unknown error"}.` };
+    userId = data.user.id;
+    invited = true;
+  }
+
+  const { data: row } = await supabase
+    .from("profiles")
+    .select(PROFILE_COLUMNS)
+    .eq("id", userId)
+    .maybeSingle<ProfileRow>();
+  if (!row) return { error: "That account has no profile yet. Run migration 0010, then try again." };
+  mirror(row);
+  const found = existingStudent(userId, cohort.id);
+  if ("error" in found) return found;
+
+  db().cohortMembers.push({ cohortId: cohort.id, userId, role: "student" });
+  notify(userId, `Welcome to ${cohort.name}`, `/cohorts/${cohort.id}`);
+  done();
+  return {
+    ok: true,
+    message: invited
+      ? `Invited ${row.full_name} (${email}) and added them. They'll get an email to choose a password.`
+      : `Added ${row.full_name} (${email}) to the cohort.`,
   };
 }
 

@@ -53,6 +53,11 @@ export default defineConfig({
       E2E_TEST_SECRET: process.env.E2E_TEST_SECRET,
       DEMO_PASSWORD: process.env.E2E_DEMO_PASSWORD,
       ACADEMY_TIMEZONE: "Asia/Dubai",
+      // Demo mode, always: set but empty beats a developer's .env.local, so
+      // the tests never touch a real Supabase project.
+      NEXT_PUBLIC_SUPABASE_URL: "",
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "",
+      SUPABASE_SECRET_KEY: "",
     },
   },
 });

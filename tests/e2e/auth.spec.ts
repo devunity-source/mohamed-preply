@@ -111,3 +111,20 @@ test.describe("temporary passwords", () => {
     await expect(phone).toHaveURL(/\/dashboard$/);
   });
 });
+
+test("without Supabase, the email-link pages stay off", async ({ page }) => {
+  // Password reset needs email: no page and no link to it in demo mode.
+  expect((await page.goto("/forgot-password"))?.status()).toBe(404);
+  await page.goto("/login");
+  await expect(page.getByRole("link", { name: /forgot/i })).toHaveCount(0);
+
+  // An email link can't sign anyone in; it explains the link didn't work.
+  await page.goto("/auth/confirm?token_hash=abc&type=recovery&next=/set-password");
+  await expect(page).toHaveURL(/\/login\?link=expired/);
+  await expect(main(page).getByRole("alert")).toContainText("expired");
+
+  // Setting a password this way needs a signed-in link session, even for a signed-in user.
+  await signIn(page, "ahmed");
+  await page.goto("/set-password");
+  await expect(page).toHaveURL(/\/dashboard/);
+});
