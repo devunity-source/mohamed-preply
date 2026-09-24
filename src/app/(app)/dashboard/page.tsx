@@ -27,7 +27,7 @@ import {
   tasksFor,
   thisWeek,
 } from "@/lib/data/repo";
-import { currentUser } from "@/lib/session";
+import { currentUser, mustChangePassword } from "@/lib/session";
 import type { Cohort, Profile } from "@/lib/types";
 import { hasAdminArea } from "@/lib/authz";
 import { Welcome } from "@/components/welcome";
@@ -66,6 +66,16 @@ export default async function Dashboard() {
   return (
     <>
       <Hello name={firstName} now={now} subtitle={`${cohort.name} · Cohort ${cohort.code}`} />
+      {mustChangePassword(user.id) && (
+        <p className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-k-workshop/40 bg-k-workshop/10 p-4 text-sm">
+          <span className="flex-1">
+            You&apos;re signed in with a temporary password. Pick your own so only you know it.
+          </span>
+          <Link href="/profile#password" className="font-medium underline underline-offset-4">
+            Change password
+          </Link>
+        </p>
+      )}
       {!user.onboardedAt && (
         <Welcome firstName={firstName} staff={role !== "student"} startHref={welcomeHref(user, cohort, role, now)} />
       )}

@@ -1,12 +1,13 @@
 import Link from "next/link";
 import clsx from "clsx";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, UserMinus } from "lucide-react";
 import { Avatar, Card, Empty, KindMark, ProgressBar } from "@/components/ui";
 import { cohortStats } from "@/lib/data/admin";
 import { cohortWeek } from "@/lib/data/repo";
 import { isAdmin, requireCohortManager } from "@/lib/authz";
 import { AddStudentForm } from "@/components/admin-forms";
-import { addStudentToCohort } from "@/lib/admin-actions";
+import { addStudentToCohort, removeStudentFromCohort } from "@/lib/admin-actions";
+import { ConfirmForm } from "@/components/confirm-form";
 import { formatMoney, formatPercent } from "@/lib/format";
 import { formatShortDate, formatTime, relativeDay } from "@/lib/time";
 
@@ -17,6 +18,9 @@ export default async function CohortDashboard({ params }: PageProps<"/admin/coho
   const s = cohortStats(cohortId, now);
   const { week, totalWeeks } = cohortWeek(s.cohort, now);
   const base = `/admin/cohorts/${cohortId}`;
+
+  // Admins manage who's enrolled; a finished cohort's roster is history.
+  const canRemove = isAdmin(user) && s.cohort.status !== "completed";
 
   const tiles = [
     { label: "Students", value: String(s.students.length) },
@@ -96,7 +100,7 @@ export default async function CohortDashboard({ params }: PageProps<"/admin/coho
       </div>
 
       <Card title="Students">
-        <div className="-mx-5 overflow-x-auto">
+        <div className="relative -mx-5 overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-line text-left font-mono text-[11px] tracking-wider text-muted uppercase">
@@ -105,6 +109,11 @@ export default async function CohortDashboard({ params }: PageProps<"/admin/coho
                 <th className="px-3 py-2 font-medium">Attendance</th>
                 <th className="px-3 py-2 font-medium">Submitted</th>
                 <th className="px-3 py-2 font-medium">Labs to review</th>
+                {canRemove && (
+                  <th className="px-3 py-2 font-medium">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -136,6 +145,23 @@ export default async function CohortDashboard({ params }: PageProps<"/admin/coho
                     {r.submitted}/{r.due}
                   </td>
                   <td className="px-3 py-2.5 font-mono">{r.labsPending || "·"}</td>
+                  {canRemove && (
+                    <td className="px-3 py-2.5 text-right">
+                      <ConfirmForm
+                        action={removeStudentFromCohort.bind(null, s.cohort.id, r.profile.id)}
+                        triggerLabel={`Remove ${r.profile.fullName}`}
+                        triggerClassName="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted hover:bg-k-deadline/10 hover:text-k-deadline"
+                        trigger={
+                          <>
+                            <UserMinus size={14} /> Remove
+                          </>
+                        }
+                        title={`Remove ${r.profile.fullName} from this cohort?`}
+                        description="They lose access to its classes, work and community spaces, and leave their capstone team. Their submissions and grades are kept, so you can add them back later."
+                        confirmLabel="Remove student"
+                      />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

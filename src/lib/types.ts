@@ -261,6 +261,8 @@ export interface Account {
   email: string;
   // scrypt hash; null means the account can't sign in with a password.
   passwordHash: string | null;
+  /** Set when an admin created the account with a temporary password. */
+  mustChangePassword?: boolean;
 }
 
 export interface Session {

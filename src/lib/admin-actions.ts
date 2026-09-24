@@ -604,7 +604,12 @@ export async function addStudentToCohort(_prev: FormState, form: FormData): Prom
     };
     tempPassword = randomBytes(9).toString("base64url");
     s.profiles.push(student);
-    s.accounts.push({ userId: student.id, email, passwordHash: await hashPassword(tempPassword) });
+    s.accounts.push({
+      userId: student.id,
+      email,
+      passwordHash: await hashPassword(tempPassword),
+      mustChangePassword: true,
+    });
   }
 
   s.cohortMembers.push({ cohortId: cohort.id, userId: student.id, role: "student" });
@@ -616,6 +621,22 @@ export async function addStudentToCohort(_prev: FormState, form: FormData): Prom
       ? `Created an account for ${student.fullName} (${email}) and added them. Temporary password: ${tempPassword}. Send it to them privately; it won't be shown again.`
       : `Added ${student.fullName} (${email}) to the cohort.`,
   };
+}
+
+/**
+ * Takes a student out of a cohort: they lose access to its classes, work and
+ * spaces, and leave their capstone team. Their submissions, grades and posts
+ * stay, so re-adding them later picks up where they left off.
+ */
+export async function removeStudentFromCohort(cohortId: string, userId: string) {
+  await admin();
+  const s = db();
+  const member = s.cohortMembers.find((m) => m.cohortId === cohortId && m.userId === userId);
+  if (!member || member.role !== "student") throw new Denied("Not a student in this cohort");
+  s.cohortMembers.splice(s.cohortMembers.indexOf(member), 1);
+  const teams = new Set(s.projects.filter((p) => p.cohortId === cohortId).map((p) => p.id));
+  s.projectMembers = s.projectMembers.filter((pm) => !(pm.userId === userId && teams.has(pm.projectId)));
+  done();
 }
 
 export async function updateProgramme(_prev: FormState, form: FormData): Promise<FormState> {

@@ -4,10 +4,10 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/data/store";
 import { demoLoginEnabled } from "@/lib/auth/config";
-import { verifyPassword } from "@/lib/auth/password";
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { isInternalPath } from "@/lib/paths";
 import { isLimited, recordFailure } from "@/lib/rate-limit";
-import { endSession, startSession } from "@/lib/session";
+import { currentUser, endOtherSessions, endSession, startSession } from "@/lib/session";
 import type { FormState } from "@/lib/actions";
 
 const WINDOW = 15 * 60_000;
@@ -70,4 +70,36 @@ export async function demoSignInForm(form: FormData) {
 export async function signOut() {
   await endSession();
   redirect("/login");
+}
+
+const MIN_PASSWORD = 10;
+
+/**
+ * Change your own password. Needs the current one (so a borrowed, signed-in
+ * laptop isn't enough), limits wrong guesses, and signs out every other
+ * session so an old password can't keep someone logged in elsewhere.
+ */
+export async function changePassword(_prev: FormState, form: FormData): Promise<FormState> {
+  const user = await currentUser();
+  const account = db().accounts.find((a) => a.userId === user.id);
+  if (!account) return { error: "This account can't use a password." };
+
+  const current = String(form.get("current") ?? "").slice(0, 200);
+  const next = String(form.get("next") ?? "").slice(0, 200);
+  const confirm = String(form.get("confirm") ?? "").slice(0, 200);
+
+  const key = `change-password:${user.id}`;
+  if (isLimited(key, 5)) return { error: "Too many wrong attempts. Wait 15 minutes and try again." };
+  if (!(await verifyPassword(current, account.passwordHash))) {
+    recordFailure(key, WINDOW);
+    return { error: "Your current password is incorrect." };
+  }
+  if (next.length < MIN_PASSWORD) return { error: `Use at least ${MIN_PASSWORD} characters for the new password.` };
+  if (next !== confirm) return { error: "The new passwords don't match." };
+  if (next === current) return { error: "Pick a password that's different from the current one." };
+
+  account.passwordHash = await hashPassword(next);
+  account.mustChangePassword = false;
+  await endOtherSessions(user.id);
+  return { ok: true };
 }

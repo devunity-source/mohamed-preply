@@ -3,17 +3,20 @@
 import { useId } from "react";
 import { useFormAction } from "@/components/use-form-action";
 import clsx from "clsx";
-import { ArrowRight, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { joinWaitlist } from "@/lib/actions";
 
 export function WaitlistForm({
   programmes,
   defaultProgramme,
   tone = "light",
+  stacked = false,
 }: {
   programmes: { slug: string; title: string }[];
   defaultProgramme?: string;
   tone?: "light" | "dark";
+  /** Email on its own row, for narrow columns. */
+  stacked?: boolean;
 }) {
   const { state, pending, formProps } = useFormAction(joinWaitlist);
   const id = useId();
@@ -34,7 +37,7 @@ export function WaitlistForm({
           dark ? "bg-paper text-ink" : "bg-ink text-paper",
         )}
       >
-        <Check size={18} strokeWidth={3} className="shrink-0 text-accent" />
+        <Check size={18} strokeWidth={3} className={clsx("shrink-0", dark ? "text-dusk" : "text-accent")} />
         You&apos;re on the list. We&apos;ll email you before enrolment opens.
       </p>
     );
@@ -42,7 +45,7 @@ export function WaitlistForm({
 
   return (
     <form {...formProps} className="w-full">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className={clsx("flex flex-col gap-2", stacked ? "sm:grid sm:grid-cols-[1fr_auto]" : "sm:flex-row")}>
         <label htmlFor={`${id}-email`} className="sr-only">
           Email
         </label>
@@ -54,7 +57,7 @@ export function WaitlistForm({
           maxLength={254}
           autoComplete="email"
           placeholder="you@email.com"
-          className={clsx(field, "w-full min-w-0 sm:flex-1")}
+          className={clsx(field, "w-full min-w-0 sm:flex-1", stacked && "sm:col-span-2")}
         />
         <label htmlFor={`${id}-programme`} className="sr-only">
           Programme
@@ -75,15 +78,13 @@ export function WaitlistForm({
         <input type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
         <button
           disabled={pending}
+          // Lamp: the page's one accent is reserved for this button.
           className={clsx(
-            "inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-md px-5 font-medium transition-colors disabled:opacity-60",
-            dark
-              ? "bg-accent text-accent-ink hover:bg-paper hover:text-ink"
-              : "bg-ink text-paper hover:bg-accent hover:text-accent-ink",
+            "inline-flex h-12 shrink-0 items-center justify-center rounded-md bg-accent px-5 font-semibold text-accent-ink transition-colors disabled:opacity-60",
+            dark ? "hover:bg-paper" : "hover:bg-ink hover:text-paper",
           )}
         >
           {pending ? "Joining…" : "Join the waitlist"}
-          {!pending && <ArrowRight size={16} />}
         </button>
       </div>
       {state.error ? (

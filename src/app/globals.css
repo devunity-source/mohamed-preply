@@ -8,6 +8,7 @@
   --line: #e3e1da;
   --accent: #ff5a1f;
   --accent-ink: #ffffff;
+  --dusk: #1f2a44;
   --k-class: #7c5cff;
   --k-lab: #2f6bff;
   --k-office: #00a870;
@@ -48,6 +49,7 @@
   --color-k-deadline: var(--k-deadline);
   --color-k-workshop: var(--k-workshop);
   --color-k-event: var(--k-event);
+  --color-dusk: var(--dusk);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -78,5 +80,62 @@ body {
   }
   body {
     background: #fff;
+  }
+}
+
+/*
+ * Marketing pages (landing, sign-in, verify) run on an evening palette taken
+ * from the class times: live classes start at 19:00. It's scoped to the
+ * marketing layout by redefining the same tokens, so shared components pick
+ * it up and the signed-in app keeps its own look. One family, Archivo, with
+ * its width axis doing the work: wide headlines, condensed week strip.
+ */
+.marketing {
+  --paper: #f3f5f7; /* Chalk */
+  --surface: #fbfcfd;
+  --ink: #15181f; /* Ink */
+  --muted: #5b6475; /* Slate */
+  --line: #d5dae2; /* Rule */
+  --accent: #f2b33d; /* Lamp */
+  --accent-ink: #15181f;
+  --dusk: #1f2a44; /* Dusk */
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-wide {
+  font-variation-settings: "wdth" 125;
+}
+.font-condensed {
+  font-variation-settings: "wdth" 75;
+}
+
+@layer base {
+  /* Lamp is too light to mark focus on Chalk; use Ink there and Lamp on Dusk. */
+  .marketing :focus-visible {
+    outline-color: var(--ink);
+  }
+  .marketing .bg-dusk :focus-visible {
+    outline-color: var(--accent);
+  }
+}
+
+/* The week strip fills in once on load. Nothing moves for people who ask for reduced motion. */
+@keyframes strip-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.strip-fill {
+  transform-origin: left;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .strip-fill {
+    animation: strip-fill 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 140ms + 250ms);
   }
 }

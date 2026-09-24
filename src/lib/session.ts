@@ -67,6 +67,19 @@ export async function endSession(): Promise<void> {
   jar.delete({ name: SESSION_COOKIE, path: "/", secure: process.env.NODE_ENV === "production" });
 }
 
+/** Sign the user out everywhere except this browser (after a password change). */
+export async function endOtherSessions(userId: string): Promise<void> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const keep = token ? hashToken(token) : null;
+  const s = db();
+  s.sessions = s.sessions.filter((x) => x.userId !== userId || x.tokenHash === keep);
+}
+
+/** Whether the signed-in user is still on an admin-issued temporary password. */
+export function mustChangePassword(userId: string): boolean {
+  return !!db().accounts.find((a) => a.userId === userId)?.mustChangePassword;
+}
+
 /** The sign-in email for a user; only ever shown to that user. */
 export function accountEmail(userId: string): string | undefined {
   return db().accounts.find((a) => a.userId === userId)?.email;

@@ -38,7 +38,8 @@ This file is the single source of truth for what's planned, what's built, and wh
 | Sign-in (target) | Email + password, Google, LinkedIn | Owner's choice, 24 Sep 2026. Google and LinkedIn arrive with Supabase Auth in Phase 2. |
 | Refunds | Full refund until week 2 starts; one free move to a later cohort before week 3 | Owner's choice, 24 Sep 2026. Draft in `docs/refund-policy.md`, needs legal review before publishing. |
 | Video | Zoom links for V1, LiveKit later | Brief says integrate first, build later. |
-| Design | Warm off-white paper, near-black ink, one signal-orange accent, mono uppercase labels, square geometry. Light + dark. | Matches "bold, geometric, minimalist". |
+| Design (app) | Warm off-white paper, near-black ink, one signal-orange accent, square geometry. Light + dark. | Matches "bold, geometric, minimalist". |
+| Design (marketing: `/`, `/login`, `/verify`) | Evening palette from the 19:00 class time: Dusk `#1F2A44`, Chalk `#F3F5F7`, Ink `#15181F`, Slate `#5B6475`, Rule `#D5DAE2`, one accent Lamp `#F2B33D`. One family, Archivo, using its width axis (wide headlines, condensed week strip). Sentence-case labels, no uppercase mono. Scoped with a `.marketing` class that redefines the tokens, so the app keeps its look. | Owner's redesign brief, 24 Sep 2026: build the page around the evening schedule. Terminal look rejected as a stock style. |
 | Auth (now) | Built-in email + password: scrypt hashes, server-side sessions, `__Host-` HttpOnly cookie. One-click demo sign-in only in dev or with `DEMO_LOGIN=true`. Sign-in required for everything but `/`, `/verify` and `/login`. | Replaced the cookie-holds-a-user-id demo auth (security review #1). Phase 2 swaps it for Supabase Auth behind the same `currentUser()`. |
 | Roles | `student`, `instructor` (acts only in cohorts they teach), `admin` (runs the academy). Rakan is seeded as `admin`. | Came out of the security review: "any instructor can edit everything" was too broad. |
 
@@ -177,7 +178,9 @@ Admin area at `/admin` (the **Admin** item in the sidebar). **Admins see everyth
 - [x] Curriculum editor: programme title/tagline/description/price/published, module titles, lessons (add, edit, reorder, delete). Unpublishing hides a programme from the landing page, catalogue and waitlist.
 - [x] **New programme** (admins): title, tagline, description, length in weeks, USD price, certificate code (unique, 2 to 5 letters), what's included. Starts as a draft with empty Week 1 to Week N modules. No delete by design: unpublish instead, so cohorts and certificates keep their history.
 - [x] **New cohort** (admins): programme, start date (today or later, UAE time) and instructor. Gets the next academy-wide number (#03…), an end date from the programme length, its own General / Announcements / Questions spaces, and notifies the instructor.
-- [x] **Add a student to a cohort** (admins, on the cohort dashboard; not for finished cohorts): by email. An existing student account is added as is; a new email gets a student account with a random temporary password shown to the admin once (only the hash is stored). The student gets a welcome notification. Instructors and admins can't be added as students; duplicates are refused. No password change or invite email yet (Phase 2 auth + Resend), and no remove button yet.
+- [x] **Change password** (Profile → Password): needs the current password, at least 10 characters, limits wrong guesses (5 per 15 minutes), signs out every other session. Accounts created with a temporary password are flagged and nudged on the dashboard until changed.
+- [x] **Remove a student from a cohort** (admins, cohort dashboard, confirm dialog, not on finished cohorts): removes access and their capstone team membership; submissions and grades are kept so re-adding picks up where they left off.
+- [x] **Add a student to a cohort** (admins, on the cohort dashboard; not for finished cohorts): by email. An existing student account is added as is; a new email gets a student account with a random temporary password shown to the admin once (only the hash is stored). The student gets a welcome notification. Instructors and admins can't be added as students; duplicates are refused. No invite email yet (Phase 2 Resend).
 - [x] Class scheduler: create, edit, delete (future only), recording links. 🟡 Meeting links are pasted; `src/lib/integrations/video.ts` is where Zoom API creation plugs in once `ZOOM_*` keys exist.
 - [x] Grading: per-criterion rubric (default 40/25/20/15), live total, required feedback, re-grading, student notified with the grade, one-click reminder to everyone who hasn't submitted
 - [x] Lab reviews: queue of submitted labs with pass / return (student notified), full status matrix. Only instructors can pass a lab.
@@ -227,8 +230,8 @@ Review of the whole app on 2026-09-23. Every finding was reproduced by exploitin
 
 Public page at `/`, the app moved behind it at `/dashboard`. Aimed at career switchers, main action is **join the waitlist**.
 
-- [x] Hero with waitlist form, next-cohort date, "explore the demo" link, geometric cohort-board graphic
-- [x] Old way vs AcadeMe, six features, a typical week (colours match the app calendar), DevOps curriculum, programme cards with price and next dates, instructor (name and role only), outcomes, FAQ, closing waitlist band
+- [x] **Redesign (24 Sep):** Dusk hero with the headline, the class times and the waitlist form, above a six-week strip for the next cohort ("Starts" marker in Lamp, capstone demo in the last week). The strip fills in once on load; no motion with reduced-motion on.
+- [x] Then: most courses vs AcadeMe; a real Monday to Friday timetable with times (same colours as the app calendar); what's included as a two-column list; programmes side by side with week list and large price; instructor and what you leave with; FAQ; Dusk closing band. No icon cards, no "A · B" strings, no arrows on links.
 - [x] Every price, date and curriculum item is read from the same data the app uses. No invented stats, testimonials or student counts.
 - [x] Programme cards preselect the programme in the form and scroll to it
 - [x] Waitlist action: email validation, per-IP rate limit, honeypot for bots, de-duplication, same response whether or not you're already listed (no enumeration)
@@ -236,6 +239,7 @@ Public page at `/`, the app moved behind it at `/dashboard`. Aimed at career swi
 - [x] Responsive (390px, no horizontal scroll), dark mode, SEO title/description/Open Graph
 - [x] Admin view of the waitlist with CSV export (Phase 3)
 - [ ] Real bio and photo for Rakan (waiting on you)
+- [ ] Marketing pages ignore dark mode on purpose (the Dusk bands carry the evening look); revisit if wanted
 
 ## UX pass
 
@@ -298,3 +302,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-24 | Owner answers: UAE timezone (`Asia/Dubai`), USD pricing, `ACM-` certificate IDs, sign-in = email + password + Google + LinkedIn. Refund policy drafted (`docs/refund-policy.md`). Migration 0006. |
 | 2026-09-24 | Admins can create programmes (draft, empty weekly modules) and cohorts (instructor, spaces, notification). Migration 0007, `test:db` 91 checks, 24 new browser checks. |
 | 2026-09-24 | Admins can add students to a cohort by email (existing account, or a new one with a one-time temporary password). 20 new browser checks plus a replay test: an instructor replaying the admin action is refused. |
+| 2026-09-24 | Change password (with temporary-password nudge, other sessions signed out), remove student from cohort, landing redesign around the evening schedule (Dusk/Chalk/Lamp palette, Archivo, six-week strip). 17 new browser checks; fixed a mobile overflow from a screen-reader-only table header. |

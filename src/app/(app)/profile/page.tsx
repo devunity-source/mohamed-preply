@@ -7,7 +7,8 @@ import { achievementsFor, listProfiles, myCohorts, primaryCohort, progressFor } 
 import { certificateFor } from "@/lib/data/admin";
 import { demoSignInForm, signOut } from "@/lib/auth-actions";
 import { demoLoginEnabled } from "@/lib/auth/config";
-import { accountEmail, currentUser } from "@/lib/session";
+import { accountEmail, currentUser, mustChangePassword } from "@/lib/session";
+import { ChangePasswordForm } from "@/components/change-password-form";
 
 export const metadata = { title: "Profile" };
 
@@ -120,6 +121,19 @@ export default async function Profile() {
               </SubmitButton>
             </form>
           </Card>
+
+          {accountEmail(user.id) && (
+            <div id="password" className="scroll-mt-8">
+              <Card title="Password">
+                {mustChangePassword(user.id) && (
+                  <p className="mb-4 rounded-md border border-k-workshop/40 bg-k-workshop/10 p-3 text-sm">
+                    You&apos;re using the temporary password you were given. Choose your own now.
+                  </p>
+                )}
+                <ChangePasswordForm />
+              </Card>
+            </div>
+          )}
 
           {demoLoginEnabled() && (
             <Card title="Demo mode">
