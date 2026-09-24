@@ -1,7 +1,7 @@
 import Link from "next/link";
 import clsx from "clsx";
 import { Check } from "lucide-react";
-import { Avatar, Card, ProgressBar } from "@/components/ui";
+import { Avatar, Card, ProgressBar, ProgressBreakdown } from "@/components/ui";
 import { cohortRoster, cohortWeek, modulesFor, progressFor } from "@/lib/data/repo";
 import { loadCohort } from "./load";
 
@@ -57,6 +57,7 @@ export default async function CohortOverview({ params }: PageProps<"/cohorts/[co
           <Card title="Your progress">
             <p className="mb-3 text-4xl font-semibold tracking-tight">{progress.percent}%</p>
             <ProgressBar value={progress.percent} />
+            <ProgressBreakdown progress={progress} className="mt-3" />
           </Card>
         )}
 

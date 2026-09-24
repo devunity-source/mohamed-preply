@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
@@ -12,10 +13,16 @@ export interface SpaceLink {
   readOnly: boolean;
   cohortOnly: boolean;
   pinned: boolean;
+  unread: number;
 }
 
 export function SpaceNav({ spaces }: { spaces: SpaceLink[] }) {
   const pathname = usePathname();
+  // Spaces opened since the layout rendered: their counts are stale, so hide them.
+  const current = spaces.find((s) => pathname.startsWith(`/community/${s.slug}`))?.slug;
+  const [seen, setSeen] = useState<string[]>([]);
+  if (current && !seen.includes(current)) setSeen([...seen, current]);
+  const count = (s: SpaceLink) => (seen.includes(s.slug) ? 0 : s.unread);
   const more = spaces.filter((s) => !s.pinned);
   const moreOpen = more.some((s) => pathname.startsWith(`/community/${s.slug}`));
 
@@ -30,15 +37,16 @@ export function SpaceNav({ spaces }: { spaces: SpaceLink[] }) {
       >
         Latest activity
       </Link>
-      <Groups spaces={spaces.filter((s) => s.pinned)} pathname={pathname} />
+      <Groups spaces={spaces.filter((s) => s.pinned)} pathname={pathname} count={count} />
       {more.length > 0 && (
         <details open={moreOpen || undefined} className="group">
           <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted hover:bg-line/60 hover:text-ink [&::-webkit-details-marker]:hidden">
             <ChevronRight size={14} className="transition-transform group-open:rotate-90" />
             More spaces · {more.length}
+            <UnreadBadge n={more.reduce((n, s) => n + count(s), 0)} />
           </summary>
           <div className="mt-4 space-y-6">
-            <Groups spaces={more} pathname={pathname} />
+            <Groups spaces={more} pathname={pathname} count={count} />
           </div>
         </details>
       )}
@@ -46,7 +54,26 @@ export function SpaceNav({ spaces }: { spaces: SpaceLink[] }) {
   );
 }
 
-function Groups({ spaces, pathname }: { spaces: SpaceLink[]; pathname: string }) {
+function UnreadBadge({ n }: { n: number }) {
+  if (n <= 0) return null;
+  return (
+    <span className="ml-auto rounded-[4px] bg-accent px-1.5 font-mono text-[11px] font-semibold text-accent-ink">
+      <span className="sr-only">, </span>
+      {n > 99 ? "99+" : n}
+      <span className="sr-only"> new</span>
+    </span>
+  );
+}
+
+function Groups({
+  spaces,
+  pathname,
+  count,
+}: {
+  spaces: SpaceLink[];
+  pathname: string;
+  count: (s: SpaceLink) => number;
+}) {
   const groups = [...new Set(spaces.map((s) => s.group))];
   // Cohort groups first: that's where students spend most of their time.
   groups.sort(
@@ -77,6 +104,7 @@ function Groups({ spaces, pathname }: { spaces: SpaceLink[]; pathname: string })
                   )}
                 >
                   <Icon size={14} /> {s.name}
+                  <UnreadBadge n={count(s)} />
                 </Link>
               </li>
             );

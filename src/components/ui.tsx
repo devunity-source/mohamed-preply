@@ -23,11 +23,7 @@ export function PageHeader({
 }
 
 export function Label({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <p className={clsx("font-mono text-[11px] font-medium tracking-[0.12em] text-muted uppercase", className)}>
-      {children}
-    </p>
-  );
+  return <p className={clsx("text-[13px] font-medium text-muted", className)}>{children}</p>;
 }
 
 export function Card({
@@ -171,6 +167,25 @@ export function Pill({ children, tone = "neutral" }: { children: React.ReactNode
     >
       {children}
     </span>
+  );
+}
+
+type Tally = { done: number; total: number };
+
+/** What the progress % is made of. Every lesson, lab and assignment counts once. */
+export function ProgressBreakdown({
+  progress,
+  className,
+}: {
+  progress: { lessons: Tally; labs: Tally; assignments: Tally };
+  className?: string;
+}) {
+  const { lessons, labs, assignments } = progress;
+  return (
+    <p className={clsx("text-xs leading-relaxed text-muted", className)}>
+      {lessons.done}/{lessons.total} lessons · {labs.done}/{labs.total} labs · {assignments.done}/{assignments.total}{" "}
+      assignments. Each one counts the same; labs count once submitted, assignments once handed in.
+    </p>
   );
 }
 

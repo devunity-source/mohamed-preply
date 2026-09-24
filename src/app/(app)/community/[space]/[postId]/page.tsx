@@ -62,7 +62,7 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
         <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-line pt-4 text-sm">
           {moderator && (
             <>
-              <span className="mr-1 font-mono text-[11px] tracking-wider text-muted uppercase">Moderate</span>
+              <span className="mr-1 text-xs text-muted">Moderate</span>
               <form action={togglePin.bind(null, post.id)}>
                 <SubmitButton unstyled className={toolClass}>
                   {post.pinned ? <PinOff size={14} /> : <Pin size={14} />} {post.pinned ? "Unpin" : "Pin"}

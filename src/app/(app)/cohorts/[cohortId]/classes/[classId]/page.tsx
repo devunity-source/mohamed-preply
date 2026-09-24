@@ -25,24 +25,24 @@ export default async function Classroom({ params }: PageProps<"/cohorts/[cohortI
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 [&>*]:min-w-0">
       <section className="rounded-md bg-ink p-6 text-paper md:p-10 lg:col-span-2">
         <div className="flex items-center gap-3">
-          <p className="font-mono text-[11px] font-medium tracking-[0.12em] uppercase opacity-60">Live classroom</p>
+          <p className="text-[13px] font-medium opacity-60">Live classroom</p>
           {live && <Pill tone="accent">Live</Pill>}
         </div>
         <h2 className="mt-8 text-3xl font-semibold tracking-tight md:text-4xl">{c.title}</h2>
         <p className="mt-3 max-w-xl opacity-70">{c.description}</p>
         <dl className="mt-8 grid grid-cols-2 gap-6 font-mono text-sm sm:grid-cols-3">
           <div>
-            <dt className="text-[11px] tracking-wider uppercase opacity-60">When</dt>
+            <dt className="font-sans text-xs opacity-60">When</dt>
             <dd className="mt-1">
               {relativeDay(c.startsAt, now)} · {formatTime(c.startsAt)}
             </dd>
           </div>
           <div>
-            <dt className="text-[11px] tracking-wider uppercase opacity-60">Duration</dt>
+            <dt className="font-sans text-xs opacity-60">Duration</dt>
             <dd className="mt-1">{c.durationMin} min</dd>
           </div>
           <div>
-            <dt className="text-[11px] tracking-wider uppercase opacity-60">Via</dt>
+            <dt className="font-sans text-xs opacity-60">Via</dt>
             <dd className="mt-1">{PROVIDER[c.provider]}</dd>
           </div>
         </dl>

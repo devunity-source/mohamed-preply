@@ -130,5 +130,15 @@ await expect("instructor issues certificate", "deny", as(ins, `insert into certi
 await expect("student revokes own certificate", "none", as(st, `update certificates set revoked_at=now() where user_id='${st}' returning id`));
 await expect("admin revokes certificate", "ok", as(adm, `update certificates set revoked_at=now() where id='AM-DEV-2026-00002' returning revoked_at`));
 await expect("verify reports revocation", "ok", as(null, `select revoked_at from verify_certificate('AM-DEV-2026-00002') where revoked_at is not null`));
+
+console.log("-- 0005 ux state");
+await expect("student marks own space read", "ok", as(st, `insert into space_reads (user_id, space_id) values ('${st}','${GEN}') returning last_seen_at`));
+await expect("student updates own read time", "ok", as(st, `update space_reads set last_seen_at=now() where user_id='${st}' returning space_id`));
+await expect("student writes read row for someone else", "deny", as(st, `insert into space_reads (user_id, space_id) values ('${st2}','${GEN}')`));
+await expect("outsider records read of hidden cohort space", "deny", as(out, `insert into space_reads (user_id, space_id) values ('${out}','${GEN}')`));
+await expect("student marks read of other cohort's space", "deny", as(st, `insert into space_reads (user_id, space_id) values ('${st}','${GEN2}')`));
+await expect("classmate reads another's read times", "none", as(st2, `select * from space_reads`));
+await expect("student dismisses own welcome", "ok", as(st, `update profiles set onboarded_at=now() where id='${st}' returning onboarded_at`));
+await expect("student dismisses someone else's welcome", "none", as(st, `update profiles set onboarded_at=now() where id='${st2}' returning id`));
 console.log(fail ? `\n${fail} FAILED` : "\nALL PASSED");
 process.exit(fail ? 1 : 0);

@@ -4,6 +4,7 @@ import { Avatar, Logo } from "@/components/ui";
 import { unreadCount } from "@/lib/data/repo";
 import { Bell, LogOut } from "lucide-react";
 import { MobileNav } from "@/components/mobile-nav";
+import { CommandPalette, SearchButton } from "@/components/command-palette";
 import { signOut } from "@/lib/auth-actions";
 import { currentUser } from "@/lib/session";
 import { hasAdminArea } from "@/lib/authz";
@@ -22,13 +23,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <Logo className="size-7 text-ink" />
           <span className="text-lg font-semibold tracking-tight">AcadeMe</span>
         </Link>
+        <SearchButton className="mb-4 flex w-full items-center gap-3 rounded-md border border-line px-3 py-2 text-sm text-muted hover:border-ink hover:text-ink" />
         <Nav unread={unread} showAdmin={showAdmin} />
         <div className="mt-auto flex items-center gap-1">
           <Link href="/profile" className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 hover:bg-line/60">
             <Avatar profile={user} />
             <span className="min-w-0">
               <span className="block truncate text-sm font-medium">{user.fullName}</span>
-              <span className="block font-mono text-[11px] tracking-wider text-muted uppercase">{user.role}</span>
+              <span className="block text-xs text-muted capitalize">{user.role}</span>
             </span>
           </Link>
           <form action={signOut}>
@@ -51,6 +53,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             <span className="font-semibold tracking-tight">AcadeMe</span>
           </Link>
           <div className="flex items-center gap-1">
+            <SearchButton compact className="rounded-md p-2 text-muted hover:text-ink" />
             <Link
               href="/notifications"
               aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
@@ -73,6 +76,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-28 md:px-10 md:py-12 print:max-w-none print:p-0">
         <ToastProvider>{children}</ToastProvider>
+        <CommandPalette />
       </main>
     </div>
   );

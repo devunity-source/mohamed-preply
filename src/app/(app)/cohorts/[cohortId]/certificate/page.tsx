@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BadgeCheck, Lock } from "lucide-react";
-import { Card, ProgressBar } from "@/components/ui";
+import { Card, ProgressBar, ProgressBreakdown } from "@/components/ui";
 import { Certificate } from "@/components/certificate";
 import { PrintButton } from "@/components/print-button";
 import { certificateFor } from "@/lib/data/admin";
@@ -62,6 +62,7 @@ export default async function CertificatePage({ params }: PageProps<"/cohorts/[c
             <div className="mt-5">
               <p className="mb-2 font-mono text-sm">{progress.percent}% complete</p>
               <ProgressBar value={progress.percent} />
+              <ProgressBreakdown progress={progress} className="mt-3" />
             </div>
           )}
           <p className="mt-5 text-xs text-muted">

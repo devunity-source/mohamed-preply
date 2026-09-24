@@ -382,6 +382,28 @@ export function visibleSpaces(userId: string): Space[] {
   return db().spaces.filter((s) => !s.cohortId || isCohortMember(userId, s.cohortId));
 }
 
+/** With no visit on record, look back a week so a new member isn't greeted by the whole archive. */
+const UNREAD_WINDOW_DAYS = 7;
+
+export function lastSeenIn(userId: string, spaceId: string, now: Date): Date {
+  return (
+    db().spaceReads.find((r) => r.userId === userId && r.spaceId === spaceId)?.lastSeenAt ??
+    addDays(now, -UNREAD_WINDOW_DAYS)
+  );
+}
+
+/** New posts by other people since you last opened each space. */
+export function unreadBySpace(userId: string, now: Date): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const space of visibleSpaces(userId)) {
+    const since = lastSeenIn(userId, space.id, now);
+    counts[space.slug] = db().posts.filter(
+      (p) => p.spaceId === space.id && p.authorId !== userId && p.createdAt > since,
+    ).length;
+  }
+  return counts;
+}
+
 export function spaceBySlug(slug: string, userId: string): Space | undefined {
   return visibleSpaces(userId).find((s) => s.slug === slug);
 }

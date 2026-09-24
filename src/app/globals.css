@@ -62,9 +62,12 @@ body {
   color: var(--accent-ink);
 }
 
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+/* In the base layer so a component can opt out (e.g. the search input, whose dialog already shows focus). */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 }
 
 /* Certificates print as a single landscape page with nothing but the certificate. */

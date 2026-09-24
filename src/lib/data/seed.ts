@@ -27,6 +27,7 @@ import type {
   Space,
   Submission,
   WaitlistEntry,
+  SpaceRead,
 } from "@/lib/types";
 import { addDays, formatMonthYear, startOfWeek, zonedParts } from "@/lib/time";
 import { demoPassword } from "@/lib/auth/config";
@@ -63,6 +64,7 @@ export interface Store {
   certificates: Certificate[];
   accounts: Account[];
   sessions: Session[];
+  spaceReads: SpaceRead[];
 }
 
 export const DEMO_USER_ID = "u_ahmed";
@@ -1114,6 +1116,7 @@ export function createSeed(now: Date = new Date()): Store {
     certificates,
     accounts: demoAccounts(),
     sessions: [],
+    spaceReads: [],
   };
 }
 

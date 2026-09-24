@@ -96,8 +96,9 @@ supabase/
 │   ├── 0001_init.sql                 27 tables, row level security on every one
 │   ├── 0002_security_hardening.sql   fixes from the security review
 │   ├── 0003_waitlist.sql             landing page waitlist
-│   └── 0004_teaching_tools.sql       grading, projects, attendance, certificates
-└── tests/rls.test.mjs                70 access-control checks
+│   ├── 0004_teaching_tools.sql       grading, projects, attendance, certificates
+│   └── 0005_ux_state.sql             welcome dismissal, per-space read times
+└── tests/rls.test.mjs                78 access-control checks
 ```
 
 `npm run test:db` runs every migration on an in-process Postgres (PGlite), then acts as students, instructors, an admin, an outsider and an anonymous visitor to check who can read and write what. No Postgres install or Docker needed.

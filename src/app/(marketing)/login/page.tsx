@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import clsx from "clsx";
 import { Avatar, Label } from "@/components/ui";
 import { SignInForm } from "@/components/sign-in-form";
 import { demoSignIn } from "@/lib/auth-actions";
@@ -21,11 +23,22 @@ export default async function Login({ searchParams }: PageProps<"/login">) {
   const demoProfiles = DEMO_ORDER.map(profileById).filter((p) => p !== undefined);
 
   return (
-    <section className="mx-auto grid max-w-5xl gap-12 px-4 py-16 md:px-8 md:py-24 lg:grid-cols-2">
-      <div className="max-w-sm">
-        <Label className="mb-3">AcadeMe</Label>
-        <h1 className="mb-8 text-4xl font-semibold tracking-tight">Sign in</h1>
+    <section
+      className={clsx(
+        "mx-auto grid items-start gap-8 px-4 py-16 md:py-24",
+        demo ? "max-w-4xl lg:grid-cols-2" : "max-w-md",
+      )}
+    >
+      <div className="rounded-md border border-line bg-surface p-6 md:p-8">
+        <h1 className="mb-1 text-3xl font-semibold tracking-tight">Sign in</h1>
+        <p className="mb-6 text-sm text-muted">Welcome back. Pick up where you left off.</p>
         <SignInForm next={next} />
+        <p className="mt-6 border-t border-line pt-5 text-sm text-muted">
+          Not a student yet?{" "}
+          <Link href="/#waitlist" className="font-medium text-ink underline underline-offset-4 hover:text-accent">
+            Join the waitlist
+          </Link>
+        </p>
         {demoPassword() && demo && (
           <p className="mt-4 text-xs text-muted">
             Demo accounts use <span className="font-mono">handle@academe.demo</span> with password{" "}

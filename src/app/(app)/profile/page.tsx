@@ -1,7 +1,7 @@
 import Link from "next/link";
 import clsx from "clsx";
 import { Check, LogOut } from "lucide-react";
-import { Avatar, Card, Label, PageHeader, ProgressBar } from "@/components/ui";
+import { Avatar, Card, Label, PageHeader, ProgressBar, ProgressBreakdown } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { achievementsFor, listProfiles, myCohorts, primaryCohort, progressFor } from "@/lib/data/repo";
 import { certificateFor } from "@/lib/data/admin";
@@ -31,6 +31,7 @@ export default async function Profile() {
             <Card title={primary.programme.title}>
               <p className="mb-3 text-5xl font-semibold tracking-tight">{progress.percent}%</p>
               <ProgressBar value={progress.percent} />
+              <ProgressBreakdown progress={progress} className="mt-3" />
               <ol className="mt-6 grid gap-2 sm:grid-cols-2">
                 {progress.modules.map(({ module, status }) => (
                   <li key={module.id} className="flex items-center gap-3 text-sm">

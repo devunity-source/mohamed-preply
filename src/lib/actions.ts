@@ -258,6 +258,29 @@ export async function joinWaitlist(_prev: FormState, form: FormData): Promise<Fo
 // ---------------------------------------------------------------------------
 // Notifications and demo session
 
+/**
+ * Records a visit to a space. No revalidation on purpose: the page keeps its
+ * "New" markers from before the visit, and the sidebar hides the badge for
+ * the space you're in.
+ */
+export async function markSpaceSeen(slug: string) {
+  const user = await currentUser();
+  if (typeof slug !== "string") return;
+  const space = spaceBySlug(slug, user.id);
+  if (!space) return;
+  const s = db();
+  const existing = s.spaceReads.find((r) => r.userId === user.id && r.spaceId === space.id);
+  if (existing) existing.lastSeenAt = new Date();
+  else s.spaceReads.push({ userId: user.id, spaceId: space.id, lastSeenAt: new Date() });
+}
+
+export async function dismissWelcome() {
+  const user = await currentUser();
+  const profile = db().profiles.find((p) => p.id === user.id);
+  if (profile) profile.onboardedAt ??= new Date();
+  revalidatePath("/dashboard");
+}
+
 export async function markAllRead() {
   const user = await currentUser();
   const now = new Date();

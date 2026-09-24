@@ -55,7 +55,7 @@ function LabCard({ lab, status, student, now }: { lab: Lab; status: LabStatus; s
 
       <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 font-mono text-xs">
         <div className="flex items-center gap-2">
-          <dt className="tracking-wider text-muted uppercase">Difficulty</dt>
+          <dt className="font-sans text-muted">Difficulty</dt>
           <dd className="flex gap-0.5" aria-label={`${lab.difficulty} of 5`}>
             {Array.from({ length: 5 }, (_, i) => (
               <span key={i} className={clsx("size-2.5 rounded-[2px]", i < lab.difficulty ? "bg-ink" : "bg-line")} />
@@ -67,7 +67,7 @@ function LabCard({ lab, status, student, now }: { lab: Lab; status: LabStatus; s
           <dd>~{lab.estMinutes} min</dd>
         </div>
         <div className="flex items-center gap-2">
-          <dt className="tracking-wider text-muted uppercase">Due</dt>
+          <dt className="font-sans text-muted">Due</dt>
           <dd className={clsx(overdue && "text-k-deadline")}>
             {lab.dueAt > now ? relativeDay(lab.dueAt, now) : formatShortDate(lab.dueAt)} · {formatTime(lab.dueAt)}
           </dd>

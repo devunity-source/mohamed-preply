@@ -1,7 +1,17 @@
 import Link from "next/link";
 import clsx from "clsx";
 import { ArrowRight, ArrowUpRight, Check, Video } from "lucide-react";
-import { Avatar, ButtonLink, Card, Empty, KindMark, Label, Legend, ProgressBar } from "@/components/ui";
+import {
+  Avatar,
+  ButtonLink,
+  Card,
+  Empty,
+  KindMark,
+  Label,
+  Legend,
+  ProgressBar,
+  ProgressBreakdown,
+} from "@/components/ui";
 import {
   cohortAssignments,
   cohortPulse,
@@ -18,7 +28,9 @@ import {
   thisWeek,
 } from "@/lib/data/repo";
 import { currentUser } from "@/lib/session";
-import type { Cohort } from "@/lib/types";
+import type { Cohort, Profile } from "@/lib/types";
+import { hasAdminArea } from "@/lib/authz";
+import { Welcome } from "@/components/welcome";
 import { addDays, formatShortDate, formatTime, formatWeekday, greeting, relativeDay, zonedParts } from "@/lib/time";
 
 export const metadata = { title: "Home" };
@@ -54,6 +66,9 @@ export default async function Dashboard() {
   return (
     <>
       <Hello name={firstName} now={now} subtitle={`${cohort.name} · Cohort ${cohort.code}`} />
+      {!user.onboardedAt && (
+        <Welcome firstName={firstName} staff={role !== "student"} startHref={welcomeHref(user, cohort, role, now)} />
+      )}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 [&>*]:min-w-0">
         <div className="space-y-5 lg:col-span-2">
@@ -61,7 +76,7 @@ export default async function Dashboard() {
 
           {/* Next class */}
           <section className="rounded-md bg-ink p-6 text-paper md:p-8">
-            <p className="font-mono text-[11px] font-medium tracking-[0.12em] uppercase opacity-60">Next class</p>
+            <p className="text-[13px] font-medium opacity-60">Next class</p>
             {next ? (
               <>
                 <p className="mt-6 font-mono text-sm opacity-70">
@@ -180,6 +195,12 @@ export default async function Dashboard() {
   );
 }
 
+function welcomeHref(user: Profile, cohort: Cohort, role: string, now: Date) {
+  if (role !== "student") return hasAdminArea(user) ? "/admin" : undefined;
+  const next = nextLessonFor(user.id, cohort, now);
+  return next ? `/cohorts/${cohort.id}/modules/${next.module.id}/${next.lesson.id}` : undefined;
+}
+
 function Hello({ name, now, subtitle }: { name: string; now: Date; subtitle: string }) {
   return (
     <header className="mb-8">
@@ -213,22 +234,7 @@ function ProgressCard({
         Week {week} of {totalWeeks}
       </p>
       <ProgressBar value={p.percent} />
-      <dl className="mt-5 grid grid-cols-3 gap-2 text-center">
-        {(
-          [
-            ["Lessons", p.lessons],
-            ["Labs", p.labs],
-            ["Assignments", p.assignments],
-          ] as const
-        ).map(([label, v]) => (
-          <div key={label} className="rounded-md border border-line p-2">
-            <dt className="font-mono text-[10px] tracking-wider text-muted uppercase">{label}</dt>
-            <dd className="font-mono text-sm font-semibold">
-              {v.done}/{v.total}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <ProgressBreakdown progress={p} className="mt-4" />
     </Card>
   );
 }

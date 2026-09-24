@@ -1,10 +1,20 @@
 import Link from "next/link";
 import { Lock, MessageSquare, Pin } from "lucide-react";
-import { Avatar } from "@/components/ui";
+import { Avatar, Pill } from "@/components/ui";
 import type { PostView } from "@/lib/data/repo";
 import { timeAgo } from "@/lib/time";
 
-export function PostCard({ view, now, showSpace }: { view: PostView; now: Date; showSpace?: boolean }) {
+export function PostCard({
+  view,
+  now,
+  showSpace,
+  isNew,
+}: {
+  view: PostView;
+  now: Date;
+  showSpace?: boolean;
+  isNew?: boolean;
+}) {
   const { post, author, space, commentCount, reactions } = view;
   return (
     <Link
@@ -15,6 +25,7 @@ export function PostCard({ view, now, showSpace }: { view: PostView; now: Date; 
         <Avatar profile={author} size={24} />
         <span className="font-medium">{author.fullName}</span>
         <span className="text-muted">· {timeAgo(post.createdAt, now)}</span>
+        {isNew && <Pill tone="accent">New</Pill>}
         {showSpace && (
           <span className="ml-auto font-mono text-[11px] tracking-wider text-muted uppercase">
             {space.cohortId ? `${space.group} / ` : ""}

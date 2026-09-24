@@ -24,7 +24,7 @@ export function ProjectCard({
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="font-mono text-[11px] tracking-wider text-muted uppercase">{project.title}</p>
+          <p className="text-[13px] text-muted">{project.title}</p>
           <h3 className="mt-1 text-xl font-semibold tracking-tight">{project.teamName}</h3>
         </div>
         <span className="font-mono text-2xl font-semibold">{progress}%</span>

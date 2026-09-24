@@ -30,7 +30,7 @@ export default async function CohortDashboard({ params }: PageProps<"/admin/coho
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line md:grid-cols-3 xl:grid-cols-6">
         {tiles.map((t) => (
           <div key={t.label} className="bg-surface p-5">
-            <dt className="font-mono text-[11px] tracking-wider text-muted uppercase">{t.label}</dt>
+            <dt className="text-[13px] text-muted">{t.label}</dt>
             <dd className="mt-2 text-3xl font-semibold tracking-tight">{t.value}</dd>
           </div>
         ))}

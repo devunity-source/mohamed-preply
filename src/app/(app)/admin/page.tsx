@@ -36,7 +36,7 @@ export default async function AdminOverview() {
       <dl className="mb-10 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line md:grid-cols-5">
         {kpis.map((k) => (
           <div key={k.label} className="bg-surface p-5">
-            <dt className="font-mono text-[11px] tracking-wider text-muted uppercase">{k.label}</dt>
+            <dt className="text-[13px] text-muted">{k.label}</dt>
             <dd className="mt-2 text-3xl font-semibold tracking-tight">{k.value}</dd>
           </div>
         ))}
@@ -78,7 +78,7 @@ export default async function AdminOverview() {
                   ["Avg progress", `${s.avgProgress}%`],
                 ].map(([l, v]) => (
                   <div key={l} className="rounded-md border border-line p-2">
-                    <dt className="font-mono text-[10px] tracking-wider text-muted uppercase">{l}</dt>
+                    <dt className="text-[11px] text-muted">{l}</dt>
                     <dd className="font-mono text-sm font-semibold">{v}</dd>
                   </div>
                 ))}

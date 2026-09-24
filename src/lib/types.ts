@@ -11,6 +11,8 @@ export interface Profile {
   role: Role;
   headline: string;
   avatarColor: string;
+  /** Set when the first-visit welcome is dismissed. */
+  onboardedAt?: Date | null;
 }
 
 export interface Programme {
@@ -186,6 +188,13 @@ export interface Post {
   pinned: boolean;
   // Locked threads accept no new replies.
   locked: boolean;
+}
+
+/** When someone last opened a community space. Drives the per-space unread counts. */
+export interface SpaceRead {
+  userId: string;
+  spaceId: string;
+  lastSeenAt: Date;
 }
 
 export interface Comment {

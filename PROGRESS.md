@@ -81,7 +81,8 @@ supabase/migrations/0001_init.sql   full schema + RLS
 supabase/migrations/0002_security_hardening.sql   review fixes
 supabase/migrations/0003_waitlist.sql             landing page waitlist
 supabase/migrations/0004_teaching_tools.sql       Phase 3: rubrics, milestones, attendance, certificates
-supabase/tests/rls.test.mjs         70 RLS checks on PGlite (npm run test:db)
+supabase/migrations/0005_ux_state.sql             onboarded_at, space_reads (unread counts)
+supabase/tests/rls.test.mjs         78 RLS checks on PGlite (npm run test:db)
 legacy/                             previous repo contents, untouched
 ```
 
@@ -226,7 +227,7 @@ Public page at `/`, the app moved behind it at `/dashboard`. Aimed at career swi
 
 ## UX pass
 
-From a review of the running app (24 Sep 2026). Two batches done; the small stuff is left.
+From a review of the running app (24 Sep 2026). All three batches done.
 
 **Done**
 - [x] **Lessons you can actually take:** lesson pages at `/cohorts/…/modules/<module>/<lesson>` with real content, lesson N of M, prev/next, a module sidebar, and **Mark done and continue** (crosses into the next module). Week 4 (Kubernetes) has full lessons; other weeks show their summary until content is written. Video lessons show a placeholder until a video host is connected.
@@ -243,8 +244,13 @@ From a review of the running app (24 Sep 2026). Two batches done; the small stuf
 - [x] **Grading one at a time:** submission queue on the left (ungraded first, oldest first), one submission on the right with an Open repo button. **Save and next ungraded** saves and jumps to the next one (server-side redirect, works without JavaScript), then confirms whose grade was saved. `j`/`k` step through, ⌘/Ctrl+Enter saves.
 - [x] Profile shows your real certificates with their public verify links; removed two stale "Phase 3" notes.
 
-**Next**
-- [ ] Smaller: explain the progress %, centred sign-in card with waitlist link, first-visit welcome, fewer mono labels, ⌘K search, unread counts per space
+- [x] **Progress % explained** wherever it shows: "10/19 lessons · 3/6 labs · 3/5 assignments", and that each counts the same.
+- [x] **Sign-in** is a centred card with a "Join the waitlist" link for people who aren't students yet.
+- [x] **First-visit welcome** on the dashboard: three lines on how it works (different copy for students and staff), a start button, and "Got it". Stored as `profiles.onboarded_at`.
+- [x] **Fewer mono labels:** section and card labels are plain sans now. Mono stays for numbers, codes, dates and status pills.
+- [x] **⌘K / Ctrl+K search** (also `/`, and a Search button in the sidebar and phone header) over pages, lessons, labs, assignments, classes, spaces and admin tools. The index comes from the same permission checks as the pages, so you only find what you could open, and it loads on first use instead of with every page.
+- [x] **Unread counts per space:** new posts by others since your last visit (or the past week if you've never opened it). Opening a space clears its badge and marks the new posts "New" for that visit. Stored in `space_reads`, private per user.
+- [x] Global focus ring moved into the CSS base layer so components can style their own focus.
 
 ## Out of scope for V1 (on purpose)
 
@@ -276,3 +282,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-23 | Replaced cookie auth with email + password sign-in, server-side sessions and a sign-in gate; demo login limited to dev. 32 auth checks (27 attack, 4 demo toggle, 1 dev). |
 | 2026-09-24 | UX batch 1: lesson pages + continue learning, current work first, instant feedback with undo, confirm dialogs, mobile overflow fixes. 29 new browser checks. |
 | 2026-09-24 | UX batch 2: one-line cohort header, single admin tab bar + cohort switcher, folded community spaces, mobile bottom bar, calmer status colours, blank attendance + mark remaining, one-at-a-time grading with save and next. 35 new browser checks. |
+| 2026-09-24 | UX batch 3: progress breakdown, sign-in card, first-visit welcome, sans labels, ⌘K search, unread counts per space. Migration 0005, `test:db` 78 checks, 24 new browser checks. |
