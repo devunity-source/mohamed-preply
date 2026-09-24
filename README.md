@@ -166,7 +166,7 @@ More detail in [PROGRESS.md → Architecture](PROGRESS.md#architecture).
 
 | Problem | Fix |
 | --- | --- |
-| `EBADENGINE` warning or odd build errors | Upgrade Node to 20.9+ (`node -v`). |
+| `You are using Node.js 18…` / `EBADENGINE` / odd build errors | Node is too old; you need 20.9+. With [nvm](https://github.com/nvm-sh/nvm): `nvm install --lts`, then `nvm use` in this folder (it reads `.nvmrc`). Delete `node_modules` and run `npm install` again afterwards. |
 | `Port 3000 is already in use` | Stop the other process or use `npm run dev -- -p 4000`. |
 | My posts and submissions disappeared | Expected. Demo data lives in memory and resets on restart. |
 | Class times look an hour off | Set `ACADEMY_TIMEZONE` in `.env.local` and restart. |
