@@ -2,6 +2,7 @@
 
 import { useFormAction } from "@/components/use-form-action";
 import { Button } from "@/components/ui";
+import { useT } from "@/components/i18n-provider";
 import { signIn } from "@/lib/auth-actions";
 
 const field =
@@ -9,15 +10,16 @@ const field =
 
 export function SignInForm({ next }: { next?: string }) {
   const { state, pending, formProps } = useFormAction(signIn);
+  const t = useT();
   return (
     <form {...formProps} className="space-y-4">
       {next && <input type="hidden" name="next" value={next} />}
       <label className="block">
-        <span className="mb-1.5 block text-sm font-medium">Email</span>
-        <input name="email" type="email" required autoComplete="email" maxLength={254} className={field} />
+        <span className="mb-1.5 block text-sm font-medium">{t("auth.email")}</span>
+        <input name="email" type="email" required autoComplete="email" maxLength={254} dir="ltr" className={field} />
       </label>
       <label className="block">
-        <span className="mb-1.5 block text-sm font-medium">Password</span>
+        <span className="mb-1.5 block text-sm font-medium">{t("auth.password")}</span>
         <input
           name="password"
           type="password"
@@ -33,7 +35,7 @@ export function SignInForm({ next }: { next?: string }) {
         </p>
       )}
       <Button disabled={pending} className="h-11 w-full">
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? t("auth.signingIn") : t("auth.signIn")}
       </Button>
     </form>
   );

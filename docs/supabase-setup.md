@@ -7,8 +7,8 @@ With Supabase connected, everything lives in your project: accounts and sign-in,
 Four things, about 5 minutes:
 
 1. Add `SUPABASE_SECRET_KEY` to `.env.local`. It's required now: the server uses it to send notifications and invites.
-2. `npm run db:bundle -- 0011`, paste `supabase/all-migrations.sql` into **SQL Editor**, press **Run**. (That's 0011 and 0012 together.)
-3. `npm run db:seed` to load the curriculum.
+2. `npm run db:bundle -- 0011`, paste `supabase/all-migrations.sql` into **SQL Editor**, press **Run**. (That's 0011 to 0013 together.)
+3. `npm run db:seed` to load the curriculum. Run it again after 0013 if you seeded earlier: it adds the Arabic versions to rows that don't have any yet, and leaves everything else alone.
 4. `npm run db:check` to confirm everything is in place.
 
 The rest of this page is the full setup for a new project.
@@ -61,18 +61,16 @@ Adds the DevOps and AI Engineering programmes (published, with their prices), th
 - **Site URL**: the same value as `SITE_URL` (for now `http://localhost:3000`, later your real domain).
 - **Redirect URLs**: add `http://localhost:3000/**` and, when you deploy, `https://<your-domain>/**`.
 
-[Email Templates](https://supabase.com/dashboard/project/_/auth/templates): replace the link in two templates so it goes through the app's own confirm page. The exact HTML is in `supabase/templates/` (the automated tests use the same files); keep the wording around the link as you like.
+[Email Templates](https://supabase.com/dashboard/project/_/auth/templates): replace two templates with the files in `supabase/templates/` (the automated tests use the same files). Each is Arabic first, then English, since someone being invited hasn't chosen a language yet:
 
-**Invite user** (`supabase/templates/invite.html`):
+- **Invite user**: paste `supabase/templates/invite.html`; subject `دعوة إلى AcadeMe | You're invited to AcadeMe`
+- **Reset password**: paste `supabase/templates/recovery.html`; subject `إعادة تعيين كلمة المرور | Reset your AcadeMe password`
 
-```html
-<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=%2Fset-password%3Fwelcome%3D1">Accept the invite and choose a password</a></p>
-```
-
-**Reset password** (`supabase/templates/recovery.html`):
+The part that matters is the link, which goes through the app's own confirm page:
 
 ```html
-<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=%2Fset-password">Choose a new password</a></p>
+<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=%2Fset-password%3Fwelcome%3D1">…</a>
+<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=%2Fset-password">…</a>
 ```
 
 Why: the default links only work in the browser that asked for them, and invites never can. These open a page with a **Continue** button, so mail scanners that open links in advance don't use them up.

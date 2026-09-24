@@ -6,13 +6,22 @@ import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-// Only downloaded when a page has Arabic text in it.
-const arabic = Noto_Kufi_Arabic({ variable: "--font-arabic", subsets: ["arabic"], preload: false });
+// Only downloaded when a page has Arabic text in it. No metric fallback face:
+// it would have no unicode range and catch Latin text before Geist.
+const arabic = Noto_Kufi_Arabic({
+  variable: "--font-arabic",
+  subsets: ["arabic"],
+  preload: false,
+  adjustFontFallback: false,
+});
 
-export const metadata: Metadata = {
-  title: { default: "AcadeMe", template: "%s · AcadeMe" },
-  description: "Cohort-based programmes with live classes, labs, projects and community.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return {
+    title: { default: "AcadeMe", template: "%s · AcadeMe" },
+    description: t("nav.metaDescription"),
+  };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const { locale, dir } = await getI18n();

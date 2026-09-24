@@ -12,21 +12,32 @@ import {
   MessagesSquare,
   ShieldCheck,
   UserRound,
+  type LucideIcon,
 } from "lucide-react";
+import { useT } from "@/components/i18n-provider";
+import type { Key } from "@/lib/i18n/translate";
 
-const ITEMS = [
-  { href: "/dashboard", label: "Home", icon: House },
-  { href: "/programmes", label: "Programmes", icon: GraduationCap, also: "/cohorts" },
-  { href: "/community", label: "Community", icon: MessagesSquare },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/resources", label: "Resources", icon: BookOpen },
-  { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/profile", label: "Profile", icon: UserRound },
+interface Item {
+  href: string;
+  label: Key;
+  icon: LucideIcon;
+  also?: string;
+}
+
+const ITEMS: Item[] = [
+  { href: "/dashboard", label: "common.home", icon: House },
+  { href: "/programmes", label: "common.programmes", icon: GraduationCap, also: "/cohorts" },
+  { href: "/community", label: "common.community", icon: MessagesSquare },
+  { href: "/calendar", label: "common.calendar", icon: CalendarDays },
+  { href: "/resources", label: "common.resources", icon: BookOpen },
+  { href: "/notifications", label: "common.notifications", icon: Bell },
+  { href: "/profile", label: "common.profile", icon: UserRound },
 ];
 
-const ADMIN_ITEM = { href: "/admin", label: "Admin", icon: ShieldCheck, also: undefined };
+const ADMIN_ITEM: Item = { href: "/admin", label: "common.admin", icon: ShieldCheck };
 
 export function Nav({ unread, showAdmin }: { unread: number; showAdmin: boolean }) {
+  const t = useT();
   const pathname = usePathname();
   const items = showAdmin ? [...ITEMS, ADMIN_ITEM] : ITEMS;
   return (
@@ -44,9 +55,9 @@ export function Nav({ unread, showAdmin }: { unread: number; showAdmin: boolean 
             )}
           >
             <Icon size={16} strokeWidth={2} />
-            <span>{label}</span>
+            <span>{t(label)}</span>
             {href === "/notifications" && unread > 0 && (
-              <span className="ml-auto rounded-[4px] bg-accent px-1.5 font-mono text-[11px] font-semibold text-accent-ink">
+              <span className="ms-auto rounded-[4px] bg-accent px-1.5 font-mono text-[11px] font-semibold text-accent-ink">
                 {unread}
               </span>
             )}

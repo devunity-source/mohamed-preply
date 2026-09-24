@@ -53,6 +53,23 @@ export default defineConfig({
       testMatch: LAYOUT,
       use: { ...devices["Desktop Chrome"], viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
     },
+    // The same layout checks in Arabic (right to left), at every size.
+    ...(
+      [
+        ["desktop-ar", { width: 1440, height: 900 }],
+        ["tablet-ar", { width: 768, height: 1024 }],
+        ["phone-ar", { width: 390, height: 844 }],
+      ] as const
+    ).map(([name, viewport]) => ({
+      name,
+      testMatch: LAYOUT,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport,
+        locale: "ar-AE",
+        ...(name === "phone-ar" ? { isMobile: true, hasTouch: true } : {}),
+      },
+    })),
   ],
   webServer: {
     command: process.env.E2E_SKIP_BUILD ? `npx next start -p ${PORT}` : `npm run build && npx next start -p ${PORT}`,

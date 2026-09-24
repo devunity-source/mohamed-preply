@@ -7,7 +7,7 @@ import { db, newId, withData } from "@/lib/data/store";
 import { insert, notify, remove, update } from "@/lib/data/save";
 import { sendLater } from "@/lib/email/send";
 import { waitlistEmail } from "@/lib/email/templates";
-import { getLocale } from "@/lib/i18n/server";
+import { getI18n, getLocale } from "@/lib/i18n/server";
 import { loc } from "@/lib/i18n/content";
 import { EMAIL_KINDS, turnOffFromLink } from "@/lib/email/prefs";
 import { validUnsubscribe } from "@/lib/email/links";
@@ -116,9 +116,10 @@ export const updateLab = withData(async (labId: string, status: Extract<LabStatu
 
 export const submitAssignment = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const user = await currentUser();
+  const { t } = await getI18n();
   const s = db();
   const assignment = s.assignments.find((a) => a.id === form.get("assignmentId"));
-  if (!assignment || !isCohortMember(user.id, assignment.cohortId)) return { error: "Assignment not found." };
+  if (!assignment || !isCohortMember(user.id, assignment.cohortId)) return { error: t("errors.assignmentNotFound") };
 
   const repoUrl = String(form.get("repoUrl") ?? "").trim();
   const note = String(form.get("note") ?? "")
@@ -128,14 +129,14 @@ export const submitAssignment = withData(async (_prev: FormState, form: FormData
   try {
     parsed = new URL(repoUrl);
   } catch {
-    return { error: "Enter a full repository URL, like https://github.com/you/repo." };
+    return { error: t("errors.repoUrlFull") };
   }
   if (parsed.protocol !== "https:" || !["github.com", "gitlab.com", "dev.azure.com"].includes(parsed.hostname)) {
-    return { error: "Use a GitHub, GitLab or Azure DevOps repository URL." };
+    return { error: t("errors.repoUrlHost") };
   }
 
   const existing = s.submissions.find((x) => x.assignmentId === assignment.id && x.userId === user.id);
-  if (existing?.grade != null) return { error: "This submission has already been graded." };
+  if (existing?.grade != null) return { error: t("errors.alreadyGraded") };
   if (existing) {
     await update("submissions", existing, { repoUrl, note, submittedAt: new Date() });
   } else {
@@ -167,9 +168,10 @@ export const submitAssignment = withData(async (_prev: FormState, form: FormData
 
 export const createPost = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const user = await currentUser();
+  const { t } = await getI18n();
   const space = spaceBySlug(String(form.get("space") ?? ""), user.id);
-  if (!space) return { error: "Space not found." };
-  if (!canPost(user, space)) return { error: "Only instructors can post here." };
+  if (!space) return { error: t("errors.spaceNotFound") };
+  if (!canPost(user, space)) return { error: t("errors.instructorsOnlyPost") };
 
   const title = String(form.get("title") ?? "")
     .trim()
@@ -177,7 +179,7 @@ export const createPost = withData(async (_prev: FormState, form: FormData): Pro
   const body = String(form.get("body") ?? "")
     .trim()
     .slice(0, 10_000);
-  if (!title || !body) return { error: "Add a title and some text." };
+  if (!title || !body) return { error: t("errors.addTitleAndText") };
 
   const id = newId("po");
   await insert("posts", {
@@ -198,15 +200,16 @@ export const createPost = withData(async (_prev: FormState, form: FormData): Pro
 
 export const addComment = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const user = await currentUser();
+  const { t } = await getI18n();
   const s = db();
   const post = s.posts.find((p) => p.id === form.get("postId"));
-  if (!post || !visibleSpaces(user.id).some((sp) => sp.id === post.spaceId)) return { error: "Post not found." };
-  if (post.locked) return { error: "This thread is locked." };
+  if (!post || !visibleSpaces(user.id).some((sp) => sp.id === post.spaceId)) return { error: t("errors.postNotFound") };
+  if (post.locked) return { error: t("errors.threadLocked") };
 
   const body = String(form.get("body") ?? "")
     .trim()
     .slice(0, 5000);
-  if (!body) return { error: "Write something first." };
+  if (!body) return { error: t("errors.writeSomething") };
 
   await insert("comments", { id: newId("co"), postId: post.id, authorId: user.id, body, createdAt: new Date() });
   const space = s.spaces.find((sp) => sp.id === post.spaceId)!;
@@ -250,18 +253,19 @@ export const joinWaitlist = withData(async (_prev: FormState, form: FormData): P
   // Honeypot: real people never see or fill this field. Pretend success for bots.
   if (String(form.get("company") ?? "") !== "") return { ok: true };
 
+  const { t } = await getI18n();
   const h = await headers();
   const ip = h.get("x-forwarded-for")?.split(",")[0].trim() || h.get("x-real-ip") || "unknown";
-  if (!rateLimit(`waitlist:${ip}`, 5, 60_000)) return { error: "Too many attempts. Try again in a minute." };
+  if (!rateLimit(`waitlist:${ip}`, 5, 60_000)) return { error: t("errors.tooManyAttemptsMinute") };
 
   const email = String(form.get("email") ?? "")
     .trim()
     .toLowerCase();
-  if (email.length > 254 || !EMAIL.test(email)) return { error: "Enter a valid email address." };
+  if (email.length > 254 || !EMAIL.test(email)) return { error: t("errors.invalidEmail") };
 
   const s = db();
   const programme = s.programmes.find((p) => p.published && p.slug === form.get("programme"));
-  if (!programme) return { error: "Pick a programme." };
+  if (!programme) return { error: t("errors.pickProgramme") };
 
   // Same answer whether or not the email was already listed, so the form
   // can't be used to find out who signed up.
@@ -310,28 +314,29 @@ export const markSpaceSeen = withData(async (slug: string) => {
  */
 export const sendOfficeMessage = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const user = await currentUser();
+  const { t } = await getI18n();
   const s = db();
   const cohortId = String(form.get("cohortId") ?? "");
   const isStudent = s.cohortMembers.some(
     (m) => m.cohortId === cohortId && m.userId === user.id && m.role === "student",
   );
-  if (!isStudent) return { error: "Only students in this cohort can message its instructors." };
+  if (!isStudent) return { error: t("errors.officeStudentsOnly") };
 
   const now = new Date();
   const status = officeStatus(cohortId, now);
   if (!status.open) {
     return {
       error: status.next
-        ? `Office hours are closed. They open ${formatWeekday(status.next.at)} at ${formatTime(status.next.at)}.`
-        : "Office hours are closed.",
+        ? t("errors.officeClosedNext", { day: formatWeekday(status.next.at), time: formatTime(status.next.at) })
+        : t("errors.officeClosed"),
     };
   }
   const body = String(form.get("body") ?? "")
     .trim()
     .slice(0, 2000);
-  if (!body) return { error: "Write your message first." };
+  if (!body) return { error: t("errors.writeMessage") };
   if (!rateLimit(`office:${user.id}`, 20, 60 * 60_000)) {
-    return { error: "That's a lot of messages. Wait a bit, or bring it to the next class." };
+    return { error: t("errors.officeTooMany") };
   }
 
   let thread = threadFor(cohortId, user.id);

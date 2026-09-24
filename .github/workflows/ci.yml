@@ -29,6 +29,8 @@ jobs:
         run: npm run typecheck
       - name: Lint
         run: npm run lint
+      - name: No hard-coded English (every text in English and Arabic)
+        run: npm run i18n:check
       - name: Formatting
         run: npx prettier --check src tests scripts playwright.config.ts
       - name: Database security tests

@@ -6,24 +6,39 @@ import { isAdmin } from "@/lib/authz";
 import { cohortWeek, publishedProgrammes, myCohorts, progressFor } from "@/lib/data/repo";
 import { currentUser } from "@/lib/session";
 import { formatShortDate } from "@/lib/time";
+import { getI18n } from "@/lib/i18n/server";
+import { loc } from "@/lib/i18n/content";
+import type { CohortStatus } from "@/lib/types";
 
-export const metadata = { title: "Programmes" };
+export async function generateMetadata() {
+  const { t } = await getI18n();
+  return { title: t("programmes.metaTitle") };
+}
+
+const STATUS = {
+  upcoming: "programmes.statusUpcoming",
+  active: "programmes.statusActive",
+  completed: "programmes.statusCompleted",
+} as const satisfies Record<CohortStatus, string>;
 
 const price = (cents: number, currency: string) => formatMoney(cents, currency);
 
 export default async function Programmes() {
+  const { t, locale } = await getI18n();
   const user = await currentUser();
   const now = new Date();
   const mine = myCohorts(user.id);
   const enrolledProgrammes = new Set(mine.map((m) => m.programme.id));
-  const catalogue = publishedProgrammes().filter((p) => !enrolledProgrammes.has(p.id));
+  const catalogue = publishedProgrammes()
+    .filter((p) => !enrolledProgrammes.has(p.id))
+    .map((p) => loc(p, locale));
 
   return (
     <>
-      <PageHeader eyebrow="My programmes" title="Programmes">
+      <PageHeader eyebrow={t("programmes.eyebrow")} title={t("programmes.title")}>
         {isAdmin(user) && (
           <ButtonLink href="/admin/programmes/new">
-            <Plus size={16} /> New programme
+            <Plus size={16} /> {t("programmes.newProgramme")}
           </ButtonLink>
         )}
       </PageHeader>
@@ -39,15 +54,22 @@ export default async function Programmes() {
               className="group rounded-md border border-line bg-surface p-6 transition-colors hover:border-ink"
             >
               <div className="mb-6 flex items-center justify-between">
-                <Label>Cohort {cohort.code}</Label>
+                <Label>{t("programmes.cohortCode", { code: cohort.code })}</Label>
                 <Pill tone={cohort.status === "active" ? "good" : "quiet"}>
-                  {cohort.status === "active" ? `Week ${week}/${totalWeeks}` : cohort.status}
+                  {cohort.status === "active"
+                    ? t("programmes.weekPill", { week, total: totalWeeks })
+                    : t(STATUS[cohort.status])}
                 </Pill>
               </div>
-              <h2 className="text-2xl font-semibold tracking-tight group-hover:text-accent">{programme.title}</h2>
+              <h2 className="text-2xl font-semibold tracking-tight group-hover:text-accent">
+                {loc(programme, locale).title}
+              </h2>
               <p className="mt-1 text-sm text-muted">
-                {formatShortDate(cohort.startsOn)} to {formatShortDate(cohort.endsOn)}
-                {role === "instructor" && " · Instructor"}
+                {t("programmes.dateRange", {
+                  start: formatShortDate(cohort.startsOn),
+                  end: formatShortDate(cohort.endsOn),
+                })}
+                {role === "instructor" && t("programmes.asInstructor")}
               </p>
               {progress && (
                 <div className="mt-6">
@@ -62,11 +84,11 @@ export default async function Programmes() {
 
       {catalogue.length > 0 && (
         <>
-          <h2 className="mt-14 mb-4 text-xl font-semibold tracking-tight">Explore programmes</h2>
+          <h2 className="mt-14 mb-4 text-xl font-semibold tracking-tight">{t("programmes.explore")}</h2>
           <div className="grid gap-5 md:grid-cols-2">
             {catalogue.map((p) => (
               <Card key={p.id}>
-                <Label>{p.durationWeeks} weeks · Live cohort</Label>
+                <Label>{t("programmes.weeksLive", { count: p.durationWeeks })}</Label>
                 <h3 className="mt-2 text-2xl font-semibold tracking-tight">{p.title}</h3>
                 <p className="mt-1 text-muted">{p.tagline}</p>
                 <ul className="mt-5 space-y-1.5 text-sm">
@@ -80,9 +102,9 @@ export default async function Programmes() {
                   <span className="text-3xl font-semibold tracking-tight">{price(p.priceCents, p.currency)}</span>
                   <span
                     className="cursor-not-allowed rounded-md bg-ink/40 px-4 py-2 text-sm font-medium text-paper"
-                    title="Stripe checkout arrives in Phase 2"
+                    title={t("programmes.checkoutSoon")}
                   >
-                    Enrol now
+                    {t("programmes.enrol")}
                   </span>
                 </div>
               </Card>

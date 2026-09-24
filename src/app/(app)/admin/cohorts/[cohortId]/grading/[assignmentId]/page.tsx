@@ -11,11 +11,23 @@ import { gradeSubmission, remindNonSubmitters } from "@/lib/admin-actions";
 import { assignmentState, STATE_META } from "@/lib/assignment-status";
 import { requireCohortManager } from "@/lib/authz";
 import { formatFull, timeAgo } from "@/lib/time";
+import { getI18n } from "@/lib/i18n/server";
+import { rich } from "@/components/rich";
+import type { AssignmentState } from "@/lib/assignment-status";
+
+const STATE_LABEL = {
+  graded: "grading.stateGraded",
+  submitted: "grading.stateSubmitted",
+  late: "grading.stateLate",
+  overdue: "grading.stateNotSubmitted",
+  open: "grading.stateNotSubmitted",
+} as const satisfies Record<AssignmentState, string>;
 
 export default async function GradeAssignment({
   params,
   searchParams,
 }: PageProps<"/admin/cohorts/[cohortId]/grading/[assignmentId]">) {
+  const { t } = await getI18n();
   const { cohortId, assignmentId } = await params;
   const { student, graded } = await searchParams;
   await requireCohortManager(cohortId);
@@ -51,18 +63,20 @@ export default async function GradeAssignment({
         href={`/admin/cohorts/${cohortId}/grading`}
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"
       >
-        <ArrowLeft size={14} /> All assignments
+        <ArrowLeft size={14} className="rtl:-scale-x-100" /> {t("grading.allAssignments")}
       </Link>
       <div className="mb-6">
         <h2 className="text-2xl font-semibold tracking-tight">{a.title}</h2>
         <p className="mt-1 text-sm text-muted">
-          Due {formatFull(a.dueAt)} · {ungraded.length === 0 ? "all graded" : `${ungraded.length} to grade`}
+          {ungraded.length === 0
+            ? t("grading.dueAllGraded", { date: formatFull(a.dueAt) })
+            : t("grading.dueToGrade", { date: formatFull(a.dueAt), count: ungraded.length })}
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[17rem_1fr] [&>*]:min-w-0">
         <div className="space-y-5 lg:order-none">
-          <Card title={`Submissions · ${queue.length}`}>
+          <Card title={t("grading.submissionsTitle", { count: queue.length })}>
             {queue.length ? (
               <ul className="-mx-2">
                 {queue.map(({ p, sub }) => {
@@ -84,7 +98,10 @@ export default async function GradeAssignment({
                         {state === "graded" ? (
                           <span className="font-mono text-xs opacity-70">{sub.grade}</span>
                         ) : (
-                          <span className="size-2 shrink-0 rounded-full bg-accent" aria-label="Needs grading" />
+                          <span
+                            className="size-2 shrink-0 rounded-full bg-accent"
+                            aria-label={t("grading.needsGrading")}
+                          />
                         )}
                       </Link>
                     </li>
@@ -92,12 +109,12 @@ export default async function GradeAssignment({
                 })}
               </ul>
             ) : (
-              <Empty>Nothing submitted yet.</Empty>
+              <Empty>{t("grading.nothingSubmitted")}</Empty>
             )}
           </Card>
 
           {missing.length > 0 && (
-            <Card title={`Not submitted · ${missing.length}`}>
+            <Card title={t("grading.notSubmittedTitle", { count: missing.length })}>
               <ul className="mb-4 space-y-1.5 text-sm text-muted">
                 {missing.map((p) => (
                   <li key={p.id}>{p.fullName}</li>
@@ -105,7 +122,7 @@ export default async function GradeAssignment({
               </ul>
               <form action={remindNonSubmitters.bind(null, a.id)}>
                 <SubmitButton variant="ghost" className="w-full">
-                  <Bell size={14} /> Send a reminder
+                  <Bell size={14} /> {t("grading.sendReminder")}
                 </SubmitButton>
               </form>
             </Card>
@@ -116,8 +133,8 @@ export default async function GradeAssignment({
           <div className="space-y-3">
             {justGraded && (
               <p role="status" className="flex items-center gap-2 text-sm text-k-office">
-                <Check size={14} strokeWidth={3} /> Saved {justGraded.p.fullName}&apos;s grade ({justGraded.sub.grade}
-                /100). They&apos;ve been notified.
+                <Check size={14} strokeWidth={3} />{" "}
+                {t("grading.savedGrade", { name: justGraded.p.fullName, grade: justGraded.sub.grade ?? "" })}
               </p>
             )}
             <Card>
@@ -130,24 +147,32 @@ export default async function GradeAssignment({
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold">{current.p.fullName}</p>
                   <p className="text-xs text-muted">
-                    Submitted {timeAgo(current.sub.submittedAt, now)} · {index + 1} of {queue.length}
+                    {t("grading.submittedMeta", {
+                      ago: timeAgo(current.sub.submittedAt, now),
+                      position: index + 1,
+                      total: queue.length,
+                    })}
                   </p>
                 </div>
                 <Pill tone={STATE_META[assignmentState(a, current.sub, now)].tone}>
                   {current.sub.grade != null
-                    ? `${current.sub.grade}/100`
-                    : STATE_META[assignmentState(a, current.sub, now)].label}
+                    ? t("grading.gradeOutOf", { grade: current.sub.grade })
+                    : t(STATE_LABEL[assignmentState(a, current.sub, now)])}
                 </Pill>
               </div>
 
               <div className="mt-5 space-y-4 border-t border-line pt-5">
                 <div className="flex flex-wrap items-center gap-3">
                   <ButtonLink href={current.sub.repoUrl} external variant="ghost">
-                    <ExternalLink size={14} /> Open repo
+                    <ExternalLink size={14} /> {t("grading.openRepo")}
                   </ButtonLink>
-                  <span className="min-w-0 truncate font-mono text-xs text-muted">{current.sub.repoUrl}</span>
+                  <span dir="ltr" className="min-w-0 truncate font-mono text-xs text-muted">
+                    {current.sub.repoUrl}
+                  </span>
                 </div>
-                {current.sub.note && <p className="rounded-md bg-paper p-3 text-sm">“{current.sub.note}”</p>}
+                {current.sub.note && (
+                  <p className="rounded-md bg-paper p-3 text-sm">{t("grading.note", { note: current.sub.note })}</p>
+                )}
                 <GradeForm
                   key={current.sub.id}
                   action={gradeSubmission}
@@ -159,18 +184,20 @@ export default async function GradeAssignment({
                 />
                 {current.sub.gradedBy && current.sub.gradedAt && (
                   <p className="text-xs text-muted">
-                    Last graded by {profileById(current.sub.gradedBy)?.fullName} {timeAgo(current.sub.gradedAt, now)}
-                    {!current.sub.rubricScores && " (before rubrics; re-grade to record scores)"}
+                    {t(current.sub.rubricScores ? "grading.lastGraded" : "grading.lastGradedNoRubric", {
+                      name: profileById(current.sub.gradedBy)?.fullName ?? "",
+                      ago: timeAgo(current.sub.gradedAt, now),
+                    })}
                   </p>
                 )}
                 <p className="hidden text-xs text-muted md:block">
-                  <Kbd>j</Kbd> / <Kbd>k</Kbd> next and previous · <Kbd>⌘</Kbd>/<Kbd>Ctrl</Kbd> + <Kbd>Enter</Kbd> save
+                  {rich(t("grading.keysHint"), { k: (c) => <Kbd>{c}</Kbd> })}
                 </p>
               </div>
             </Card>
           </div>
         ) : (
-          <Empty>No submissions to grade yet.</Empty>
+          <Empty>{t("grading.noSubmissions")}</Empty>
         )}
       </div>
     </>

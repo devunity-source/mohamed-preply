@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "./store";
-import { addDays, daysBetween, startOfWeek } from "@/lib/time";
+import { activeLocale, addDays, daysBetween, startOfWeek } from "@/lib/time";
+import { translate } from "@/lib/i18n/translate";
 import type {
   Assignment,
   CalendarKind,
@@ -272,6 +273,7 @@ export interface CalendarItem {
 /** Everything on a user's calendar between two instants. */
 export function calendarFor(userId: string, from: Date, to: Date): CalendarItem[] {
   const s = db();
+  const locale = activeLocale();
   const cohortIds = new Set(myCohorts(userId).map((c) => c.cohort.id));
   // Campus-wide events have no cohort and show for everyone.
   const shows = (cohortId: string | null, at: Date) =>
@@ -305,7 +307,7 @@ export function calendarFor(userId: string, from: Date, to: Date): CalendarItem[
       .map((a) => ({
         id: `due_${a.id}`,
         kind: "deadline" as const,
-        title: `Due: ${a.title}`,
+        title: translate(locale, "errors.dueTitle", { title: a.title }),
         startsAt: a.dueAt,
         durationMin: 0,
         href: `/cohorts/${a.cohortId}/assignments/${a.id}`,
@@ -316,7 +318,7 @@ export function calendarFor(userId: string, from: Date, to: Date): CalendarItem[
       .map((l) => ({
         id: `due_${l.id}`,
         kind: "deadline" as const,
-        title: `Due: Lab #${String(l.number).padStart(2, "0")}`,
+        title: translate(locale, "errors.dueLab", { number: String(l.number).padStart(2, "0") }),
         startsAt: l.dueAt,
         durationMin: 0,
         href: `/cohorts/${l.cohortId}/labs`,
@@ -354,7 +356,10 @@ export function tasksFor(userId: string, cohortId: string, now: Date): Task[] {
     tasks.push({
       id: l.id,
       kind: "lab",
-      title: `Lab #${String(l.number).padStart(2, "0")}: ${l.title}`,
+      title: translate(activeLocale(), "errors.labTask", {
+        number: String(l.number).padStart(2, "0"),
+        title: l.title,
+      }),
       dueAt: l.dueAt,
       done: st === "submitted" || st === "passed",
       href: `/cohorts/${cohortId}/labs`,

@@ -5,23 +5,25 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { CornerDownLeft, Search } from "lucide-react";
 import { searchIndex, type SearchItem } from "@/lib/search";
+import { useT } from "@/components/i18n-provider";
 
 const OPEN_EVENT = "academe:search";
 const LIMIT = 30;
 
 /** Any button can open the palette: it just fires this event. */
 export function SearchButton({ className, compact }: { className?: string; compact?: boolean }) {
+  const t = useT();
   return (
     <button
       type="button"
-      aria-label="Search"
+      aria-label={t("common.search")}
       onClick={() => window.dispatchEvent(new Event(OPEN_EVENT))}
       className={className}
     >
       <Search size={compact ? 20 : 16} />
       {!compact && (
         <>
-          <span className="flex-1 text-left">Search</span>
+          <span className="flex-1 text-start">{t("common.search")}</span>
           <kbd className="rounded-[4px] border border-line px-1 font-mono text-[11px]">⌘K</kbd>
         </>
       )}
@@ -35,7 +37,7 @@ function rank(items: SearchItem[], query: string): SearchItem[] {
   const scored: [number, SearchItem][] = [];
   for (const item of items) {
     const label = item.label.toLowerCase();
-    const hay = `${label} ${item.hint.toLowerCase()} ${item.kind.toLowerCase()}`;
+    const hay = `${label} ${item.hint.toLowerCase()} ${item.kindLabel.toLowerCase()}`;
     if (!words.every((w) => hay.includes(w))) continue;
     let score = 0;
     if (label.startsWith(words[0])) score += 3;
@@ -47,6 +49,7 @@ function rank(items: SearchItem[], query: string): SearchItem[] {
 }
 
 export function CommandPalette() {
+  const t = useT();
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -113,7 +116,7 @@ export function CommandPalette() {
   return (
     <dialog
       ref={dialog}
-      aria-label="Search"
+      aria-label={t("common.search")}
       onClick={(e) => e.target === dialog.current && dialog.current?.close()}
       className="m-auto mt-[12vh] w-[min(36rem,calc(100vw-2rem))] rounded-md border border-line bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/40 print:hidden"
     >
@@ -132,18 +135,23 @@ export function CommandPalette() {
             setActive(0);
           }}
           onKeyDown={onInputKey}
-          placeholder="Lessons, labs, assignments, spaces…"
+          placeholder={t("search.placeholder")}
           className="w-full bg-transparent py-3.5 text-base outline-none placeholder:text-muted focus-visible:outline-none"
         />
         <kbd className="hidden rounded-[4px] border border-line px-1 font-mono text-[11px] text-muted sm:block">
           esc
         </kbd>
       </div>
-      <ul id="search-results" role="listbox" aria-label="Results" className="max-h-[50vh] overflow-y-auto p-2">
+      <ul
+        id="search-results"
+        role="listbox"
+        aria-label={t("search.results")}
+        className="max-h-[50vh] overflow-y-auto p-2"
+      >
         {items === null ? (
-          <li className="px-3 py-6 text-center text-sm text-muted">Loading…</li>
+          <li className="px-3 py-6 text-center text-sm text-muted">{t("search.loading")}</li>
         ) : results.length === 0 ? (
-          <li className="px-3 py-6 text-center text-sm text-muted">Nothing matches “{query}”.</li>
+          <li className="px-3 py-6 text-center text-sm text-muted">{t("search.noMatch", { query })}</li>
         ) : (
           results.map((item, i) => (
             <li
@@ -162,7 +170,7 @@ export function CommandPalette() {
                 <span className="block truncate font-medium">{item.label}</span>
                 {item.hint && <span className="block truncate text-xs opacity-60">{item.hint}</span>}
               </span>
-              <span className="shrink-0 text-xs opacity-60">{item.kind}</span>
+              <span className="shrink-0 text-xs opacity-60">{item.kindLabel}</span>
               {i === active && <CornerDownLeft size={14} className="shrink-0 opacity-60" aria-hidden />}
             </li>
           ))

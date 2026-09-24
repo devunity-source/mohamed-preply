@@ -6,9 +6,13 @@ import { cohortAssignments, cohortRoster, resourcesByIds, submissionFor } from "
 import { assignmentState, STATE_META } from "@/lib/assignment-status";
 import { formatFull, relativeDay, timeAgo } from "@/lib/time";
 import type { Assignment } from "@/lib/types";
+import { getI18n } from "@/lib/i18n/server";
+import type { T } from "@/lib/i18n/translate";
 import { loadCohort } from "../../load";
+import { STATE_LABEL } from "../state-label";
 
 export default async function AssignmentPage({ params }: PageProps<"/cohorts/[cohortId]/assignments/[assignmentId]">) {
+  const { t } = await getI18n();
   const { assignmentId } = await params;
   const { user, cohort, role } = await loadCohort(params);
   const a = cohortAssignments(cohort.id).find((x) => x.id === assignmentId);
@@ -23,20 +27,23 @@ export default async function AssignmentPage({ params }: PageProps<"/cohorts/[co
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 [&>*]:min-w-0">
       <div className="space-y-5 lg:col-span-2">
         <div>
-          <Label className="mb-1">Assignment</Label>
+          <Label className="mb-1">{t("assignments.assignment")}</Label>
           <h2 className="text-2xl font-semibold tracking-tight">{a.title}</h2>
           <p className="mt-2 font-mono text-sm text-muted">
-            Due {formatFull(a.dueAt)}
+            {t("assignments.dueFull", { when: formatFull(a.dueAt) })}
             {a.dueAt > now && ` · ${relativeDay(a.dueAt, now)}`}
           </p>
         </div>
 
-        <Card title="Instructions">
+        <Card title={t("assignments.instructions")}>
           <p className="leading-relaxed">{a.instructions}</p>
         </Card>
 
         {role === "student" ? (
-          <Card title="Your submission" action={<Pill tone={STATE_META[state].tone}>{STATE_META[state].label}</Pill>}>
+          <Card
+            title={t("assignments.yourSubmission")}
+            action={<Pill tone={STATE_META[state].tone}>{t(STATE_LABEL[state])}</Pill>}
+          >
             {sub?.grade != null ? (
               <div className="space-y-4">
                 <p className="text-5xl font-semibold tracking-tight">
@@ -48,7 +55,8 @@ export default async function AssignmentPage({ params }: PageProps<"/cohorts/[co
                   href={sub.repoUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="block truncate font-mono text-sm underline"
+                  dir="ltr"
+                  className="block truncate text-start font-mono text-sm underline"
                 >
                   {sub.repoUrl}
                 </a>
@@ -57,7 +65,7 @@ export default async function AssignmentPage({ params }: PageProps<"/cohorts/[co
               <>
                 {sub && (
                   <p className="mb-4 text-sm text-muted">
-                    Submitted {timeAgo(sub.submittedAt, now)}. You can update it until it&apos;s graded.
+                    {t("assignments.submittedAgo", { ago: timeAgo(sub.submittedAt, now) })}
                   </p>
                 )}
                 <SubmitAssignment assignmentId={a.id} defaultRepo={sub?.repoUrl} resubmit={!!sub} />
@@ -65,12 +73,12 @@ export default async function AssignmentPage({ params }: PageProps<"/cohorts/[co
             )}
           </Card>
         ) : (
-          <InstructorRoster cohortId={cohort.id} assignment={a} now={now} />
+          <InstructorRoster cohortId={cohort.id} assignment={a} now={now} t={t} />
         )}
       </div>
 
       <div className="space-y-5">
-        <Card title="Resources">
+        <Card title={t("assignments.resources")}>
           <ResourceList resources={resources} />
         </Card>
       </div>
@@ -78,10 +86,20 @@ export default async function AssignmentPage({ params }: PageProps<"/cohorts/[co
   );
 }
 
-function InstructorRoster({ cohortId, assignment, now }: { cohortId: string; assignment: Assignment; now: Date }) {
+function InstructorRoster({
+  cohortId,
+  assignment,
+  now,
+  t,
+}: {
+  cohortId: string;
+  assignment: Assignment;
+  now: Date;
+  t: T;
+}) {
   const { students } = cohortRoster(cohortId);
   return (
-    <Card title="Submissions">
+    <Card title={t("assignments.submissions")}>
       <ul className="divide-y divide-line">
         {students.map((s) => {
           const sub = submissionFor(s.id, assignment.id);
@@ -97,18 +115,18 @@ function InstructorRoster({ cohortId, assignment, now }: { cohortId: string; ass
                   rel="noreferrer"
                   className="hidden font-mono text-xs text-muted underline sm:inline"
                 >
-                  repo
+                  {t("assignments.repo")}
                 </a>
               )}
               <Pill tone={STATE_META[state].tone}>
-                {state === "graded" ? `${sub!.grade}/100` : STATE_META[state].label}
+                {state === "graded" ? `${sub!.grade}/100` : t(STATE_LABEL[state])}
               </Pill>
             </li>
           );
         })}
       </ul>
       <ButtonLink href={`/admin/cohorts/${cohortId}/grading/${assignment.id}`} variant="ghost" className="mt-4">
-        Open in grading
+        {t("assignments.openInGrading")}
       </ButtonLink>
     </Card>
   );

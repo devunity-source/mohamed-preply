@@ -4,14 +4,17 @@ import { ButtonLink, Label, PageHeader, Pill } from "@/components/ui";
 import { listProgrammes, modulesFor } from "@/lib/data/repo";
 import { requireAdmin } from "@/lib/authz";
 import { formatMoney } from "@/lib/format";
+import { getI18n } from "@/lib/i18n/server";
+import { loc } from "@/lib/i18n/content";
 
 export default async function ProgrammesAdmin() {
+  const { t, locale } = await getI18n();
   await requireAdmin();
   return (
     <>
-      <PageHeader eyebrow="Curriculum" title="Programmes">
+      <PageHeader eyebrow={t("curriculum.eyebrow")} title={t("curriculum.title")}>
         <ButtonLink href="/admin/programmes/new">
-          <Plus size={16} /> New programme
+          <Plus size={16} /> {t("curriculum.newProgramme")}
         </ButtonLink>
       </PageHeader>
       <div className="grid gap-5 md:grid-cols-2">
@@ -26,15 +29,21 @@ export default async function ProgrammesAdmin() {
             >
               <div className="mb-3 flex items-center justify-between">
                 <Label>
-                  {p.durationWeeks} weeks · {formatMoney(p.priceCents, p.currency)}
+                  {t("curriculum.weeksPrice", {
+                    count: p.durationWeeks,
+                    price: formatMoney(p.priceCents, p.currency),
+                  })}
                 </Label>
-                <Pill tone={p.published ? "good" : "quiet"}>{p.published ? "Published" : "Draft"}</Pill>
+                <Pill tone={p.published ? "good" : "quiet"}>
+                  {p.published ? t("curriculum.published") : t("curriculum.draft")}
+                </Pill>
               </div>
               <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight group-hover:text-accent">
-                {p.title} <ArrowUpRight size={16} />
+                {loc(p, locale).title} <ArrowUpRight size={16} className="rtl:-scale-x-100" />
               </h2>
               <p className="mt-1 text-sm text-muted">
-                {modules.length} modules · {lessons} lessons
+                {t("curriculum.modulesCount", { count: modules.length })} ·{" "}
+                {t("curriculum.lessonsCount", { count: lessons })}
               </p>
             </Link>
           );

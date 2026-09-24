@@ -5,8 +5,17 @@ import { Tabs } from "@/components/tabs";
 import { CohortSwitcher } from "@/components/cohort-switcher";
 import { cohortById } from "@/lib/data/admin";
 import { isAdmin, managedCohortIds, requireCohortManager } from "@/lib/authz";
+import { getI18n } from "@/lib/i18n/server";
+import type { CohortStatus } from "@/lib/types";
+
+const STATUS = {
+  upcoming: "teaching.statusUpcoming",
+  active: "teaching.statusActive",
+  completed: "teaching.statusCompleted",
+} as const satisfies Record<CohortStatus, string>;
 
 export default async function AdminCohortLayout({ children, params }: LayoutProps<"/admin/cohorts/[cohortId]">) {
+  const { t } = await getI18n();
   const { cohortId } = await params;
   const user = await requireCohortManager(cohortId);
   const cohort = cohortById(cohortId)!;
@@ -15,21 +24,25 @@ export default async function AdminCohortLayout({ children, params }: LayoutProp
 
   const unread = unreadInboxCount(cohortId);
   const items = [
-    { href: "", label: "Dashboard" },
-    { href: "grading", label: "Grading" },
-    { href: "labs", label: "Lab reviews" },
-    { href: "attendance", label: "Attendance" },
-    { href: "classes", label: "Classes" },
-    { href: "projects", label: "Projects" },
-    { href: "office-hours", label: unread ? `Office hours (${unread})` : "Office hours" },
-    ...(isAdmin(user) ? [{ href: "certificates", label: "Certificates" }] : []),
+    { href: "", label: t("teaching.tabDashboard") },
+    { href: "grading", label: t("teaching.tabGrading") },
+    { href: "labs", label: t("teaching.tabLabs") },
+    { href: "attendance", label: t("teaching.tabAttendance") },
+    { href: "classes", label: t("teaching.tabClasses") },
+    { href: "projects", label: t("teaching.tabProjects") },
+    {
+      href: "office-hours",
+      label: unread ? t("teaching.tabOfficeHoursUnread", { count: unread }) : t("teaching.tabOfficeHours"),
+    },
+    ...(isAdmin(user) ? [{ href: "certificates", label: t("teaching.tabCertificates") }] : []),
   ];
 
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
         <Link href="/admin" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
-          <ArrowLeft size={14} /> {isAdmin(user) ? "Admin" : "My cohorts"}
+          <ArrowLeft size={14} className="rtl:-scale-x-100" />{" "}
+          {isAdmin(user) ? t("teaching.backAdmin") : t("teaching.backMyCohorts")}
         </Link>
         <span className="text-line" aria-hidden>
           /
@@ -42,7 +55,7 @@ export default async function AdminCohortLayout({ children, params }: LayoutProp
           <h1 className="text-lg font-semibold tracking-tight">{cohort.name}</h1>
         )}
         <span className="text-sm text-muted">
-          Cohort {cohort.code} · {cohort.status}
+          {t("teaching.cohortMeta", { code: cohort.code, status: t(STATUS[cohort.status]) })}
         </span>
       </div>
       <Tabs base={`/admin/cohorts/${cohortId}`} items={items} />

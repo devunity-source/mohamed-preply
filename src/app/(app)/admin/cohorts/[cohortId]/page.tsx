@@ -11,8 +11,16 @@ import { ConfirmForm } from "@/components/confirm-form";
 import { formatMoney, formatPercent } from "@/lib/format";
 import { formatShortDate, formatTime, relativeDay } from "@/lib/time";
 import { supabaseEnabled } from "@/lib/supabase/config";
+import { getI18n } from "@/lib/i18n/server";
+
+const STATUS = {
+  upcoming: "teaching.statusUpcoming",
+  active: "teaching.statusActive",
+  completed: "teaching.statusCompleted",
+} as const;
 
 export default async function CohortDashboard({ params }: PageProps<"/admin/cohorts/[cohortId]">) {
+  const { t } = await getI18n();
   const { cohortId } = await params;
   const user = await requireCohortManager(cohortId);
   const now = new Date();
@@ -24,50 +32,52 @@ export default async function CohortDashboard({ params }: PageProps<"/admin/coho
   const canRemove = isAdmin(user) && s.cohort.status !== "completed";
 
   const tiles = [
-    { label: "Students", value: String(s.students.length) },
-    { label: "Week", value: s.cohort.status === "active" ? `${week}/${totalWeeks}` : s.cohort.status },
-    { label: "Attendance", value: formatPercent(s.attendanceRate) },
-    { label: "Assignments submitted", value: formatPercent(s.submissionRate) },
-    { label: "Average progress", value: `${s.avgProgress}%` },
-    ...(isAdmin(user) ? [{ label: "Revenue (est.)", value: formatMoney(s.estimatedRevenueCents) }] : []),
+    { label: t("teaching.tileStudents"), value: String(s.students.length) },
+    {
+      label: t("teaching.tileWeek"),
+      value: s.cohort.status === "active" ? `${week}/${totalWeeks}` : t(STATUS[s.cohort.status]),
+    },
+    { label: t("teaching.tileAttendance"), value: formatPercent(s.attendanceRate) },
+    { label: t("teaching.tileSubmitted"), value: formatPercent(s.submissionRate) },
+    { label: t("teaching.tileProgress"), value: `${s.avgProgress}%` },
+    ...(isAdmin(user) ? [{ label: t("teaching.tileRevenue"), value: formatMoney(s.estimatedRevenueCents) }] : []),
   ];
 
   return (
     <div className="space-y-5">
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-line bg-line md:grid-cols-3 xl:grid-cols-6">
-        {tiles.map((t) => (
-          <div key={t.label} className="bg-surface p-5">
-            <dt className="text-[13px] text-muted">{t.label}</dt>
-            <dd className="mt-2 text-3xl font-semibold tracking-tight">{t.value}</dd>
+        {tiles.map((tile) => (
+          <div key={tile.label} className="bg-surface p-5">
+            <dt className="text-[13px] text-muted">{tile.label}</dt>
+            <dd className="mt-2 text-3xl font-semibold tracking-tight">{tile.value}</dd>
           </div>
         ))}
       </dl>
-      {isAdmin(user) && (
-        <p className="text-xs text-muted">Revenue is enrolled students × list price until Stripe is connected.</p>
-      )}
+      {isAdmin(user) && <p className="text-xs text-muted">{t("teaching.revenueNote")}</p>}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 [&>*]:min-w-0">
-        <Card title="Needs attention" className="lg:col-span-2">
+        <Card title={t("teaching.needsAttention")} className="lg:col-span-2">
           <ul className="space-y-2 text-sm">
             <li>
               <Link href={`${base}/grading`} className="flex justify-between hover:text-accent">
-                <span>Assignments to grade</span>
+                <span>{t("teaching.assignmentsToGrade")}</span>
                 <span className="font-mono font-semibold">{s.toGrade}</span>
               </Link>
             </li>
             <li>
               <Link href={`${base}/labs`} className="flex justify-between hover:text-accent">
-                <span>Labs waiting for review</span>
+                <span>{t("teaching.labsWaiting")}</span>
                 <span className="font-mono font-semibold">{s.labsToReview}</span>
               </Link>
             </li>
           </ul>
           <div className="mt-5 border-t border-line pt-5">
             <p className="mb-3 flex items-center gap-2 text-sm font-medium">
-              <AlertTriangle size={14} className="text-k-deadline" /> At-risk students ({s.atRisk.length})
+              <AlertTriangle size={14} className="text-k-deadline" />{" "}
+              {t("teaching.atRiskTitle", { count: s.atRisk.length })}
             </p>
             {s.atRisk.length === 0 ? (
-              <p className="text-sm text-muted">Everyone is on track.</p>
+              <p className="text-sm text-muted">{t("teaching.allOnTrack")}</p>
             ) : (
               <ul className="space-y-2">
                 {s.atRisk.map((r) => (
@@ -82,9 +92,9 @@ export default async function CohortDashboard({ params }: PageProps<"/admin/coho
           </div>
         </Card>
 
-        <Card title="Upcoming">
+        <Card title={t("teaching.upcoming")}>
           {s.upcoming.length === 0 ? (
-            <Empty>Nothing scheduled.</Empty>
+            <Empty>{t("teaching.nothingScheduled")}</Empty>
           ) : (
             <ul className="space-y-3">
               {s.upcoming.map((u) => (
@@ -100,19 +110,19 @@ export default async function CohortDashboard({ params }: PageProps<"/admin/coho
         </Card>
       </div>
 
-      <Card title="Students">
+      <Card title={t("teaching.studentsTitle")}>
         <div className="relative -mx-5 overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
-              <tr className="border-b border-line text-left font-mono text-[11px] tracking-wider text-muted uppercase">
-                <th className="px-5 py-2 font-medium">Student</th>
-                <th className="px-3 py-2 font-medium">Progress</th>
-                <th className="px-3 py-2 font-medium">Attendance</th>
-                <th className="px-3 py-2 font-medium">Submitted</th>
-                <th className="px-3 py-2 font-medium">Labs to review</th>
+              <tr className="border-b border-line text-start font-mono text-[11px] tracking-wider text-muted uppercase">
+                <th className="px-5 py-2 font-medium">{t("teaching.colStudent")}</th>
+                <th className="px-3 py-2 font-medium">{t("teaching.colProgress")}</th>
+                <th className="px-3 py-2 font-medium">{t("teaching.colAttendance")}</th>
+                <th className="px-3 py-2 font-medium">{t("teaching.colSubmitted")}</th>
+                <th className="px-3 py-2 font-medium">{t("teaching.colLabsToReview")}</th>
                 {canRemove && (
                   <th className="px-3 py-2 font-medium">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t("teaching.colActions")}</span>
                   </th>
                 )}
               </tr>
@@ -147,19 +157,19 @@ export default async function CohortDashboard({ params }: PageProps<"/admin/coho
                   </td>
                   <td className="px-3 py-2.5 font-mono">{r.labsPending || "·"}</td>
                   {canRemove && (
-                    <td className="px-3 py-2.5 text-right">
+                    <td className="px-3 py-2.5 text-end">
                       <ConfirmForm
                         action={removeStudentFromCohort.bind(null, s.cohort.id, r.profile.id)}
-                        triggerLabel={`Remove ${r.profile.fullName}`}
+                        triggerLabel={t("teaching.removeLabel", { name: r.profile.fullName })}
                         triggerClassName="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted hover:bg-k-deadline/10 hover:text-k-deadline"
                         trigger={
                           <>
-                            <UserMinus size={14} /> Remove
+                            <UserMinus size={14} /> {t("teaching.remove")}
                           </>
                         }
-                        title={`Remove ${r.profile.fullName} from this cohort?`}
-                        description="They lose access to its classes, work and community spaces, and leave their capstone team. Their submissions and grades are kept, so you can add them back later."
-                        confirmLabel="Remove student"
+                        title={t("teaching.removeTitle", { name: r.profile.fullName })}
+                        description={t("teaching.removeDescription")}
+                        confirmLabel={t("teaching.removeConfirm")}
                       />
                     </td>
                   )}
@@ -168,23 +178,23 @@ export default async function CohortDashboard({ params }: PageProps<"/admin/coho
             </tbody>
           </table>
         </div>
-        {s.students.length === 0 && <Empty>No students enrolled yet.</Empty>}
+        {s.students.length === 0 && <Empty>{t("teaching.noStudents")}</Empty>}
       </Card>
 
       {isAdmin(user) && s.cohort.status !== "completed" && (
-        <Card title="Add a student">
+        <Card title={t("teaching.addStudentTitle")}>
           <p className="mb-4 text-sm text-muted">
-            Enter their email. Existing students are added straight away. For a new email, add their name too:{" "}
-            {supabaseEnabled()
-              ? "they get an email invite to choose their own password."
-              : "an account is created and you get a temporary password to send them."}
+            {supabaseEnabled() ? t("teaching.addStudentHelpInvite") : t("teaching.addStudentHelpPassword")}
           </p>
           <AddStudentForm action={addStudentToCohort} cohortId={s.cohort.id} />
         </Card>
       )}
       <p className="text-xs text-muted">
-        Cohort runs {formatShortDate(s.cohort.startsOn)} to {formatShortDate(s.cohort.endsOn)}. Instructors:{" "}
-        {s.instructors.map((i) => i.fullName).join(", ")}.
+        {t("teaching.cohortRuns", {
+          start: formatShortDate(s.cohort.startsOn),
+          end: formatShortDate(s.cohort.endsOn),
+          names: s.instructors.map((i) => i.fullName).join(t("teaching.listSeparator")),
+        })}
       </p>
     </div>
   );

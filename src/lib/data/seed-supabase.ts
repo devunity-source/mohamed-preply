@@ -72,23 +72,46 @@ export const ALL_COLLECTIONS = Object.keys(TABLES) as Persisted[];
  * Adds the seed programmes, their weekly modules and lessons, and the
  * campus-wide community spaces. Only adds what's missing: anything already
  * there (matched by slug, or programme + week, or module + position) is left
- * exactly as it is, so re-running never overwrites edits.
+ * exactly as it is, so re-running never overwrites edits. The one exception:
+ * a row with no translations yet gets the seed's Arabic, so a project seeded
+ * before Arabic existed picks it up.
  */
-export async function seedCurriculum(sb: SupabaseClient, store: Store): Promise<Record<string, number>> {
+export async function seedCurriculum(
+  sb: SupabaseClient,
+  store: Store,
+): Promise<{ added: Record<string, number>; translated: Record<string, number> }> {
   const rows = seedRows(store, ["programmes", "modules", "lessons", "spaces"]);
   const added: Record<string, number> = {};
+  const translated: Record<string, number> = {};
   const insertMissing = async (table: string, list: Row[], onConflict: string) => {
     const { data, error } = await sb.from(table).upsert(list, { onConflict, ignoreDuplicates: true }).select("id");
     if (error) throw new Error(`${table}: ${error.message}`);
     added[table] = data?.length ?? 0;
   };
+  const isEmpty = (v: unknown) => !v || Object.keys(v as object).length === 0;
+  const fillTranslations = async (table: string, list: Row[], keys: string[]) => {
+    const { data, error } = await sb.from(table).select(["id", "i18n", ...keys].join(", "));
+    if (error) throw new Error(`${table}: ${error.message}`);
+    const existing = (data ?? []) as unknown as Row[];
+    translated[table] = 0;
+    for (const row of list) {
+      if (isEmpty(row.i18n)) continue;
+      const match = existing.find((e) => keys.every((k) => e[k] === row[k]));
+      if (!match || !isEmpty(match.i18n)) continue;
+      const { error: updateError } = await sb.from(table).update({ i18n: row.i18n }).eq("id", match.id);
+      if (updateError) throw new Error(`${table}: ${updateError.message}`);
+      translated[table]++;
+    }
+  };
 
   await insertMissing("programmes", rows.programmes, "slug");
+  await fillTranslations("programmes", rows.programmes, ["slug"]);
   // A programme that already existed keeps its own id; point its modules at it.
   const { data: progs } = await sb.from("programmes").select("id, slug");
   const progId = new Map(rows.programmes.map((p) => [p.id, progs?.find((x) => x.slug === p.slug)?.id ?? p.id]));
   const modules: Row[] = rows.programme_modules.map((m) => ({ ...m, programme_id: progId.get(m.programme_id) }));
   await insertMissing("programme_modules", modules, "programme_id,week,position");
+  await fillTranslations("programme_modules", modules, ["programme_id", "week", "position"]);
 
   const { data: mods } = await sb.from("programme_modules").select("id, programme_id, week, position");
   const modId = new Map(
@@ -100,10 +123,12 @@ export async function seedCurriculum(sb: SupabaseClient, store: Store): Promise<
   );
   const lessons = rows.lessons.map((l) => ({ ...l, module_id: modId.get(l.module_id) }));
   await insertMissing("lessons", lessons, "module_id,position");
+  await fillTranslations("lessons", lessons, ["module_id", "position"]);
 
   const campus = rows.spaces.filter((s) => s.cohort_id === null);
   await insertMissing("spaces", campus, "slug");
-  return added;
+  await fillTranslations("spaces", campus, ["slug"]);
+  return { added, translated };
 }
 
 // ---------------------------------------------------------------------------

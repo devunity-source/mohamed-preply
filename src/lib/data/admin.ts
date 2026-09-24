@@ -1,7 +1,8 @@
 import "server-only";
 import { supabaseEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
-import { wallTime } from "@/lib/time";
+import { activeLocale, wallTime } from "@/lib/time";
+import { translate } from "@/lib/i18n/translate";
 import { db } from "./store";
 import {
   cohortAssignments,
@@ -60,12 +61,14 @@ export function cohortStats(cohortId: string, now: Date) {
   });
 
   const avgProgress = rows.length ? Math.round(rows.reduce((n, r) => n + r.progress, 0) / rows.length) : 0;
+  const locale = activeLocale();
   for (const r of rows) {
     if (r.due - r.submitted > 0)
-      r.atRisk.push(`${r.due - r.submitted} missing submission${r.due - r.submitted > 1 ? "s" : ""}`);
-    if (r.attendance !== null && r.attendance < 75) r.atRisk.push(`attendance ${r.attendance}%`);
+      r.atRisk.push(translate(locale, "errors.atRiskMissing", { count: r.due - r.submitted }));
+    if (r.attendance !== null && r.attendance < 75)
+      r.atRisk.push(translate(locale, "errors.atRiskAttendance", { percent: r.attendance }));
     if (rows.length > 2 && r.progress < avgProgress - 15)
-      r.atRisk.push(`progress ${r.progress}% (avg ${avgProgress}%)`);
+      r.atRisk.push(translate(locale, "errors.atRiskProgress", { percent: r.progress, avg: avgProgress }));
   }
 
   const attendanceSlots = pastClasses.length * students.length;
@@ -89,7 +92,12 @@ export function cohortStats(cohortId: string, now: Date) {
     ...cohortAssignments(cohortId)
       .filter((a) => a.dueAt >= now)
       .slice(0, 2)
-      .map((a) => ({ id: a.id, kind: "deadline" as const, title: `Due: ${a.title}`, at: a.dueAt })),
+      .map((a) => ({
+        id: a.id,
+        kind: "deadline" as const,
+        title: translate(locale, "errors.dueTitle", { title: a.title }),
+        at: a.dueAt,
+      })),
   ].sort((a, b) => a.at.getTime() - b.at.getTime());
 
   return {

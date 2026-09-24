@@ -11,14 +11,12 @@ import { accountEmail, currentUser, endOtherSessions, endSession, getSessionUser
 import { supabaseEnabled } from "@/lib/supabase/config";
 import { withData } from "@/lib/data/store";
 import { createClient } from "@/lib/supabase/server";
+import { getI18n } from "@/lib/i18n/server";
+import type { T } from "@/lib/i18n/translate";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import type { FormState } from "@/lib/actions";
 
 const WINDOW = 15 * 60_000;
-// One message for every failure so the form can't be used to find out which
-// emails have accounts.
-const BAD_LOGIN = "Email or password is incorrect.";
-
 async function clientIp(): Promise<string> {
   const h = await headers();
   return h.get("x-forwarded-for")?.split(",")[0].trim() || h.get("x-real-ip") || "unknown";
@@ -30,25 +28,28 @@ function safeNext(value: FormDataEntryValue | null): string {
 }
 
 export async function signIn(_prev: FormState, form: FormData): Promise<FormState> {
+  const { t } = await getI18n();
   const email = String(form.get("email") ?? "")
     .trim()
     .toLowerCase()
     .slice(0, 254);
   const password = String(form.get("password") ?? "").slice(0, 200);
-  if (!email || !password) return { error: "Enter your email and password." };
+  if (!email || !password) return { error: t("errors.enterEmailPassword") };
 
   // Failed attempts only: per IP slows password spraying, per email slows
   // guessing one account. Signing in successfully never counts against you.
   const ipKey = `login-ip:${await clientIp()}`;
   const emailKey = `login-email:${email}`;
   if (isLimited(ipKey, 20) || isLimited(emailKey, 5)) {
-    return { error: "Too many attempts. Wait 15 minutes and try again." };
+    return { error: t("errors.tooManyAttempts") };
   }
 
   if (!(await passwordMatches(email, password))) {
     recordFailure(ipKey, WINDOW);
     recordFailure(emailKey, WINDOW);
-    return { error: BAD_LOGIN };
+    // One message for every failure so the form can't be used to find out
+    // which emails have accounts.
+    return { error: t("errors.badLogin") };
   }
   redirect(safeNext(form.get("next")));
 }
@@ -99,24 +100,25 @@ const MIN_PASSWORD = 10;
  */
 export const changePassword = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
   const user = await currentUser();
+  const { t } = await getI18n();
   const current = String(form.get("current") ?? "").slice(0, 200);
   const next = String(form.get("next") ?? "").slice(0, 200);
   const confirm = String(form.get("confirm") ?? "").slice(0, 200);
 
   const key = `change-password:${user.id}`;
-  if (isLimited(key, 5)) return { error: "Too many wrong attempts. Wait 15 minutes and try again." };
+  if (isLimited(key, 5)) return { error: t("errors.tooManyWrongAttempts") };
   if (!(await currentPasswordMatches(user.id, current))) {
     recordFailure(key, WINDOW);
-    return { error: "Your current password is incorrect." };
+    return { error: t("errors.currentPasswordWrong") };
   }
-  const invalid = newPasswordProblem(next, confirm);
+  const invalid = newPasswordProblem(t, next, confirm);
   if (invalid) return { error: invalid };
-  if (next === current) return { error: "Pick a password that's different from the current one." };
+  if (next === current) return { error: t("errors.passwordUnchanged") };
 
   if (supabaseEnabled()) {
     const supabase = await createClient();
     const { error } = await supabase.auth.updateUser({ password: next });
-    if (error) return { error: supabaseProblem(error.message) };
+    if (error) return { error: supabaseProblem(t, error.message) };
     await supabase.auth.signOut({ scope: "others" });
   } else {
     const account = db().accounts.find((a) => a.userId === user.id)!;
@@ -140,35 +142,34 @@ async function currentPasswordMatches(userId: string, password: string): Promise
   return !!account && (await verifyPassword(password, account.passwordHash));
 }
 
-function newPasswordProblem(next: string, confirm: string): string | null {
-  if (next.length < MIN_PASSWORD) return `Use at least ${MIN_PASSWORD} characters for the new password.`;
-  if (next !== confirm) return "The new passwords don't match.";
+function newPasswordProblem(t: T, next: string, confirm: string): string | null {
+  if (next.length < MIN_PASSWORD) return t("errors.passwordTooShort", { count: MIN_PASSWORD });
+  if (next !== confirm) return t("errors.passwordsDontMatch");
   return null;
 }
 
-/** Supabase's own password rules (set in its dashboard) can reject one too. */
-function supabaseProblem(message: string): string {
-  return /password/i.test(message) ? message : "Couldn't save the new password. Try again.";
+/** Supabase's own password rules (set in its dashboard) can reject one too; their wording is Supabase's. */
+function supabaseProblem(t: T, message: string): string {
+  return /password/i.test(message) ? message : t("errors.passwordSaveFailed");
 }
-
-const RESET_SENT = "If there's an account for that email, a reset link is on its way. It works once, for one hour.";
 
 /**
  * Emails a password reset link (Supabase only). Same answer whether or not
  * the email has an account, so it can't be used to find out who's enrolled.
  */
 export async function requestPasswordReset(_prev: FormState, form: FormData): Promise<FormState> {
-  if (!supabaseEnabled()) return { error: "Password reset needs email, which isn't set up here. Ask an admin." };
+  const { t } = await getI18n();
+  if (!supabaseEnabled()) return { error: t("errors.resetNeedsEmail") };
   const email = String(form.get("email") ?? "")
     .trim()
     .toLowerCase()
     .slice(0, 254);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Enter a valid email address." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: t("errors.invalidEmail") };
 
   const ipKey = `reset-ip:${await clientIp()}`;
   const emailKey = `reset-email:${email}`;
   if (isLimited(ipKey, 10) || isLimited(emailKey, 3)) {
-    return { error: "Too many requests. Wait 15 minutes and try again." };
+    return { error: t("errors.tooManyRequests") };
   }
   recordFailure(ipKey, WINDOW);
   recordFailure(emailKey, WINDOW);
@@ -177,7 +178,7 @@ export async function requestPasswordReset(_prev: FormState, form: FormData): Pr
   await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${siteUrl()}/auth/confirm?type=recovery&next=/set-password`,
   });
-  return { ok: true, message: RESET_SENT };
+  return { ok: true, message: t("errors.resetSent") };
 }
 
 /**
@@ -186,16 +187,17 @@ export async function requestPasswordReset(_prev: FormState, form: FormData): Pr
  * they own the email.
  */
 export const setNewPassword = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   if (!supabaseEnabled() || !(await getSessionUser())) {
-    return { error: "This link has expired. Ask for a new one from the sign-in page." };
+    return { error: t("errors.linkExpired") };
   }
   const next = String(form.get("next") ?? "").slice(0, 200);
-  const invalid = newPasswordProblem(next, String(form.get("confirm") ?? "").slice(0, 200));
+  const invalid = newPasswordProblem(t, next, String(form.get("confirm") ?? "").slice(0, 200));
   if (invalid) return { error: invalid };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password: next });
-  if (error) return { error: supabaseProblem(error.message) };
+  if (error) return { error: supabaseProblem(t, error.message) };
   await supabase.auth.signOut({ scope: "others" });
   redirect("/dashboard");
 });

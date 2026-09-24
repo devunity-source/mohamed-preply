@@ -13,11 +13,22 @@ import { deleteComment, deletePost, toggleLock, togglePin } from "@/lib/admin-ac
 import { canModerate } from "@/lib/authz";
 import { currentUser } from "@/lib/session";
 import { timeAgo } from "@/lib/time";
+import { getI18n } from "@/lib/i18n/server";
+import { loc } from "@/lib/i18n/content";
+import type { Key } from "@/lib/i18n/translate";
+import type { Role } from "@/lib/types";
+
+const ROLE_LABEL: Record<Role, Key> = {
+  student: "common.roleStudent",
+  instructor: "common.roleInstructor",
+  admin: "common.roleAdmin",
+};
 
 const toolClass =
   "inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-line px-2.5 py-1 text-xs hover:border-ink";
 
 export default async function PostPage({ params }: PageProps<"/community/[space]/[postId]">) {
+  const { t, locale } = await getI18n();
   const { space: slug, postId } = await params;
   const user = await currentUser();
   const view = postWithComments(postId, user.id);
@@ -34,7 +45,7 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
         href={`/community/${space.slug}`}
         className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"
       >
-        <ArrowLeft size={14} /> {space.name}
+        <ArrowLeft size={14} className="rtl:-scale-x-100" /> {loc(space, locale).name}
       </Link>
 
       <header className="mb-6">
@@ -44,12 +55,12 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
             <p className="text-sm font-medium">
               {author.fullName}
               {author.role !== "student" && (
-                <span className="ml-2 font-mono text-[11px] text-muted uppercase">{author.role}</span>
+                <span className="ms-2 font-mono text-[11px] text-muted uppercase">{t(ROLE_LABEL[author.role])}</span>
               )}
             </p>
             <p className="text-xs text-muted">{timeAgo(post.createdAt, now)}</p>
           </div>
-          {post.pinned && <Pin size={16} className="ml-auto text-accent" />}
+          {post.pinned && <Pin size={16} className="ms-auto text-accent" />}
         </div>
         <h1 className="text-3xl font-semibold tracking-tight">{post.title}</h1>
       </header>
@@ -62,15 +73,17 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
         <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-line pt-4 text-sm">
           {moderator && (
             <>
-              <span className="mr-1 text-xs text-muted">Moderate</span>
+              <span className="me-1 text-xs text-muted">{t("community.moderate")}</span>
               <form action={togglePin.bind(null, post.id)}>
                 <SubmitButton unstyled className={toolClass}>
-                  {post.pinned ? <PinOff size={14} /> : <Pin size={14} />} {post.pinned ? "Unpin" : "Pin"}
+                  {post.pinned ? <PinOff size={14} /> : <Pin size={14} />}{" "}
+                  {post.pinned ? t("community.unpin") : t("community.pin")}
                 </SubmitButton>
               </form>
               <form action={toggleLock.bind(null, post.id)}>
                 <SubmitButton unstyled className={toolClass}>
-                  {post.locked ? <LockOpen size={14} /> : <Lock size={14} />} {post.locked ? "Unlock" : "Lock replies"}
+                  {post.locked ? <LockOpen size={14} /> : <Lock size={14} />}{" "}
+                  {post.locked ? t("community.unlock") : t("community.lockReplies")}
                 </SubmitButton>
               </form>
             </>
@@ -81,21 +94,19 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
               triggerClassName={clsx(toolClass, "hover:border-k-deadline hover:text-k-deadline")}
               trigger={
                 <>
-                  <Trash2 size={14} /> Delete
+                  <Trash2 size={14} /> {t("community.delete")}
                 </>
               }
-              title="Delete this post?"
-              description={`This removes the post and its ${comments.length} ${comments.length === 1 ? "reply" : "replies"} for everyone. It can't be undone.`}
-              confirmLabel="Delete post"
+              title={t("community.deletePostTitle")}
+              description={t("community.deletePostDescription", { count: comments.length })}
+              confirmLabel={t("community.deletePost")}
             />
           )}
         </div>
       )}
 
       <section className="mt-10 border-t border-line pt-8">
-        <Label className="mb-5">
-          {comments.length} {comments.length === 1 ? "reply" : "replies"}
-        </Label>
+        <Label className="mb-5">{t("community.replies", { count: comments.length })}</Label>
         <ol className="space-y-6">
           {comments.map(({ comment, author: a }) => (
             <li key={comment.id} className="flex gap-3">
@@ -112,12 +123,12 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
               {(moderator || comment.authorId === user.id) && (
                 <ConfirmForm
                   action={deleteComment.bind(null, comment.id)}
-                  triggerLabel="Delete reply"
+                  triggerLabel={t("community.deleteReply")}
                   triggerClassName="rounded-md p-1.5 text-muted hover:bg-k-deadline/10 hover:text-k-deadline"
                   trigger={<Trash2 size={13} />}
-                  title="Delete this reply?"
-                  description="It will be removed for everyone. This can't be undone."
-                  confirmLabel="Delete reply"
+                  title={t("community.deleteReplyTitle")}
+                  description={t("community.deleteReplyDescription")}
+                  confirmLabel={t("community.deleteReply")}
                 />
               )}
             </li>
@@ -126,7 +137,7 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
         <div className="mt-8">
           {post.locked ? (
             <p className="flex items-center gap-2 rounded-md border border-line bg-surface p-4 text-sm text-muted">
-              <Lock size={14} /> This thread is locked. No new replies.
+              <Lock size={14} /> {t("community.threadLocked")}
             </p>
           ) : (
             <CommentForm postId={post.id} />

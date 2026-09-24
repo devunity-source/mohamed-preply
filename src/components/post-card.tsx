@@ -3,8 +3,10 @@ import { Lock, MessageSquare, Pin } from "lucide-react";
 import { Avatar, Pill } from "@/components/ui";
 import type { PostView } from "@/lib/data/repo";
 import { timeAgo } from "@/lib/time";
+import { getI18n } from "@/lib/i18n/server";
+import { loc } from "@/lib/i18n/content";
 
-export function PostCard({
+export async function PostCard({
   view,
   now,
   showSpace,
@@ -15,7 +17,9 @@ export function PostCard({
   showSpace?: boolean;
   isNew?: boolean;
 }) {
-  const { post, author, space, commentCount, reactions } = view;
+  const { t, locale } = await getI18n();
+  const { post, author, commentCount, reactions } = view;
+  const space = loc(view.space, locale);
   return (
     <Link
       href={`/community/${space.slug}/${post.id}`}
@@ -25,14 +29,14 @@ export function PostCard({
         <Avatar profile={author} size={24} />
         <span className="font-medium">{author.fullName}</span>
         <span className="text-muted">· {timeAgo(post.createdAt, now)}</span>
-        {isNew && <Pill tone="accent">New</Pill>}
+        {isNew && <Pill tone="accent">{t("community.new")}</Pill>}
         {showSpace && (
-          <span className="ml-auto font-mono text-[11px] tracking-wider text-muted uppercase">
+          <span className="ms-auto font-mono text-[11px] tracking-wider text-muted uppercase">
             {space.cohortId ? `${space.group} / ` : ""}
             {space.name}
           </span>
         )}
-        {post.pinned && !showSpace && <Pin size={14} className="ml-auto text-accent" />}
+        {post.pinned && !showSpace && <Pin size={14} className="ms-auto text-accent" />}
       </div>
       <h3 className="font-semibold tracking-tight">{post.title}</h3>
       <p className="mt-1 line-clamp-2 text-sm text-muted">{post.body}</p>
@@ -47,7 +51,7 @@ export function PostCard({
         </span>
         {post.locked && (
           <span className="flex items-center gap-1">
-            <Lock size={12} /> Locked
+            <Lock size={12} /> {t("community.locked")}
           </span>
         )}
       </div>

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Check, X } from "lucide-react";
+import { useT } from "@/components/i18n-provider";
 
 interface Toast {
   id: number;
@@ -39,6 +40,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 }
 
 function ToastItem({ toast, dismiss }: { toast: Toast; dismiss: (id: number) => void }) {
+  const t = useT();
   useEffect(() => {
     const timer = setTimeout(() => dismiss(toast.id), 6000);
     return () => clearTimeout(timer);
@@ -48,7 +50,7 @@ function ToastItem({ toast, dismiss }: { toast: Toast; dismiss: (id: number) => 
   return (
     <div
       role="status"
-      className="pointer-events-auto flex items-center gap-3 rounded-md bg-ink py-2.5 pr-2 pl-4 text-sm text-paper shadow-lg"
+      className="pointer-events-auto flex items-center gap-3 rounded-md bg-ink py-2.5 ps-4 pe-2 text-sm text-paper shadow-lg"
     >
       <Check size={15} strokeWidth={3} className="text-accent" aria-hidden />
       <span>{toast.message}</span>
@@ -63,7 +65,7 @@ function ToastItem({ toast, dismiss }: { toast: Toast; dismiss: (id: number) => 
           {toast.action.label}
         </button>
       )}
-      <button onClick={onDone} aria-label="Dismiss" className="rounded-md p-1 opacity-60 hover:opacity-100">
+      <button onClick={onDone} aria-label={t("common.dismiss")} className="rounded-md p-1 opacity-60 hover:opacity-100">
         <X size={14} />
       </button>
     </div>

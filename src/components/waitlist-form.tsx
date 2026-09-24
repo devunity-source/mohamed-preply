@@ -4,6 +4,7 @@ import { useId } from "react";
 import { useFormAction } from "@/components/use-form-action";
 import clsx from "clsx";
 import { Check } from "lucide-react";
+import { useT } from "@/components/i18n-provider";
 import { joinWaitlist } from "@/lib/actions";
 
 export function WaitlistForm({
@@ -19,6 +20,7 @@ export function WaitlistForm({
   stacked?: boolean;
 }) {
   const { state, pending, formProps } = useFormAction(joinWaitlist);
+  const t = useT();
   const id = useId();
   const dark = tone === "dark";
   const field = clsx(
@@ -34,7 +36,7 @@ export function WaitlistForm({
     <form {...formProps} className="w-full">
       <div className={clsx("flex flex-col gap-2", stacked ? "sm:grid sm:grid-cols-[1fr_auto]" : "sm:flex-row")}>
         <label htmlFor={`${id}-email`} className="sr-only">
-          Email
+          {t("landing.formEmail")}
         </label>
         <input
           id={`${id}-email`}
@@ -43,17 +45,18 @@ export function WaitlistForm({
           required
           maxLength={254}
           autoComplete="email"
+          dir="ltr"
           placeholder="you@email.com"
           className={clsx(field, "w-full min-w-0 sm:flex-1", stacked && "sm:col-span-2")}
         />
         <label htmlFor={`${id}-programme`} className="sr-only">
-          Programme
+          {t("landing.formProgramme")}
         </label>
         <select
           id={`${id}-programme`}
           name="programme"
           defaultValue={defaultProgramme ?? programmes[0]?.slug}
-          className={clsx(field, "pr-8", dark && "[&>option]:text-ink")}
+          className={clsx(field, "pe-8", dark && "[&>option]:text-ink")}
         >
           {programmes.map((p) => (
             <option key={p.slug} value={p.slug}>
@@ -71,7 +74,7 @@ export function WaitlistForm({
             dark ? "hover:bg-paper" : "hover:bg-ink hover:text-paper",
           )}
         >
-          {pending ? "Joining…" : "Join the waitlist"}
+          {pending ? t("landing.formJoining") : t("landing.joinWaitlist")}
         </button>
       </div>
       <Footnote dark={dark} error={state.error} />
@@ -80,6 +83,7 @@ export function WaitlistForm({
 }
 
 function Joined({ dark }: { dark: boolean }) {
+  const t = useT();
   return (
     <p
       role="status"
@@ -89,13 +93,14 @@ function Joined({ dark }: { dark: boolean }) {
       )}
     >
       <Check size={18} strokeWidth={3} className={clsx("shrink-0", dark ? "text-dusk" : "text-accent")} />
-      You&apos;re on the list. We&apos;ll email you before enrolment opens.
+      {t("landing.formJoined")}
     </p>
   );
 }
 
 /** The error when there is one, otherwise the no-spam line. */
 function Footnote({ dark, error }: { dark: boolean; error?: string }) {
+  const t = useT();
   if (error) {
     return (
       <p role="alert" className={clsx("mt-2 text-sm", dark ? "text-accent" : "text-k-deadline")}>
@@ -103,9 +108,5 @@ function Footnote({ dark, error }: { dark: boolean; error?: string }) {
       </p>
     );
   }
-  return (
-    <p className={clsx("mt-2 text-xs", dark ? "text-paper/60" : "text-muted")}>
-      We only email you about cohorts. No spam, unsubscribe any time.
-    </p>
-  );
+  return <p className={clsx("mt-2 text-xs", dark ? "text-paper/60" : "text-muted")}>{t("landing.formNoSpam")}</p>;
 }

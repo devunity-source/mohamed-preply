@@ -1,11 +1,22 @@
 import Link from "next/link";
+import { rich } from "@/components/rich";
 import { SubmitButton } from "@/components/submit-button";
 import { unsubscribeFromLink } from "@/lib/actions";
 import { validUnsubscribe } from "@/lib/email/links";
 import { kindNoun } from "@/lib/email/prefs";
+import { getI18n } from "@/lib/i18n/server";
 import type { EmailKind } from "@/lib/types";
 
-export const metadata = { title: "Email settings", robots: { index: false } };
+export async function generateMetadata() {
+  const { t } = await getI18n();
+  return { title: t("auth.unsubMetaTitle"), robots: { index: false } };
+}
+
+const settingsLink = (c: React.ReactNode) => (
+  <Link href="/profile#email" className="underline underline-offset-4 hover:text-accent">
+    {c}
+  </Link>
+);
 
 const str = (v: string | string[] | undefined) => (typeof v === "string" ? v : "");
 
@@ -14,6 +25,7 @@ const str = (v: string | string[] | undefined) => (typeof v === "string" ? v : "
  * the button does. Mail scanners open links, people press buttons.
  */
 export default async function Unsubscribe({ searchParams }: PageProps<"/email/unsubscribe">) {
+  const { t: tr } = await getI18n();
   const sp = await searchParams;
   const [u, k, t] = [str(sp.u), str(sp.k), str(sp.t)];
   const done = str(sp.done);
@@ -22,41 +34,27 @@ export default async function Unsubscribe({ searchParams }: PageProps<"/email/un
   let heading: string;
   let body: React.ReactNode;
   if (["grades", "community", "office_hours", "reminders"].includes(done)) {
-    heading = "You're unsubscribed";
-    body = (
-      <>
-        No more <strong>{kindNoun(done as EmailKind)}</strong> emails. They still show in your notifications. Change
-        your mind any time in{" "}
-        <Link href="/profile#email" className="underline underline-offset-4 hover:text-accent">
-          your email settings
-        </Link>
-        .
-      </>
-    );
+    heading = tr("auth.unsubDoneTitle");
+    body = rich(tr("auth.unsubDoneBody", { kind: tr(kindNoun(done as EmailKind)) }), {
+      strong: (c) => <strong>{c}</strong>,
+      link: settingsLink,
+    });
   } else if (valid) {
-    heading = `Stop ${kindNoun(k)} emails?`;
+    heading = tr("auth.unsubConfirmTitle", { kind: tr(kindNoun(k)) });
     body = (
       <>
-        <p className="mb-6">You&apos;ll still see them in your notifications on AcadeMe.</p>
+        <p className="mb-6">{tr("auth.unsubConfirmBody")}</p>
         <form action={unsubscribeFromLink}>
           <input type="hidden" name="u" value={u} />
           <input type="hidden" name="k" value={k} />
           <input type="hidden" name="t" value={t} />
-          <SubmitButton className="h-11 w-full">Unsubscribe</SubmitButton>
+          <SubmitButton className="h-11 w-full">{tr("auth.unsubscribe")}</SubmitButton>
         </form>
       </>
     );
   } else {
-    heading = "This link doesn't work";
-    body = (
-      <>
-        It may have been copied incompletely. You can choose which emails you get in{" "}
-        <Link href="/profile#email" className="underline underline-offset-4 hover:text-accent">
-          your email settings
-        </Link>{" "}
-        after signing in.
-      </>
-    );
+    heading = tr("auth.unsubInvalidTitle");
+    body = rich(tr("auth.unsubInvalidBody"), { link: settingsLink });
   }
   return (
     <section className="mx-auto max-w-md px-4 py-16 md:py-24">

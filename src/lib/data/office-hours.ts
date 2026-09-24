@@ -1,10 +1,20 @@
 import "server-only";
 import { db } from "./store";
 import { profileById } from "./repo";
-import { addDays, zonedParts } from "@/lib/time";
+import { activeLocale, addDays, zonedParts } from "@/lib/time";
+import { intlLocale, type Locale } from "@/lib/i18n/config";
 import type { OfficeHoursSlot, OfficeMessage, OfficeThread, Profile } from "@/lib/types";
 
+/** English day names, Monday first. For display use weekdayName(), which follows the reader's language. */
 export const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/** The name of weekday `i` (0 = Monday ... 6 = Sunday) in the request's language, or `locale`. */
+export function weekdayName(i: number, locale: Locale = activeLocale()): string {
+  // 1 January 2024 was a Monday.
+  return new Intl.DateTimeFormat(intlLocale(locale), { weekday: "long", timeZone: "UTC" }).format(
+    new Date(Date.UTC(2024, 0, 1 + i)),
+  );
+}
 
 const toMinutes = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);

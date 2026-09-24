@@ -7,7 +7,8 @@ import { Conversation, OfficeStatusBanner } from "@/components/office-hours-view
 import { WEEKDAY_NAMES, inboxFor, messagesIn, officeHoursFor, officeStatus, threadFor } from "@/lib/data/office-hours";
 import { replyOfficeMessage, saveOfficeHours } from "@/lib/admin-actions";
 import { requireCohortManager } from "@/lib/authz";
-import { timeAgo } from "@/lib/time";
+import { formatWeekday, timeAgo, wallTime } from "@/lib/time";
+import { getI18n } from "@/lib/i18n/server";
 
 const timeField =
   "w-full min-w-0 rounded-md border border-line bg-paper px-2 py-1.5 text-sm tabular-nums outline-none focus:border-ink";
@@ -16,6 +17,7 @@ export default async function OfficeHoursAdmin({
   params,
   searchParams,
 }: PageProps<"/admin/cohorts/[cohortId]/office-hours">) {
+  const { t, locale } = await getI18n();
   const { cohortId } = await params;
   const { student } = await searchParams;
   const user = await requireCohortManager(cohortId);
@@ -29,9 +31,9 @@ export default async function OfficeHoursAdmin({
 
   return (
     <div className="grid grid-cols-1 gap-5 min-[1400px]:grid-cols-[1.4fr_1fr] [&>*]:min-w-0">
-      <Card title={`Inbox · ${inbox.length}`}>
+      <Card title={t("teaching.inboxTitle", { count: inbox.length })}>
         {inbox.length === 0 ? (
-          <Empty>No messages yet. They&apos;ll appear here when students write during office hours.</Empty>
+          <Empty>{t("teaching.inboxEmpty")}</Empty>
         ) : (
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-[14rem_1fr] [&>*]:min-w-0">
             <ul className="-mx-2">
@@ -55,7 +57,9 @@ export default async function OfficeHoursAdmin({
                         </span>
                         <span className="block text-xs opacity-70">{timeAgo(r.thread.lastMessageAt, now)}</span>
                       </span>
-                      {r.unread && <span className="size-2 shrink-0 rounded-full bg-accent" aria-label="Unread" />}
+                      {r.unread && (
+                        <span className="size-2 shrink-0 rounded-full bg-accent" aria-label={t("teaching.unread")} />
+                      )}
                     </Link>
                   </li>
                 );
@@ -74,24 +78,23 @@ export default async function OfficeHoursAdmin({
       </Card>
       <div className="space-y-5">
         <OfficeStatusBanner status={status} now={now} />
-        <Card title="Weekly hours (UAE time)">
-          <p className="mb-4 text-sm text-muted">
-            Students can send you messages only during these hours. Outside them the message box is greyed out. You can
-            reply any time.
-          </p>
-          <ActionForm action={saveOfficeHours} submitLabel="Save hours">
+        <Card title={t("teaching.weeklyHours")}>
+          <p className="mb-4 text-sm text-muted">{t("teaching.weeklyHoursHelp")}</p>
+          <ActionForm action={saveOfficeHours} submitLabel={t("teaching.saveHours")}>
             <input type="hidden" name="cohortId" value={cohortId} />
             <ul className="divide-y divide-line">
-              {WEEKDAY_NAMES.map((day, i) => {
+              {WEEKDAY_NAMES.map((name, i) => {
+                // 1 January 2024 was a Monday, like WEEKDAY_NAMES[0].
+                const day = locale === "en" ? name : formatWeekday(wallTime(2024, 1, 1 + i, 12), locale);
                 const slot = slots.find((s) => s.weekday === i);
                 return (
-                  <li key={day} className="grid grid-cols-[6.5rem_7.5rem_auto_7.5rem] items-center gap-2 py-2">
+                  <li key={name} className="grid grid-cols-[6.5rem_7.5rem_auto_7.5rem] items-center gap-2 py-2">
                     <label className="flex items-center gap-2 text-sm">
                       <input type="checkbox" name={`on:${i}`} defaultChecked={!!slot} className="accent-[var(--ink)]" />
                       {day}
                     </label>
                     <label className="text-sm">
-                      <span className="sr-only">{day} start</span>
+                      <span className="sr-only">{t("teaching.dayStart", { day })}</span>
                       <input
                         type="time"
                         name={`start:${i}`}
@@ -99,9 +102,9 @@ export default async function OfficeHoursAdmin({
                         className={timeField}
                       />
                     </label>
-                    <span className="text-sm text-muted">to</span>
+                    <span className="text-sm text-muted">{t("teaching.timeTo")}</span>
                     <label className="text-sm">
-                      <span className="sr-only">{day} end</span>
+                      <span className="sr-only">{t("teaching.dayEnd", { day })}</span>
                       <input type="time" name={`end:${i}`} defaultValue={slot?.end ?? "17:00"} className={timeField} />
                     </label>
                   </li>

@@ -6,40 +6,50 @@ import { AtPath } from "@/components/path-switch";
 import { cohortForUser, cohortRoster, cohortWeek } from "@/lib/data/repo";
 import { currentUser } from "@/lib/session";
 import { formatShortDate } from "@/lib/time";
+import { getI18n } from "@/lib/i18n/server";
+import { loc } from "@/lib/i18n/content";
+import type { Key } from "@/lib/i18n/translate";
 
-const TABS = [
-  { href: "", label: "Overview" },
-  { href: "schedule", label: "Schedule" },
-  { href: "modules", label: "Modules" },
-  { href: "classes", label: "Classes" },
-  { href: "labs", label: "Labs" },
-  { href: "assignments", label: "Assignments" },
-  { href: "office-hours", label: "Office hours" },
-  { href: "projects", label: "Projects" },
-  { href: "certificate", label: "Certificate" },
+const TABS: { href: string; label: Key }[] = [
+  { href: "", label: "cohort.tabOverview" },
+  { href: "schedule", label: "cohort.tabSchedule" },
+  { href: "modules", label: "cohort.tabModules" },
+  { href: "classes", label: "cohort.tabClasses" },
+  { href: "labs", label: "cohort.tabLabs" },
+  { href: "assignments", label: "cohort.tabAssignments" },
+  { href: "office-hours", label: "cohort.tabOfficeHours" },
+  { href: "projects", label: "cohort.tabProjects" },
+  { href: "certificate", label: "cohort.tabCertificate" },
 ];
 
+const STATUS: Record<"upcoming" | "completed" | "active", Key> = {
+  active: "cohort.statusActive",
+  upcoming: "cohort.statusUpcoming",
+  completed: "cohort.statusCompleted",
+};
+
 export default async function CohortLayout({ children, params }: LayoutProps<"/cohorts/[cohortId]">) {
+  const { t, locale } = await getI18n();
   const { cohortId } = await params;
   const user = await currentUser();
   const summary = cohortForUser(cohortId, user.id);
   if (!summary) notFound();
 
-  const { cohort, programme } = summary;
+  const { cohort } = summary;
+  const programme = loc(summary.programme, locale);
   const { week, totalWeeks } = cohortWeek(cohort, new Date());
   const { instructors, students } = cohortRoster(cohort.id);
 
   const base = `/cohorts/${cohort.id}`;
-  const when = cohort.status === "active" ? `Week ${week} of ${totalWeeks}` : cohort.status;
+  const when = cohort.status === "active" ? t("cohort.weekOf", { week, total: totalWeeks }) : t(STATUS[cohort.status]);
 
   const full = (
     <header className="mb-6">
-      <Label className="mb-2">
-        {programme.title} · Cohort {cohort.code}
-      </Label>
+      <Label className="mb-2">{t("cohort.eyebrow", { programme: programme.title, code: cohort.code })}</Label>
       <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">{cohort.name}</h1>
       <p className="mt-2 text-sm text-muted">
-        {formatShortDate(cohort.startsOn)} to {formatShortDate(cohort.endsOn)} · {when} · {students.length} students
+        {t("cohort.dateRange", { start: formatShortDate(cohort.startsOn), end: formatShortDate(cohort.endsOn) })} ·{" "}
+        {when} · {t("cohort.studentCount", { count: students.length })}
         {instructors[0] && ` · ${instructors[0].fullName}`}
       </p>
     </header>
@@ -58,7 +68,7 @@ export default async function CohortLayout({ children, params }: LayoutProps<"/c
       <div className="print:hidden">
         <AtPath path={base} match={full} other={compact} />
       </div>
-      <Tabs base={base} items={TABS} />
+      <Tabs base={base} items={TABS.map((tab) => ({ href: tab.href, label: t(tab.label) }))} />
       {children}
     </>
   );

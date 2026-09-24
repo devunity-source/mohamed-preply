@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { Check } from "lucide-react";
 import { toggleLesson } from "@/lib/actions";
 import { useToast } from "@/components/toast";
+import { useT } from "@/components/i18n-provider";
 
 /**
  * Flips instantly, saves in the background, and offers Undo. Without
@@ -21,6 +22,7 @@ export function LessonDoneToggle({
 }) {
   const [optimisticDone, setOptimisticDone] = useOptimistic(done);
   const toast = useToast();
+  const t = useT();
 
   function flip(next: boolean, withUndo: boolean) {
     startTransition(async () => {
@@ -29,8 +31,8 @@ export function LessonDoneToggle({
     });
     if (withUndo) {
       toast({
-        message: next ? "Lesson marked done" : "Marked as not done",
-        action: { label: "Undo", onClick: () => flip(!next, false) },
+        message: next ? t("lessons.toastDone") : t("lessons.toastNotDone"),
+        action: { label: t("lessons.undo"), onClick: () => flip(!next, false) },
       });
     }
   }
@@ -45,7 +47,7 @@ export function LessonDoneToggle({
     >
       {variant === "link" ? (
         <button className="text-sm text-muted underline-offset-4 hover:text-ink hover:underline">
-          {optimisticDone ? "Completed. Mark as not done" : "Mark done"}
+          {optimisticDone ? t("lessons.completedMarkNotDone") : t("lessons.markDone")}
         </button>
       ) : (
         <button
@@ -56,7 +58,7 @@ export function LessonDoneToggle({
           )}
         >
           {optimisticDone && <Check size={12} strokeWidth={3} />}
-          {optimisticDone ? "Done" : "Mark done"}
+          {optimisticDone ? t("lessons.done") : t("lessons.markDone")}
         </button>
       )}
     </form>

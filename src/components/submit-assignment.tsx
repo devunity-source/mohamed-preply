@@ -3,6 +3,8 @@
 import { useFormAction } from "@/components/use-form-action";
 import { submitAssignment } from "@/lib/actions";
 import { Button } from "@/components/ui";
+import { useT } from "@/components/i18n-provider";
+import { rich } from "@/components/rich";
 
 export function SubmitAssignment({
   assignmentId,
@@ -13,15 +15,17 @@ export function SubmitAssignment({
   defaultRepo?: string;
   resubmit: boolean;
 }) {
+  const t = useT();
   const { state, pending, formProps } = useFormAction(submitAssignment);
   return (
     <form {...formProps} className="space-y-4">
       <input type="hidden" name="assignmentId" value={assignmentId} />
       <label className="block">
-        <span className="mb-1.5 block text-sm font-medium">Repository URL</span>
+        <span className="mb-1.5 block text-sm font-medium">{t("assignments.repoUrl")}</span>
         <input
           name="repoUrl"
           type="url"
+          dir="ltr"
           required
           defaultValue={defaultRepo}
           placeholder="https://github.com/you/landing-zone"
@@ -30,7 +34,9 @@ export function SubmitAssignment({
       </label>
       <label className="block">
         <span className="mb-1.5 block text-sm font-medium">
-          Note for your instructor <span className="font-normal text-muted">(optional)</span>
+          {rich(t("assignments.note"), {
+            muted: (c) => <span className="font-normal text-muted">{c}</span>,
+          })}
         </span>
         <textarea
           name="note"
@@ -45,13 +51,13 @@ export function SubmitAssignment({
       )}
       {state.ok && (
         <p role="status" className="text-sm text-k-office">
-          Submitted. Your instructor has been notified.
+          {t("assignments.submittedOk")}
         </p>
       )}
       <Button disabled={pending}>
-        {pending ? "Submitting…" : resubmit ? "Update submission" : "Submit assignment"}
+        {pending ? t("assignments.submitting") : resubmit ? t("assignments.update") : t("assignments.submit")}
       </Button>
-      <p className="text-xs text-muted">ZIP uploads arrive with file storage in Phase 2.</p>
+      <p className="text-xs text-muted">{t("assignments.zipNote")}</p>
     </form>
   );
 }

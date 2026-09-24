@@ -60,7 +60,7 @@ function Inline({ text }: { text: string }) {
     <>
       {text.split(/(`[^`]+`|\*\*[^*]+\*\*)/g).map((part, i) =>
         part.startsWith("`") && part.endsWith("`") ? (
-          <code key={i} className="rounded-[4px] bg-line/70 px-1.5 py-0.5 font-mono text-[0.85em]">
+          <code key={i} dir="ltr" className="rounded-[4px] bg-line/70 px-1.5 py-0.5 font-mono text-[0.85em]">
             {part.slice(1, -1)}
           </code>
         ) : part.startsWith("**") && part.endsWith("**") ? (
@@ -89,6 +89,7 @@ export function LessonBody({ source }: { source: string }) {
           return (
             <pre
               key={i}
+              dir="ltr"
               className="overflow-x-auto rounded-md bg-ink p-4 font-mono text-[13px] leading-relaxed text-paper"
             >
               <code>{b.text}</code>

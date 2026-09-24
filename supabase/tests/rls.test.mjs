@@ -258,5 +258,14 @@ await check("snapshot has only your own settings", "ok", as(st2, `select 1 where
 await check("signed-in people can't touch the reminder log", "deny", as(adm, `insert into email_reminders (class_id, user_id) select id, '${st}' from classes limit 1`));
 await check("server key records a reminder", "ok", asService(`insert into email_reminders (class_id, user_id) select id, '${st}' from classes limit 1 returning user_id`));
 await check("and nobody signed in can read it", "none", as(st, `select * from email_reminders`));
+console.log("-- 0013 arabic");
+await check("student sets own language", "ok", as(st, `update profiles set locale='ar' where id='${st}' returning locale`));
+await check("unknown language refused", "deny", as(st, `update profiles set locale='fr' where id='${st}'`));
+await check("student can't set someone else's", "none", as(st, `update profiles set locale='ar' where id='${st2}' returning id`));
+await check("programme translations are stored", "ok", as(adm, `update programmes set i18n='{"ar":{"title":"برنامج"}}' where id='${PROG}' returning i18n->'ar'->>'title' as t`));
+await check("translations must be an object", "deny", as(adm, `update programmes set i18n='[]' where id='${PROG}'`));
+await check("students can't edit translations", "none", as(st, `update programmes set i18n='{}' where id='${PROG}' returning id`));
+await check("snapshot carries translations", "ok", as(st, `select p->'i18n' from jsonb_array_elements(app_snapshot()->'programmes') p where p->'i18n'->'ar'->>'title' = 'برنامج'`));
+await check("snapshot carries the language choice", "ok", as(st, `select 1 from jsonb_array_elements(app_snapshot()->'profiles') p where p->>'id'='${st}' and p->>'locale' = 'ar'`));
 console.log(fail ? `\n${fail} FAILED` : "\nALL PASSED");
 process.exit(fail ? 1 : 0);

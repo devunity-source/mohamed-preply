@@ -247,11 +247,11 @@ otp_expiry = 3600
 
 # Uncomment to customize email template
 [auth.email.template.invite]
-subject = "You're invited to AcadeMe"
+subject = "دعوة إلى AcadeMe | You're invited to AcadeMe"
 content_path = "./supabase/templates/invite.html"
 
 [auth.email.template.recovery]
-subject = "Reset your AcadeMe password"
+subject = "إعادة تعيين كلمة المرور | Reset your AcadeMe password"
 content_path = "./supabase/templates/recovery.html"
 
 # [auth.email.template.invite]

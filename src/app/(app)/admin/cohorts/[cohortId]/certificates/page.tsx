@@ -7,8 +7,10 @@ import { cohortCertificates } from "@/lib/data/admin";
 import { issueCertificate, setCertificateRevoked } from "@/lib/admin-actions";
 import { requireAdmin, requireCohortManager } from "@/lib/authz";
 import { formatShortDate } from "@/lib/time";
+import { getI18n } from "@/lib/i18n/server";
 
 export default async function AdminCertificates({ params }: PageProps<"/admin/cohorts/[cohortId]/certificates">) {
+  const { t } = await getI18n();
   const { cohortId } = await params;
   await requireCohortManager(cohortId);
   await requireAdmin();
@@ -16,45 +18,52 @@ export default async function AdminCertificates({ params }: PageProps<"/admin/co
   const eligible = rows.filter((r) => r.progress === 100 && !r.certificate).length;
 
   return (
-    <Card title={`Certificates · ${rows.filter((r) => r.certificate && !r.certificate.revokedAt).length} issued`}>
+    <Card
+      title={t("teaching.certificatesTitle", {
+        count: rows.filter((r) => r.certificate && !r.certificate.revokedAt).length,
+      })}
+    >
       <p className="mb-5 text-sm text-muted">
-        Students become eligible at 100% (every lesson, lab and assignment).{" "}
-        {eligible > 0 ? `${eligible} ready to issue.` : "Nobody is waiting."}
+        {eligible > 0 ? t("teaching.certificatesHelpReady", { count: eligible }) : t("teaching.certificatesHelpNone")}
       </p>
       <ul className="-my-2 divide-y divide-line">
         {rows.map(({ profile, progress, certificate }) => (
           <li key={profile.id} className="flex flex-wrap items-center gap-3 py-3">
             <Avatar profile={profile} size={28} />
             <span className="min-w-36 flex-1 font-medium">{profile.fullName}</span>
-            <span className="w-12 text-right font-mono text-sm">{progress}%</span>
+            <span className="w-12 text-end font-mono text-sm">{progress}%</span>
             {certificate ? (
               <>
-                <Link href={`/verify/${certificate.id}`} className="font-mono text-xs underline hover:text-accent">
+                <Link
+                  href={`/verify/${certificate.id}`}
+                  dir="ltr"
+                  className="font-mono text-xs underline hover:text-accent"
+                >
                   {certificate.id}
                 </Link>
                 {certificate.revokedAt ? (
                   <>
-                    <Pill tone="bad">Revoked {formatShortDate(certificate.revokedAt)}</Pill>
+                    <Pill tone="bad">{t("teaching.revokedOn", { date: formatShortDate(certificate.revokedAt) })}</Pill>
                     <form action={setCertificateRevoked.bind(null, certificate.id, false)}>
                       <SubmitButton variant="ghost">
-                        <RotateCcw size={14} /> Restore
+                        <RotateCcw size={14} /> {t("teaching.restore")}
                       </SubmitButton>
                     </form>
                   </>
                 ) : (
                   <>
-                    <Pill tone="good">Issued {formatShortDate(certificate.issuedAt)}</Pill>
+                    <Pill tone="good">{t("teaching.issuedOn", { date: formatShortDate(certificate.issuedAt) })}</Pill>
                     <ConfirmForm
                       action={setCertificateRevoked.bind(null, certificate.id, true)}
                       triggerClassName={buttonClass("ghost")}
                       trigger={
                         <>
-                          <Ban size={14} /> Revoke
+                          <Ban size={14} /> {t("teaching.revoke")}
                         </>
                       }
-                      title={`Revoke ${profile.fullName}'s certificate?`}
-                      description={`${certificate.id} will show as revoked on its public verification page. You can restore it later.`}
-                      confirmLabel="Revoke certificate"
+                      title={t("teaching.revokeTitle", { name: profile.fullName })}
+                      description={t("teaching.revokeDescription", { id: certificate.id })}
+                      confirmLabel={t("teaching.revokeConfirm")}
                     />
                   </>
                 )}
@@ -62,11 +71,11 @@ export default async function AdminCertificates({ params }: PageProps<"/admin/co
             ) : progress === 100 ? (
               <form action={issueCertificate.bind(null, profile.id, cohortId)}>
                 <SubmitButton>
-                  <Award size={14} /> Issue certificate
+                  <Award size={14} /> {t("teaching.issueCertificate")}
                 </SubmitButton>
               </form>
             ) : (
-              <Pill>Not complete</Pill>
+              <Pill>{t("teaching.notComplete")}</Pill>
             )}
           </li>
         ))}

@@ -37,7 +37,7 @@ import type {
 import { addDays, formatMonthYear, startOfWeek, zonedParts } from "@/lib/time";
 import { demoPassword } from "@/lib/auth/config";
 import { hashPasswordSync } from "@/lib/auth/password";
-import { LESSON_CONTENT } from "./lesson-content";
+import { LESSON_CONTENT, LESSON_CONTENT_AR } from "./lesson-content";
 
 const zonedYear = (d: Date) => zonedParts(d).year;
 
@@ -161,6 +161,23 @@ const programmes: Programme[] = [
       "Recordings and resources",
       "Certificate",
     ],
+    i18n: {
+      ar: {
+        title: "هندسة DevOps",
+        tagline: "ستة أسابيع من Linux إلى Kubernetes في بيئة الإنتاج على Azure.",
+        description:
+          "برنامج مباشر مع دفعة يغطي مسار التسليم كاملًا: Linux وGit وAzure وTerraform وCI/CD وKubernetes والأمان والمراقبة. تنهي البرنامج بمشروع تخرج على شكل منصة يمكنك عرضها على أصحاب العمل.",
+        includes: [
+          "12 حصة مباشرة",
+          "مختبرات عملية",
+          "مشروع التخرج",
+          "مجتمع الدفعة",
+          "الساعات المكتبية أسبوعيًا",
+          "تسجيلات الحصص والموارد",
+          "شهادة",
+        ],
+      },
+    },
   },
   {
     id: "p_ai",
@@ -175,6 +192,15 @@ const programmes: Programme[] = [
     certCode: "AIE",
     published: true,
     includes: ["12 live classes", "Weekly builds", "Final project", "Cohort community", "Certificate"],
+    i18n: {
+      ar: {
+        title: "هندسة الذكاء الاصطناعي",
+        tagline: "أطلق ميزات مبنية على نماذج LLM تصمد في بيئة الإنتاج.",
+        description:
+          "ابنِ ميزات الذكاء الاصطناعي وقيّمها وانشرها: كتابة الأوامر (prompting)، والاسترجاع، واستخدام الأدوات، والتقييمات (evals)، وضبط التكلفة. يُدرَّس مباشرة مع مشروع بناء كل أسبوع.",
+        includes: ["12 حصة مباشرة", "مشروع بناء أسبوعي", "المشروع النهائي", "مجتمع الدفعة", "شهادة"],
+      },
+    },
   },
 ];
 
@@ -185,12 +211,23 @@ interface WeekPlan {
   classes: [string, string][];
   lab: [string, Lab["difficulty"], number, string[]];
   assignment: [string, string] | null;
+  /** Arabic title, summary and lesson titles (same order as `lessons`). */
+  ar: { title: string; summary: string; lessons: string[] };
 }
 
 const devopsWeeks: WeekPlan[] = [
   {
     title: "DevOps Foundations",
     summary: "What DevOps actually is, the Linux you need daily, and Git as a team tool.",
+    ar: {
+      title: "أساسيات DevOps",
+      summary: "ما هو DevOps فعلًا، وما تحتاجه من Linux يوميًا، وGit كأداة للعمل الجماعي.",
+      lessons: [
+        "ماذا تفعل فرق DevOps طوال اليوم",
+        "أساسيات Linux: الملفات والعمليات والصلاحيات",
+        "Git أبعد من commit وpush",
+      ],
+    },
     lessons: [
       ["What DevOps teams do all day", "reading", 20],
       ["Linux essentials: files, processes, permissions", "video", 45],
@@ -217,6 +254,15 @@ const devopsWeeks: WeekPlan[] = [
   {
     title: "Azure and Networking",
     summary: "Core Azure services, virtual networks, and how traffic actually flows.",
+    ar: {
+      title: "Azure والشبكات",
+      summary: "خدمات Azure الأساسية، والشبكات الافتراضية، وكيف تتدفق حركة المرور فعلًا.",
+      lessons: [
+        "نموذج موارد Azure والاشتراكات",
+        "الشبكات الافتراضية (VNets) والشبكات الفرعية ومجموعات أمان الشبكة (NSGs)",
+        "DNS وموازنات الحِمل ونقاط النهاية الخاصة",
+      ],
+    },
     lessons: [
       ["Azure resource model and subscriptions", "reading", 25],
       ["VNets, subnets and NSGs", "video", 50],
@@ -240,6 +286,15 @@ const devopsWeeks: WeekPlan[] = [
   {
     title: "Terraform and CI/CD",
     summary: "Infrastructure as code with Terraform, and pipelines that deploy it safely.",
+    ar: {
+      title: "Terraform وCI/CD",
+      summary: "البنية التحتية كشيفرة باستخدام Terraform، وخطوط تنفيذ تنشرها بأمان.",
+      lessons: [
+        "الحالة (state) والمزوّدون (providers) والوحدات (modules) في Terraform",
+        "كتابة وحدات قابلة لإعادة الاستخدام",
+        "CI/CD باستخدام GitHub Actions",
+      ],
+    },
     lessons: [
       ["Terraform state, providers and modules", "video", 50],
       ["Writing reusable modules", "exercise", 45],
@@ -263,6 +318,11 @@ const devopsWeeks: WeekPlan[] = [
   {
     title: "Kubernetes and AKS",
     summary: "Containers, Kubernetes primitives, and running workloads on AKS.",
+    ar: {
+      title: "Kubernetes وAKS",
+      summary: "الحاويات، وأساسيات Kubernetes، وتشغيل أعباء العمل على AKS.",
+      lessons: ["الحاويات والصور", "Pods وDeployments وServices", "الشبكات في Kubernetes وIngress", "النشر على AKS"],
+    },
     lessons: [
       ["Containers and images", "video", 35],
       ["Pods, Deployments and Services", "video", 50],
@@ -287,6 +347,11 @@ const devopsWeeks: WeekPlan[] = [
   {
     title: "Security and Monitoring",
     summary: "Securing the platform and knowing when it breaks.",
+    ar: {
+      title: "الأمان والمراقبة",
+      summary: "تأمين المنصة ومعرفة متى تتعطل.",
+      lessons: ["الهوية والأسرار ومبدأ أقل الصلاحيات", "Prometheus وGrafana", "تنبيهات يتصرف الناس بناءً عليها"],
+    },
     lessons: [
       ["Identity, secrets and least privilege", "reading", 30],
       ["Prometheus and Grafana", "video", 45],
@@ -310,6 +375,11 @@ const devopsWeeks: WeekPlan[] = [
   {
     title: "Capstone and Career",
     summary: "Build a production-ready platform in a team, present it, and prepare for interviews.",
+    ar: {
+      title: "مشروع التخرج والمسار المهني",
+      summary: "ابنِ منصة جاهزة للإنتاج ضمن فريق، واعرضها، واستعد للمقابلات.",
+      lessons: ["موجز مشروع التخرج", "عرض العمل التقني", "مقابلات DevOps: ما الذي يُسأل"],
+    },
     lessons: [
       ["Capstone brief", "reading", 15],
       ["Presenting technical work", "video", 25],
@@ -334,6 +404,26 @@ export const DEFAULT_RUBRIC: RubricCriterion[] = [
   { id: "quality", label: "Code quality", points: 25 },
   { id: "docs", label: "Documentation", points: 20 },
   { id: "security", label: "Security", points: 15 },
+];
+
+// Arabic fallback for lessons whose full notes aren't written yet.
+const PENDING_NOTES_AR: Record<Lesson["kind"], string> = {
+  reading:
+    "الملاحظات الكاملة لهذه القراءة قيد الكتابة. حتى ذلك الحين، استخدم الشرائح وتسجيلات الحصص المباشرة لهذا الأسبوع في موارد الوحدة.",
+  video:
+    "الملاحظات الكاملة لدرس الفيديو هذا قيد الكتابة. حتى ذلك الحين، استخدم الشرائح وتسجيلات الحصص المباشرة لهذا الأسبوع في موارد الوحدة.",
+  exercise:
+    "الملاحظات الكاملة لهذا التمرين قيد الكتابة. حتى ذلك الحين، استخدم الشرائح وتسجيلات الحصص المباشرة لهذا الأسبوع في موارد الوحدة.",
+};
+
+// Arabic title and summary for each AI Engineering week, same order as aiWeeks.
+const aiWeeksAr: [string, string][] = [
+  ["أساسيات نماذج LLM", "الرموز (tokens)، ونوافذ السياق، وكتابة الأوامر، واختيار النموذج."],
+  ["الاسترجاع", "التضمينات (embeddings)، والتقطيع (chunking)، وRAG يعيد الشيء الصحيح."],
+  ["الأدوات والوكلاء", "استخدام الأدوات، وحلقات الوكلاء، وضوابط الحماية."],
+  ["التقييمات (Evals)", "قياس الجودة قبل الإطلاق وبعده."],
+  ["بيئة الإنتاج", "زمن الاستجابة، والتكلفة، والتخزين المؤقت، وقابلية المراقبة."],
+  ["المشروع النهائي", "أطلق ميزة ذكاء اصطناعي من البداية إلى النهاية."],
 ];
 
 const aiWeeks = [
@@ -414,6 +504,7 @@ export function createSeed(now: Date = new Date()): Store {
       position: 1,
       title: week.title,
       summary: week.summary,
+      i18n: { ar: { title: week.ar.title, summary: week.ar.summary } },
     });
 
     week.lessons.forEach(([title, kind, durationMin], i) => {
@@ -427,6 +518,12 @@ export function createSeed(now: Date = new Date()): Store {
         body:
           LESSON_CONTENT[title] ??
           `${week.summary}\n\nFull notes for this ${kind === "exercise" ? "exercise" : kind === "video" ? "video lesson" : "reading"} are being written. Until then, use the slides and recording from this week's live classes in the module resources.`,
+        i18n: {
+          ar: {
+            title: week.ar.lessons[i],
+            body: LESSON_CONTENT_AR[title] ?? `${week.ar.summary}\n\n${PENDING_NOTES_AR[kind]}`,
+          },
+        },
       });
     });
 
@@ -552,7 +649,16 @@ export function createSeed(now: Date = new Date()): Store {
   // AI Engineering: curriculum only (no active cohort yet).
   aiWeeks.forEach(([title, summary], w) => {
     const moduleId = `m_ai_${w + 1}`;
-    modules.push({ id: moduleId, programmeId: "p_ai", week: w + 1, position: 1, title, summary });
+    const [arTitle, arSummary] = aiWeeksAr[w];
+    modules.push({
+      id: moduleId,
+      programmeId: "p_ai",
+      week: w + 1,
+      position: 1,
+      title,
+      summary,
+      i18n: { ar: { title: arTitle, summary: arSummary } },
+    });
     lessons.push({
       id: `${moduleId}_l1`,
       moduleId,
@@ -561,6 +667,7 @@ export function createSeed(now: Date = new Date()): Store {
       kind: "reading",
       durationMin: 20,
       body: summary,
+      i18n: { ar: { title: `${arTitle}: نظرة عامة`, body: arSummary } },
     });
   });
 
@@ -695,6 +802,7 @@ export function createSeed(now: Date = new Date()): Store {
       description: "News from the AcadeMe team.",
       cohortId: null,
       readOnly: true,
+      i18n: { ar: { name: "الإعلانات", description: "أخبار من فريق AcadeMe.", group: "عام" } },
     },
     {
       id: "s_intros",
@@ -704,6 +812,9 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Say hi. Where you're from, what you do, what you want to build.",
       cohortId: null,
       readOnly: false,
+      i18n: {
+        ar: { name: "التعارف", description: "قل مرحبًا. من أين أنت، وماذا تعمل، وماذا تريد أن تبني.", group: "عام" },
+      },
     },
     {
       id: "s_wins",
@@ -713,6 +824,13 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Passed a cert, shipped a thing, got the job. Share it.",
       cohortId: null,
       readOnly: false,
+      i18n: {
+        ar: {
+          name: "الإنجازات",
+          description: "اجتزت شهادة، أو أطلقت شيئًا، أو حصلت على الوظيفة. شاركنا.",
+          group: "عام",
+        },
+      },
     },
     {
       id: "s_azure",
@@ -722,6 +840,7 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Everything Azure.",
       cohortId: null,
       readOnly: false,
+      i18n: { ar: { name: "Azure", description: "كل ما يتعلق بـ Azure.", group: "DevOps" } },
     },
     {
       id: "s_aws",
@@ -731,6 +850,7 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Everything AWS.",
       cohortId: null,
       readOnly: false,
+      i18n: { ar: { name: "AWS", description: "كل ما يتعلق بـ AWS.", group: "DevOps" } },
     },
     {
       id: "s_k8s",
@@ -740,6 +860,13 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Clusters, manifests, Helm, and the occasional CrashLoopBackOff.",
       cohortId: null,
       readOnly: false,
+      i18n: {
+        ar: {
+          name: "Kubernetes",
+          description: "العناقيد، وملفات manifests، وHelm، وبعض حالات CrashLoopBackOff بين حين وآخر.",
+          group: "DevOps",
+        },
+      },
     },
     {
       id: "s_tf",
@@ -749,6 +876,13 @@ export function createSeed(now: Date = new Date()): Store {
       description: "IaC patterns, modules and state horror stories.",
       cohortId: null,
       readOnly: false,
+      i18n: {
+        ar: {
+          name: "Terraform",
+          description: "أنماط البنية التحتية كشيفرة (IaC)، والوحدات، وقصص مرعبة عن الحالة (state).",
+          group: "DevOps",
+        },
+      },
     },
     {
       id: "s_cv",
@@ -758,6 +892,13 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Get feedback on how you present your work.",
       cohortId: null,
       readOnly: false,
+      i18n: {
+        ar: {
+          name: "السيرة الذاتية وLinkedIn",
+          description: "احصل على ملاحظات حول طريقة عرضك لعملك.",
+          group: "المسار المهني",
+        },
+      },
     },
     {
       id: "s_interviews",
@@ -767,6 +908,7 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Questions you got asked, and how you answered.",
       cohortId: null,
       readOnly: false,
+      i18n: { ar: { name: "المقابلات", description: "الأسئلة التي سُئلتها، وكيف أجبت عنها.", group: "المسار المهني" } },
     },
     {
       id: "s_jobs",
@@ -776,6 +918,7 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Roles worth applying for.",
       cohortId: null,
       readOnly: false,
+      i18n: { ar: { name: "الوظائف", description: "وظائف تستحق التقديم عليها.", group: "المسار المهني" } },
     },
     {
       id: "s_showcase",
@@ -785,6 +928,7 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Show what you built.",
       cohortId: null,
       readOnly: false,
+      i18n: { ar: { name: "معرض المشاريع", description: "اعرض ما بنيته.", group: "مشاريع الطلاب" } },
     },
     {
       id: "s_feedback",
@@ -794,6 +938,7 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Ask for a review before you ship.",
       cohortId: null,
       readOnly: false,
+      i18n: { ar: { name: "الملاحظات", description: "اطلب مراجعة قبل أن تطلق عملك.", group: "مشاريع الطلاب" } },
     },
     {
       id: "s_c01_general",
@@ -803,6 +948,7 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Your cohort's home.",
       cohortId,
       readOnly: false,
+      i18n: { ar: { name: "عام", description: "المساحة الرئيسية لدفعتك.", group: "الدفعة #01" } },
     },
     {
       id: "s_c01_announcements",
@@ -812,6 +958,7 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Schedule changes and cohort news.",
       cohortId,
       readOnly: true,
+      i18n: { ar: { name: "الإعلانات", description: "تغييرات الجدول وأخبار الدفعة.", group: "الدفعة #01" } },
     },
     {
       id: "s_c01_questions",
@@ -821,6 +968,13 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Stuck? Ask here. No question is too basic.",
       cohortId,
       readOnly: false,
+      i18n: {
+        ar: {
+          name: "الأسئلة",
+          description: "هل واجهتك مشكلة؟ اسأل هنا. لا يوجد سؤال بسيط أكثر من اللازم.",
+          group: "الدفعة #01",
+        },
+      },
     },
     {
       id: "s_c01_labs",
@@ -830,6 +984,13 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Lab help and solutions discussion (after the deadline).",
       cohortId,
       readOnly: false,
+      i18n: {
+        ar: {
+          name: "المختبرات",
+          description: "المساعدة في المختبرات ومناقشة الحلول (بعد موعد التسليم).",
+          group: "الدفعة #01",
+        },
+      },
     },
     {
       id: "s_c01_projects",
@@ -839,6 +1000,7 @@ export function createSeed(now: Date = new Date()): Store {
       description: "Capstone teams and progress.",
       cohortId,
       readOnly: false,
+      i18n: { ar: { name: "المشاريع", description: "فرق مشروع التخرج وتقدّمها.", group: "الدفعة #01" } },
     },
   ];
 

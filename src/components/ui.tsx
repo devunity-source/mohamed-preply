@@ -1,6 +1,12 @@
 import Link from "next/link";
 import clsx from "clsx";
 import type { CalendarKind, Profile } from "@/lib/types";
+import { translate, type Key, type T } from "@/lib/i18n/translate";
+import { activeLocale } from "@/lib/time";
+
+// Sync server components here read the request's language the way the date
+// helpers do (set by the page's getI18n() call). Pass `t` to override.
+const tr: T = (key, vars) => translate(activeLocale(), key, vars);
 
 export function PageHeader({
   eyebrow,
@@ -128,13 +134,24 @@ export function Avatar({ profile, size = 32 }: { profile: Profile; size?: number
   );
 }
 
-export const KIND_META: Record<CalendarKind, { label: string; className: string }> = {
-  class: { label: "Live class", className: "bg-k-class" },
-  lab: { label: "Lab", className: "bg-k-lab" },
-  office_hours: { label: "Office hours", className: "bg-k-office" },
-  workshop: { label: "Workshop", className: "bg-k-workshop" },
-  deadline: { label: "Deadline", className: "bg-k-deadline" },
-  event: { label: "Event", className: "bg-k-event" },
+/** `label` is in the request's language (server); client code can use `t(labelKey)`. */
+function kind(labelKey: Key, className: string) {
+  return {
+    labelKey,
+    className,
+    get label() {
+      return tr(labelKey);
+    },
+  };
+}
+
+export const KIND_META: Record<CalendarKind, { label: string; labelKey: Key; className: string }> = {
+  class: kind("common.kindClass", "bg-k-class"),
+  lab: kind("common.kindLab", "bg-k-lab"),
+  office_hours: kind("common.kindOfficeHours", "bg-k-office"),
+  workshop: kind("common.kindWorkshop", "bg-k-workshop"),
+  deadline: kind("common.kindDeadline", "bg-k-deadline"),
+  event: kind("common.kindEvent", "bg-k-event"),
 };
 
 export function KindMark({ kind }: { kind: CalendarKind }) {
@@ -176,15 +193,23 @@ type Tally = { done: number; total: number };
 export function ProgressBreakdown({
   progress,
   className,
+  t = tr,
 }: {
   progress: { lessons: Tally; labs: Tally; assignments: Tally };
   className?: string;
+  t?: T;
 }) {
   const { lessons, labs, assignments } = progress;
   return (
     <p className={clsx("text-xs leading-relaxed text-muted", className)}>
-      {lessons.done}/{lessons.total} lessons · {labs.done}/{labs.total} labs · {assignments.done}/{assignments.total}{" "}
-      assignments. Each one counts the same; labs count once submitted, assignments once handed in.
+      {t("common.progressBreakdown", {
+        lessonsDone: lessons.done,
+        lessonsTotal: lessons.total,
+        labsDone: labs.done,
+        labsTotal: labs.total,
+        assignmentsDone: assignments.done,
+        assignmentsTotal: assignments.total,
+      })}
     </p>
   );
 }
@@ -203,7 +228,7 @@ export function Logo({ className }: { className?: string }) {
   );
 }
 
-export function Legend({ className }: { className?: string }) {
+export function Legend({ className, t = tr }: { className?: string; t?: T }) {
   return (
     <ul
       className={clsx(
@@ -213,7 +238,7 @@ export function Legend({ className }: { className?: string }) {
     >
       {(Object.keys(KIND_META) as CalendarKind[]).map((k) => (
         <li key={k} className="flex items-center gap-1.5">
-          <KindMark kind={k} /> {KIND_META[k].label}
+          <KindMark kind={k} /> {t(KIND_META[k].labelKey)}
         </li>
       ))}
     </ul>
@@ -222,10 +247,11 @@ export function Legend({ className }: { className?: string }) {
 
 /** Finished items, collapsed by default so current work stays on top. */
 export function DoneGroup({
-  label = "Completed",
+  label,
   count,
   children,
 }: {
+  /** Defaults to "Completed". */
   label?: string;
   count: number;
   children: React.ReactNode;
@@ -235,9 +261,12 @@ export function DoneGroup({
     <details className="group rounded-md border border-dashed border-line">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3.5 text-sm font-medium text-muted hover:text-ink">
         <span>
-          {label} · {count}
+          {label ?? tr("common.completed")} · {count}
         </span>
-        <span className="font-mono text-xs transition-transform group-open:rotate-90" aria-hidden>
+        <span
+          className="font-mono text-xs transition-transform group-open:rotate-90 rtl:-scale-x-100 rtl:group-open:-rotate-90"
+          aria-hidden
+        >
           →
         </span>
       </summary>

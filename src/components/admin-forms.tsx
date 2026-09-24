@@ -7,6 +7,8 @@ import { Check } from "lucide-react";
 import type { FormState } from "@/lib/actions";
 import type { RubricCriterion } from "@/lib/types";
 import { Button } from "@/components/ui";
+import { rich } from "@/components/rich";
+import { useT } from "@/components/i18n-provider";
 
 // Client-side form shells for the admin area. The server actions they call
 // do all validation and permission checks; these only handle pending and
@@ -21,7 +23,7 @@ export function ActionForm({
   action,
   children,
   submitLabel,
-  savedLabel = "Saved",
+  savedLabel,
   className,
   resetOnSuccess,
 }: {
@@ -32,6 +34,7 @@ export function ActionForm({
   className?: string;
   resetOnSuccess?: boolean;
 }) {
+  const t = useT();
   const { state, pending, formProps } = useFormAction(action, { resetOnSuccess });
 
   return (
@@ -48,7 +51,7 @@ export function ActionForm({
     >
       {children}
       <div className="flex flex-wrap items-center gap-3">
-        <Button disabled={pending}>{pending ? "Saving…" : submitLabel}</Button>
+        <Button disabled={pending}>{pending ? t("admin.saving") : submitLabel}</Button>
         {state.error && (
           <p role="alert" className="text-sm text-k-deadline">
             {state.error}
@@ -56,7 +59,7 @@ export function ActionForm({
         )}
         {state.ok && !pending && (
           <p className="flex items-center gap-1 text-sm text-k-office">
-            <Check size={14} strokeWidth={3} /> {savedLabel}
+            <Check size={14} strokeWidth={3} /> {savedLabel ?? t("admin.saved")}
           </p>
         )}
       </div>
@@ -80,6 +83,7 @@ export function GradeForm({
   /** "Save and next": the server redirects here after a successful save. */
   nextStudentId?: string;
 }) {
+  const t = useT();
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(rubric.map((c) => [c.id, scores?.[c.id] != null ? String(scores[c.id]) : ""])),
   );
@@ -90,8 +94,8 @@ export function GradeForm({
   return (
     <ActionForm
       action={action}
-      submitLabel={nextStudentId ? "Save and next ungraded" : scores ? "Update grade" : "Save grade"}
-      savedLabel="Graded, student notified"
+      submitLabel={nextStudentId ? t("admin.saveAndNext") : scores ? t("admin.updateGrade") : t("admin.saveGrade")}
+      savedLabel={t("admin.gradedNotified")}
     >
       <input type="hidden" name="submissionId" value={submissionId} />
       {nextStudentId && <input type="hidden" name="next" value={nextStudentId} />}
@@ -109,21 +113,23 @@ export function GradeForm({
               required
               value={values[c.id]}
               onChange={(e) => setValues((v) => ({ ...v, [c.id]: e.target.value }))}
-              className="w-16 rounded-md border border-line bg-paper px-2 py-1 text-right font-mono outline-none focus:border-ink"
+              className="w-16 rounded-md border border-line bg-paper px-2 py-1 text-end font-mono outline-none focus:border-ink"
             />
             <span className="w-8 font-mono text-xs text-muted">/{c.points}</span>
           </label>
         ))}
       </div>
       <p className="font-mono text-sm">
-        Grade: <span className="text-lg font-semibold">{grade}</span>/100
+        {rich(t("admin.gradeTotal", { grade }), {
+          b: (c) => <span className="text-lg font-semibold">{c}</span>,
+        })}
       </p>
       <textarea
         name="feedback"
         rows={3}
         required
         defaultValue={feedback ?? ""}
-        placeholder="What worked, what to fix, one thing to try next."
+        placeholder={t("admin.feedbackPlaceholder")}
         className={field}
       />
     </ActionForm>
@@ -135,22 +141,23 @@ export function GradeForm({
  * a brand-new account includes the one-time temporary password.
  */
 export function AddStudentForm({ action, cohortId }: { action: Action; cohortId: string }) {
+  const t = useT();
   const { state, pending, formProps } = useFormAction(action, { resetOnSuccess: true });
   return (
     <form {...formProps} className="space-y-3">
       <input type="hidden" name="cohortId" value={cohortId} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="block text-sm">
-          <span className="mb-1 block font-medium">Email</span>
-          <input name="email" type="email" required autoComplete="off" className={field} />
+          <span className="mb-1 block font-medium">{t("admin.email")}</span>
+          <input name="email" type="email" dir="ltr" required autoComplete="off" className={field} />
         </label>
         <label className="block text-sm">
-          <span className="mb-1 block font-medium">Full name (new students only)</span>
+          <span className="mb-1 block font-medium">{t("admin.fullNameNew")}</span>
           <input name="fullName" autoComplete="off" className={field} />
         </label>
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <Button disabled={pending}>{pending ? "Adding…" : "Add student"}</Button>
+        <Button disabled={pending}>{pending ? t("admin.adding") : t("admin.addStudent")}</Button>
         {state.error && (
           <p role="alert" className="text-sm text-k-deadline">
             {state.error}

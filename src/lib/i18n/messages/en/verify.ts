@@ -1,1 +1,19 @@
-export const verify = {};
+export const verify = {
+  metaTitle: "Verify a certificate",
+  metaTitleId: "Verify {id}",
+  title: "Verify a certificate",
+  lead: "Enter the ID printed at the bottom of an AcadeMe certificate.",
+  idLabel: "Certificate ID",
+  submit: "Verify",
+  valid: "Valid certificate",
+  revoked: "This certificate was revoked",
+  notFound: "Certificate not found",
+  issuedOn: "Issued by AcadeMe on {date}.",
+  revokedBody: "It is no longer valid. Contact AcadeMe if you have questions.",
+  notFoundBody: "Check the ID. It looks like ACM-DEV-2026-00001.",
+  period: "{from} to {to}",
+  about: "About AcadeMe",
+  certOfCompletion: "Certificate of completion",
+  hasCompleted: "has completed the <b>{programme}</b> programme",
+  print: "Print / Save as PDF",
+};

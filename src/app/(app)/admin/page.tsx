@@ -6,8 +6,17 @@ import { cohortWeek } from "@/lib/data/repo";
 import { isAdmin, managedCohortIds, requireAdminArea } from "@/lib/authz";
 import { formatMoney, formatPercent } from "@/lib/format";
 import { formatShortDate } from "@/lib/time";
+import { getI18n } from "@/lib/i18n/server";
+import { loc } from "@/lib/i18n/content";
+
+const STATUS = {
+  upcoming: "admin.statusUpcoming",
+  active: "admin.statusActive",
+  completed: "admin.statusCompleted",
+} as const;
 
 export default async function AdminOverview() {
+  const { t, locale } = await getI18n();
   const user = await requireAdminArea();
   const now = new Date();
   const stats = managedCohortIds(user).map((id) => cohortStats(id, now));
@@ -15,30 +24,36 @@ export default async function AdminOverview() {
   const admin = isAdmin(user);
 
   const kpis = [
-    { label: "Active cohorts", value: String(active.length) },
-    { label: "Students (active)", value: String(active.reduce((n, s) => n + s.students.length, 0)) },
-    { label: "To grade", value: String(stats.reduce((n, s) => n + s.toGrade + s.labsToReview, 0)) },
+    { label: t("admin.kpiActiveCohorts"), value: String(active.length) },
+    {
+      label: t("admin.kpiActiveStudents"),
+      value: String(active.reduce((n, s) => n + s.students.length, 0)),
+    },
+    { label: t("admin.kpiToGrade"), value: String(stats.reduce((n, s) => n + s.toGrade + s.labsToReview, 0)) },
     ...(admin
       ? [
           {
-            label: "Revenue, active (est.)",
+            label: t("admin.kpiRevenue"),
             value: formatMoney(active.reduce((n, s) => n + s.estimatedRevenueCents, 0)),
           },
-          { label: "Waitlist", value: String(waitlistRows().length) },
+          { label: t("admin.kpiWaitlist"), value: String(waitlistRows().length) },
         ]
       : []),
   ];
 
   return (
     <>
-      <PageHeader eyebrow={admin ? "Overview" : "Your cohorts"} title={admin ? "Running the academy" : "Teaching"}>
+      <PageHeader
+        eyebrow={admin ? t("admin.overviewEyebrow") : t("admin.yourCohortsEyebrow")}
+        title={admin ? t("admin.runningTitle") : t("admin.teachingTitle")}
+      >
         {admin && (
           <div className="flex flex-wrap gap-2">
             <ButtonLink href="/admin/programmes/new" variant="ghost">
-              <Plus size={16} /> New programme
+              <Plus size={16} /> {t("admin.newProgramme")}
             </ButtonLink>
             <ButtonLink href="/admin/cohorts/new">
-              <Plus size={16} /> New cohort
+              <Plus size={16} /> {t("admin.newCohort")}
             </ButtonLink>
           </div>
         )}
@@ -52,11 +67,7 @@ export default async function AdminOverview() {
           </div>
         ))}
       </dl>
-      {admin && (
-        <p className="-mt-7 mb-10 text-xs text-muted">
-          Revenue is estimated as enrolled students × list price until Stripe is connected.
-        </p>
-      )}
+      {admin && <p className="-mt-7 mb-10 text-xs text-muted">{t("admin.revenueNote")}</p>}
 
       <div className="grid gap-5 md:grid-cols-2">
         {stats.map((s) => {
@@ -69,24 +80,29 @@ export default async function AdminOverview() {
             >
               <div className="mb-4 flex items-center justify-between">
                 <Label>
-                  {s.programme.title} · Cohort {s.cohort.code}
+                  {t("admin.cohortLabel", { programme: loc(s.programme, locale).title, code: s.cohort.code })}
                 </Label>
                 <Pill tone={s.cohort.status === "active" ? "good" : "quiet"}>
-                  {s.cohort.status === "active" ? `Week ${week}/${totalWeeks}` : s.cohort.status}
+                  {s.cohort.status === "active"
+                    ? t("admin.weekOf", { week, total: totalWeeks })
+                    : t(STATUS[s.cohort.status])}
                 </Pill>
               </div>
               <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight group-hover:text-accent">
-                {s.cohort.name} <ArrowUpRight size={16} />
+                {s.cohort.name} <ArrowUpRight size={16} className="rtl:-scale-x-100" />
               </h2>
               <p className="mt-1 text-sm text-muted">
-                {formatShortDate(s.cohort.startsOn)} to {formatShortDate(s.cohort.endsOn)} · {s.students.length}{" "}
-                students
+                {t("admin.cohortDates", {
+                  start: formatShortDate(s.cohort.startsOn),
+                  end: formatShortDate(s.cohort.endsOn),
+                  count: s.students.length,
+                })}
               </p>
               <dl className="mt-5 grid grid-cols-3 gap-2 text-center">
                 {[
-                  ["Attendance", formatPercent(s.attendanceRate)],
-                  ["Submitted", formatPercent(s.submissionRate)],
-                  ["Avg progress", `${s.avgProgress}%`],
+                  [t("admin.attendance"), formatPercent(s.attendanceRate)],
+                  [t("admin.submitted"), formatPercent(s.submissionRate)],
+                  [t("admin.avgProgress"), `${s.avgProgress}%`],
                 ].map(([l, v]) => (
                   <div key={l} className="rounded-md border border-line p-2">
                     <dt className="text-[11px] text-muted">{l}</dt>
@@ -95,15 +111,13 @@ export default async function AdminOverview() {
                 ))}
               </dl>
               {s.atRisk.length > 0 && (
-                <p className="mt-4 text-sm text-k-deadline">
-                  {s.atRisk.length} student{s.atRisk.length > 1 ? "s" : ""} need attention
-                </p>
+                <p className="mt-4 text-sm text-k-deadline">{t("admin.needAttention", { count: s.atRisk.length })}</p>
               )}
             </Link>
           );
         })}
       </div>
-      {stats.length === 0 && <Card>No cohorts yet.</Card>}
+      {stats.length === 0 && <Card>{t("admin.noCohorts")}</Card>}
     </>
   );
 }

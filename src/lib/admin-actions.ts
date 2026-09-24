@@ -9,6 +9,9 @@ import { cohortById, nextCertificateId, unassignedStudents } from "@/lib/data/ad
 import { canManageCohort, canModerate, isAdmin } from "@/lib/authz";
 import { canCreateMeetings, createMeeting } from "@/lib/integrations/video";
 import { currentUser } from "@/lib/session";
+import { getI18n } from "@/lib/i18n/server";
+import type { T } from "@/lib/i18n/translate";
+import { weekdayName } from "@/lib/data/office-hours";
 import { hashPassword } from "@/lib/auth/password";
 import { fromRow, TABLES } from "@/lib/data/schema";
 import { siteUrl } from "@/lib/auth/config";
@@ -17,7 +20,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { randomBytes } from "node:crypto";
 import { addDays, formatMonthYear, wallTime, zonedParts } from "@/lib/time";
 import type { FormState } from "@/lib/actions";
-import type { Attendance, Cohort, LessonKind, MeetingProvider, Profile, Space } from "@/lib/types";
+import type { Attendance, Cohort, LessonKind, MeetingProvider, Profile, Space, Translations } from "@/lib/types";
 
 // Admin-area writes. Every action is reachable by direct POST, so each one
 // re-checks the caller and validates every input at runtime; TypeScript
@@ -79,22 +82,23 @@ function done(path = "/", kind: "layout" | "page" = "layout") {
 // Grading
 
 export const gradeSubmission = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   const s = db();
   const sub = s.submissions.find((x) => x.id === form.get("submissionId"));
   const assignment = sub && s.assignments.find((a) => a.id === sub.assignmentId);
-  if (!sub || !assignment) return { error: "Submission not found." };
+  if (!sub || !assignment) return { error: t("errors.submissionNotFound") };
   const user = await managerOf(assignment.cohortId);
 
   const scores: Record<string, number> = {};
   for (const c of assignment.rubric) {
     const v = int(form.get(`score:${c.id}`), 0, c.points);
-    if (v === null) return { error: `${c.label}: enter a whole number from 0 to ${c.points}.` };
+    if (v === null) return { error: t("errors.rubricScore", { label: c.label, points: c.points }) };
     scores[c.id] = v;
   }
   const total = assignment.rubric.reduce((n, c) => n + c.points, 0);
   const earned = Object.values(scores).reduce((n, v) => n + v, 0);
   const feedback = str(form, "feedback", 5000);
-  if (!feedback) return { error: "Write some feedback. Students learn more from it than from the number." };
+  if (!feedback) return { error: t("errors.writeFeedback") };
 
   const first = sub.grade == null;
   await update("submissions", sub, {
@@ -174,16 +178,17 @@ export const reviewLab = withData(async (labId: string, userId: string, decision
 const ATTENDANCE: readonly Attendance["status"][] = ["present", "late", "absent"];
 
 export const saveAttendance = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   const s = db();
   const cls = s.classes.find((c) => c.id === form.get("classId"));
-  if (!cls) return { error: "Class not found." };
+  if (!cls) return { error: t("errors.classNotFound") };
   await managerOf(cls.cohortId);
-  if (cls.startsAt.getTime() - 10 * 60_000 > Date.now()) return { error: "Attendance opens when the class starts." };
+  if (cls.startsAt.getTime() - 10 * 60_000 > Date.now()) return { error: t("errors.attendanceNotOpen") };
 
   for (const student of cohortRoster(cls.cohortId).students) {
     const value = form.get(`att:${student.id}`);
     if (value === null) continue;
-    if (!ATTENDANCE.includes(value as Attendance["status"])) return { error: "Invalid attendance value." };
+    if (!ATTENDANCE.includes(value as Attendance["status"])) return { error: t("errors.invalidAttendance") };
     const existing = s.attendance.find((a) => a.classId === cls.id && a.userId === student.id);
     const status = value as Attendance["status"];
     if (existing) {
@@ -212,13 +217,14 @@ async function meetingLink(provider: MeetingProvider, pasted: string): Promise<{
 }
 
 export const saveClass = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   const s = db();
   const cohortId = str(form, "cohortId", 100);
   const user = await managerOf(cohortId);
   const cohort = cohortById(cohortId)!;
   const classId = str(form, "classId", 100);
   const existing = classId ? s.classes.find((c) => c.id === classId && c.cohortId === cohortId) : undefined;
-  if (classId && !existing) return { error: "Class not found." };
+  if (classId && !existing) return { error: t("errors.classNotFound") };
 
   const title = str(form, "title", 140);
   const description = str(form, "description", 1000);
@@ -229,17 +235,17 @@ export const saveClass = withData(async (_prev: FormState, form: FormData): Prom
   const pastedUrl = str(form, "meetingUrl", 500);
   const recordingUrl = str(form, "recordingUrl", 500);
 
-  if (!title) return { error: "Add a title." };
+  if (!title) return { error: t("errors.addTitle") };
   if (!s.modules.some((m) => m.id === moduleId && m.programmeId === cohort.programmeId))
-    return { error: "Pick a module." };
-  if (!startsAt) return { error: "Enter a valid date and time." };
-  if (durationMin === null) return { error: "Duration must be 15 to 300 minutes." };
-  if (!PROVIDERS.includes(provider)) return { error: "Pick a video provider." };
+    return { error: t("errors.pickModule") };
+  if (!startsAt) return { error: t("errors.invalidDateTime") };
+  if (durationMin === null) return { error: t("errors.classDuration") };
+  if (!PROVIDERS.includes(provider)) return { error: t("errors.pickProvider") };
   const link = await meetingLink(provider, pastedUrl);
   if ("error" in link) return link;
   const meetingUrl = link.url;
-  if (!httpsUrl(meetingUrl)) return { error: "Paste the meeting link (https://…)." };
-  if (recordingUrl && !httpsUrl(recordingUrl)) return { error: "Recording link must start with https://." };
+  if (!httpsUrl(meetingUrl)) return { error: t("errors.meetingLink") };
+  if (recordingUrl && !httpsUrl(recordingUrl)) return { error: t("errors.recordingLink") };
 
   const fields = {
     title,
@@ -278,6 +284,7 @@ const DEFAULT_MILESTONES = [
 ];
 
 export const createProject = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   const cohortId = str(form, "cohortId", 100);
   await managerOf(cohortId);
   const cohort = cohortById(cohortId)!;
@@ -286,9 +293,9 @@ export const createProject = withData(async (_prev: FormState, form: FormData): 
   const title = str(form, "title", 140) || "Capstone project";
   const memberIds = form.getAll("members").map(String);
   const free = new Set(unassignedStudents(cohortId).map((p) => p.id));
-  if (!teamName) return { error: "Name the team." };
-  if (memberIds.length === 0) return { error: "Pick at least one student." };
-  if (!memberIds.every((id) => free.has(id))) return { error: "Each student can only be on one team." };
+  if (!teamName) return { error: t("errors.nameTeam") };
+  if (memberIds.length === 0) return { error: t("errors.pickStudents") };
+  if (!memberIds.every((id) => free.has(id))) return { error: t("errors.oneTeamEach") };
 
   const id = newId("pr");
   await insert("projects", {
@@ -316,21 +323,22 @@ export const createProject = withData(async (_prev: FormState, form: FormData): 
 });
 
 export const updateProject = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   const s = db();
   const project = s.projects.find((p) => p.id === form.get("projectId"));
-  if (!project) return { error: "Project not found." };
+  if (!project) return { error: t("errors.projectNotFound") };
   await managerOf(project.cohortId);
 
   const teamName = str(form, "teamName", 80);
-  if (!teamName) return { error: "Name the team." };
+  if (!teamName) return { error: t("errors.nameTeam") };
   const date = str(form, "date", 10);
   const time = str(form, "time", 5);
   const presentsAt = date || time ? parseWallTime(date, time) : null;
-  if ((date || time) && !presentsAt) return { error: "Enter a valid presentation date and time." };
+  if ((date || time) && !presentsAt) return { error: t("errors.invalidPresentation") };
 
   const add = str(form, "addMember", 100);
   if (add && !unassignedStudents(project.cohortId).some((p) => p.id === add)) {
-    return { error: "That student is already on a team." };
+    return { error: t("errors.alreadyOnTeam") };
   }
   await update("projects", project, { teamName, presentsAt });
   if (add) await insert("projectMembers", { projectId: project.id, userId: add });
@@ -369,9 +377,10 @@ export const toggleMilestone = withData(async (milestoneId: string) => {
 });
 
 export const setProjectRepo = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   const { project } = await projectEditor(str(form, "projectId", 100));
   const repoUrl = str(form, "repoUrl", 500);
-  if (repoUrl && !httpsUrl(repoUrl, REPO_HOSTS)) return { error: "Use a GitHub, GitLab or Azure DevOps https link." };
+  if (repoUrl && !httpsUrl(repoUrl, REPO_HOSTS)) return { error: t("errors.repoLinkHost") };
   await update("projects", project, { repoUrl: repoUrl || null });
   done();
   return { ok: true };
@@ -472,6 +481,33 @@ const parseIncludes = (text: string) =>
     .filter(Boolean)
     .slice(0, 12);
 
+/**
+ * An item's translations with the Arabic fields from the curriculum editor
+ * (`ar:title`, `ar:summary`...; `max` gives each field's length limit).
+ * An empty field means no Arabic version of it; a field the form doesn't send
+ * stays as it was. `lists` are one entry per line, like the English includes.
+ */
+function withArabic<F extends object>(
+  i18n: Translations<F> | null | undefined,
+  form: FormData,
+  max: { [K in keyof F]?: number },
+  lists: (keyof F)[] = [],
+): Translations<F> {
+  const ar: Record<string, unknown> = { ...i18n?.ar };
+  for (const [field, limit] of Object.entries(max) as [keyof F & string, number][]) {
+    const key = `ar:${field}`;
+    if (!form.has(key)) continue;
+    const text = str(form, key, limit);
+    const value = lists.includes(field) ? parseIncludes(text) : text;
+    if (value.length > 0) ar[field] = value;
+    else delete ar[field];
+  }
+  const next: Translations<F> = { ...i18n };
+  if (Object.keys(ar).length > 0) next.ar = ar as Partial<F>;
+  else delete next.ar;
+  return next;
+}
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -494,6 +530,7 @@ function firstFree(base: string, taken: (name: string) => boolean, sep = "-"): s
  * editor has something to fill in. Nothing is public until "Published" is ticked.
  */
 export const createProgramme = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   await admin();
   const s = db();
   const title = str(form, "title", 100);
@@ -504,12 +541,12 @@ export const createProgramme = withData(async (_prev: FormState, form: FormData)
   const certCode = str(form, "certCode", 5).toUpperCase();
   const includes = parseIncludes(str(form, "includes", 1000));
 
-  if (!title) return { error: "Add a title." };
-  if (weeks === null) return { error: "Length must be between 1 and 52 weeks." };
-  if (priceDollars === null) return { error: "Price must be a whole number of US dollars." };
-  if (!CERT_CODE.test(certCode)) return { error: "Certificate code: 2 to 5 letters, like DEV or AI." };
+  if (!title) return { error: t("errors.addTitle") };
+  if (weeks === null) return { error: t("errors.programmeLength") };
+  if (priceDollars === null) return { error: t("errors.priceWhole") };
+  if (!CERT_CODE.test(certCode)) return { error: t("errors.certCodeFormat") };
   if (s.programmes.some((p) => p.certCode === certCode)) {
-    return { error: `Another programme already uses ${certCode} on its certificates. Pick a different code.` };
+    return { error: t("errors.certCodeTaken", { code: certCode }) };
   }
 
   const base = slugify(title) || "programme";
@@ -530,32 +567,59 @@ export const createProgramme = withData(async (_prev: FormState, form: FormData)
     published: false,
   });
   for (let week = 1; week <= weeks; week++) {
-    await insert("modules", { id: newId("m"), programmeId: id, week, position: 1, title: `Week ${week}`, summary: "" });
+    await insert("modules", {
+      id: newId("m"),
+      programmeId: id,
+      week,
+      position: 1,
+      title: `Week ${week}`,
+      summary: "",
+      i18n: { ar: { title: `الأسبوع ${week}` } },
+    });
   }
   done();
   redirect(`/admin/programmes/${id}?created=1`);
 });
 
 const COHORT_SPACES = [
-  { key: "general", name: "General", description: "Your cohort's home.", readOnly: false },
-  { key: "announcements", name: "Announcements", description: "Schedule changes and cohort news.", readOnly: true },
-  { key: "questions", name: "Questions", description: "Stuck? Ask here. No question is too basic.", readOnly: false },
+  {
+    key: "general",
+    name: "General",
+    description: "Your cohort's home.",
+    ar: { name: "عام", description: "المساحة الرئيسية لدفعتك." },
+    readOnly: false,
+  },
+  {
+    key: "announcements",
+    name: "Announcements",
+    description: "Schedule changes and cohort news.",
+    ar: { name: "الإعلانات", description: "تغييرات الجدول وأخبار الدفعة." },
+    readOnly: true,
+  },
+  {
+    key: "questions",
+    name: "Questions",
+    description: "Stuck? Ask here. No question is too basic.",
+    ar: { name: "الأسئلة", description: "واجهتك مشكلة؟ اسأل هنا. لا يوجد سؤال بسيط أكثر من اللازم." },
+    readOnly: false,
+  },
 ];
 
 /** A cohort is one run of a programme: dates, an instructor and its own community spaces. */
 export const createCohort = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   await admin();
   const s = db();
   const programme = s.programmes.find((p) => p.id === form.get("programmeId"));
-  if (!programme) return { error: "Pick a programme." };
+  if (!programme) return { error: t("errors.pickProgramme") };
   const instructor = s.profiles.find(
     (p) => p.id === form.get("instructorId") && (p.role === "instructor" || p.role === "admin"),
   );
-  if (!instructor) return { error: "Pick an instructor." };
+  if (!instructor) return { error: t("errors.pickInstructor") };
   const startsOn = parseWallTime(str(form, "startsOn", 10), "00:00");
-  if (!startsOn) return { error: "Pick a start date." };
+  if (!startsOn) return { error: t("errors.pickStartDate") };
   const today = zonedParts(new Date());
-  if (startsOn < wallTime(today.year, today.month, today.day)) return { error: "The start date can't be in the past." };
+  if (startsOn < wallTime(today.year, today.month, today.day)) return { error: t("errors.startInPast") };
 
   // Cohort numbers run across the whole academy: #00, #01, #02…
   const next = Math.max(-1, ...s.cohorts.map((c) => Number(c.code.replace(/\D/g, "")) || 0)) + 1;
@@ -564,7 +628,8 @@ export const createCohort = withData(async (_prev: FormState, form: FormData): P
     id: newId("c"),
     programmeId: programme.id,
     code: `#${num}`,
-    name: `${programme.title} · ${formatMonthYear(startsOn)}`,
+    // Stored text, so in English whatever language the admin reads in.
+    name: `${programme.title} · ${formatMonthYear(startsOn, "en")}`,
     startsOn,
     endsOn: addDays(startsOn, programme.durationWeeks * 7 - 1, "00:00"),
     status: startsOn <= new Date() ? "active" : "upcoming",
@@ -581,6 +646,7 @@ export const createCohort = withData(async (_prev: FormState, form: FormData): P
       description: sp.description,
       cohortId: cohort.id,
       readOnly: sp.readOnly,
+      i18n: { ar: { ...sp.ar, group: `الدفعة #${num}` } },
     };
     await insert("spaces", space);
   }
@@ -599,16 +665,16 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const AVATAR_COLORS = ["#FF5A1F", "#2F6BFF", "#00A870", "#8B5CF6", "#E5484D", "#F5A524"];
 
 /** An existing account can join as a student if it is one and isn't in the cohort yet. */
-function existingStudent(userId: string, cohortId: string): { student: Profile } | { error: string } {
+function existingStudent(t: T, userId: string, cohortId: string): { student: Profile } | { error: string } {
   const s = db();
   const profile = s.profiles.find((p) => p.id === userId);
-  if (!profile) return { error: "That account is incomplete. Contact support." };
+  if (!profile) return { error: t("errors.accountIncomplete") };
   if (profile.role !== "student") {
-    const role = profile.role === "admin" ? "an admin" : "an instructor";
-    return { error: `${profile.fullName} is ${role}, not a student.` };
+    const key = profile.role === "admin" ? "errors.isAdminNotStudent" : "errors.isInstructorNotStudent";
+    return { error: t(key, { name: profile.fullName }) };
   }
   if (s.cohortMembers.some((m) => m.cohortId === cohortId && m.userId === profile.id)) {
-    return { error: `${profile.fullName} is already in this cohort.` };
+    return { error: t("errors.alreadyInCohort", { name: profile.fullName }) };
   }
   return { student: profile };
 }
@@ -647,27 +713,27 @@ async function createStudentAccount(email: string, fullName: string) {
  * email until Phase 2). Only the hash is stored.
  */
 export const addStudentToCohort = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   await admin();
   const s = db();
   const cohort = s.cohorts.find((c) => c.id === form.get("cohortId"));
-  if (!cohort) return { error: "Cohort not found." };
-  if (cohort.status === "completed")
-    return { error: "This cohort has finished. Add them to a current or upcoming one." };
+  if (!cohort) return { error: t("errors.cohortNotFound") };
+  if (cohort.status === "completed") return { error: t("errors.cohortFinished") };
   const email = str(form, "email", 254).toLowerCase();
   const fullName = str(form, "fullName", 100);
-  if (!EMAIL.test(email)) return { error: "Enter a valid email address." };
+  if (!EMAIL.test(email)) return { error: t("errors.invalidEmail") };
 
-  if (supabaseEnabled()) return inviteToCohort(cohort, email, fullName);
+  if (supabaseEnabled()) return inviteToCohort(t, cohort, email, fullName);
 
   const account = s.accounts.find((a) => a.email === email);
   let student: Profile;
   let tempPassword: string | null = null;
   if (account) {
-    const found = existingStudent(account.userId, cohort.id);
+    const found = existingStudent(t, account.userId, cohort.id);
     if ("error" in found) return found;
     student = found.student;
   } else {
-    if (!fullName) return { error: "New student: add their full name too." };
+    if (!fullName) return { error: t("errors.newStudentName") };
     ({ student, tempPassword } = await createStudentAccount(email, fullName));
   }
 
@@ -677,8 +743,8 @@ export const addStudentToCohort = withData(async (_prev: FormState, form: FormDa
   return {
     ok: true,
     message: tempPassword
-      ? `Created an account for ${student.fullName} (${email}) and added them. Temporary password: ${tempPassword}. Send it to them privately; it won't be shown again.`
-      : `Added ${student.fullName} (${email}) to the cohort.`,
+      ? t("errors.studentCreated", { name: student.fullName, email, password: tempPassword })
+      : t("errors.studentAdded", { name: student.fullName, email }),
   };
 });
 
@@ -687,21 +753,22 @@ export const addStudentToCohort = withData(async (_prev: FormState, form: FormDa
  * new email gets an invite to choose their own password, so nobody ever
  * handles a temporary one. Needs SUPABASE_SECRET_KEY (server only).
  */
-async function inviteToCohort(cohort: Cohort, email: string, fullName: string): Promise<FormState> {
+async function inviteToCohort(t: T, cohort: Cohort, email: string, fullName: string): Promise<FormState> {
   const supabase = createAdminClient();
-  if (!supabase) return { error: "Inviting students needs SUPABASE_SECRET_KEY on the server. See README." };
+  if (!supabase) return { error: t("errors.inviteNeedsKey") };
 
   const { data: foundId, error: lookupError } = await supabase.rpc("user_id_by_email", { lookup: email });
-  if (lookupError) return { error: "Couldn't reach the account service. Try again." };
+  if (lookupError) return { error: t("errors.accountServiceDown") };
   let userId = foundId as string | null;
   let invited = false;
   if (!userId) {
-    if (!fullName) return { error: "New student: add their full name too." };
+    if (!fullName) return { error: t("errors.newStudentName") };
     const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
       data: { full_name: fullName },
       redirectTo: `${siteUrl()}/auth/confirm?type=invite&next=${encodeURIComponent("/set-password?welcome=1")}`,
     });
-    if (error || !data.user) return { error: `Couldn't send the invite: ${error?.message ?? "unknown error"}.` };
+    if (error || !data.user)
+      return { error: t("errors.inviteFailed", { reason: error?.message ?? t("errors.unknownError") }) };
     userId = data.user.id;
     invited = true;
   }
@@ -709,10 +776,10 @@ async function inviteToCohort(cohort: Cohort, email: string, fullName: string): 
   // A just-invited account isn't in this request's data yet.
   if (!db().profiles.some((p) => p.id === userId)) {
     const { data: row } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-    if (!row) return { error: "That account has no profile yet. Run migration 0010, then try again." };
+    if (!row) return { error: t("errors.noProfileYet") };
     db().profiles.push(fromRow(TABLES.profiles, row) as unknown as Profile);
   }
-  const found = existingStudent(userId, cohort.id);
+  const found = existingStudent(t, userId, cohort.id);
   if ("error" in found) return found;
   const row = found.student;
 
@@ -729,8 +796,8 @@ async function inviteToCohort(cohort: Cohort, email: string, fullName: string): 
   return {
     ok: true,
     message: invited
-      ? `Invited ${row.fullName} (${email}) and added them. They'll get an email to choose a password.`
-      : `Added ${row.fullName} (${email}) to the cohort.`,
+      ? t("errors.studentInvited", { name: row.fullName, email })
+      : t("errors.studentAdded", { name: row.fullName, email }),
   };
 }
 
@@ -757,16 +824,17 @@ const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Replace a cohort's weekly office hours. One window per weekday, start before end. */
 export const saveOfficeHours = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   const cohortId = str(form, "cohortId", 100);
   await managerOf(cohortId);
   const slots: { cohortId: string; weekday: number; start: string; end: string }[] = [];
-  const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   for (let weekday = 0; weekday < 7; weekday++) {
     if (form.get(`on:${weekday}`) !== "on") continue;
     const start = str(form, `start:${weekday}`, 5);
     const end = str(form, `end:${weekday}`, 5);
-    if (!HHMM.test(start) || !HHMM.test(end)) return { error: `${DAYS[weekday]}: enter times like 08:00.` };
-    if (start >= end) return { error: `${DAYS[weekday]}: the end time has to be after the start time.` };
+    if (!HHMM.test(start) || !HHMM.test(end))
+      return { error: t("errors.officeTimeFormat", { day: weekdayName(weekday) }) };
+    if (start >= end) return { error: t("errors.officeTimeOrder", { day: weekdayName(weekday) }) };
     slots.push({ cohortId, weekday, start, end });
   }
   await removeWhere("officeHours", (x) => x.cohortId === cohortId);
@@ -777,12 +845,13 @@ export const saveOfficeHours = withData(async (_prev: FormState, form: FormData)
 
 /** An instructor answers a student. Allowed any time; only students are held to the hours. */
 export const replyOfficeMessage = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   const s = db();
   const thread = s.officeThreads.find((t) => t.id === form.get("threadId"));
-  if (!thread) return { error: "Conversation not found." };
+  if (!thread) return { error: t("errors.conversationNotFound") };
   const user = await managerOf(thread.cohortId);
   const body = str(form, "body", 2000);
-  if (!body) return { error: "Write your reply first." };
+  if (!body) return { error: t("errors.writeReply") };
   const now = new Date();
   await insert("officeMessages", { id: newId("om"), threadId: thread.id, authorId: user.id, body, createdAt: now });
   await update("officeThreads", thread, { instructorReadAt: now });
@@ -800,15 +869,16 @@ export const replyOfficeMessage = withData(async (_prev: FormState, form: FormDa
 });
 
 export const updateProgramme = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   await admin();
   const programme = db().programmes.find((p) => p.id === form.get("programmeId"));
-  if (!programme) return { error: "Programme not found." };
+  if (!programme) return { error: t("errors.programmeNotFound") };
   const title = str(form, "title", 100);
   const tagline = str(form, "tagline", 200);
   const description = str(form, "description", 2000);
   const priceDollars = int(form.get("price"), 0, 100_000);
-  if (!title) return { error: "Add a title." };
-  if (priceDollars === null) return { error: "Price must be a whole number of US dollars." };
+  if (!title) return { error: t("errors.addTitle") };
+  if (priceDollars === null) return { error: t("errors.priceWhole") };
   await update("programmes", programme, {
     title,
     tagline,
@@ -816,18 +886,26 @@ export const updateProgramme = withData(async (_prev: FormState, form: FormData)
     priceCents: priceDollars * 100,
     published: form.get("published") === "on",
     ...(form.has("includes") ? { includes: parseIncludes(str(form, "includes", 1000)) } : {}),
+    i18n: withArabic(programme.i18n, form, { title: 100, tagline: 200, description: 2000, includes: 1000 }, [
+      "includes",
+    ]),
   });
   done();
   return { ok: true };
 });
 
 export const updateModule = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   await admin();
   const mod = db().modules.find((m) => m.id === form.get("moduleId"));
-  if (!mod) return { error: "Module not found." };
+  if (!mod) return { error: t("errors.moduleNotFound") };
   const title = str(form, "title", 140);
-  if (!title) return { error: "Add a title." };
-  await update("modules", mod, { title, summary: str(form, "summary", 500) });
+  if (!title) return { error: t("errors.addTitle") };
+  await update("modules", mod, {
+    title,
+    summary: str(form, "summary", 500),
+    i18n: withArabic(mod.i18n, form, { title: 140, summary: 500 }),
+  });
   done();
   return { ok: true };
 });
@@ -835,27 +913,30 @@ export const updateModule = withData(async (_prev: FormState, form: FormData): P
 const LESSON_KINDS: readonly LessonKind[] = ["reading", "video", "exercise"];
 
 export const saveLesson = withData(async (_prev: FormState, form: FormData): Promise<FormState> => {
+  const { t } = await getI18n();
   await admin();
   const s = db();
   const mod = s.modules.find((m) => m.id === form.get("moduleId"));
-  if (!mod) return { error: "Module not found." };
+  if (!mod) return { error: t("errors.moduleNotFound") };
   const lessonId = str(form, "lessonId", 100);
   const existing = lessonId ? s.lessons.find((l) => l.id === lessonId && l.moduleId === mod.id) : undefined;
-  if (lessonId && !existing) return { error: "Lesson not found." };
+  if (lessonId && !existing) return { error: t("errors.lessonNotFound") };
 
   const title = str(form, "title", 140);
   const kind = str(form, "kind", 20) as LessonKind;
   const durationMin = int(form.get("durationMin"), 1, 600);
-  if (!title) return { error: "Add a title." };
-  if (!LESSON_KINDS.includes(kind)) return { error: "Pick a lesson type." };
-  if (durationMin === null) return { error: "Duration must be 1 to 600 minutes." };
+  if (!title) return { error: t("errors.addTitle") };
+  if (!LESSON_KINDS.includes(kind)) return { error: t("errors.pickLessonType") };
+  if (durationMin === null) return { error: t("errors.lessonDuration") };
   const body = str(form, "body", 20_000);
 
+  const i18n = withArabic(existing?.i18n, form, { title: 140, body: 20_000 });
+
   if (existing) {
-    await update("lessons", existing, { title, kind, durationMin, body });
+    await update("lessons", existing, { title, kind, durationMin, body, i18n });
   } else {
     const position = Math.max(0, ...s.lessons.filter((l) => l.moduleId === mod.id).map((l) => l.position)) + 1;
-    await insert("lessons", { id: newId("l"), moduleId: mod.id, position, title, kind, durationMin, body });
+    await insert("lessons", { id: newId("l"), moduleId: mod.id, position, title, kind, durationMin, body, i18n });
   }
   done();
   return { ok: true };

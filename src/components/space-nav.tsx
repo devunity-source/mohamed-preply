@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { ChevronRight, Hash, Lock, Megaphone } from "lucide-react";
+import { useT } from "@/components/i18n-provider";
 
 export interface SpaceLink {
   slug: string;
@@ -17,6 +18,7 @@ export interface SpaceLink {
 }
 
 export function SpaceNav({ spaces }: { spaces: SpaceLink[] }) {
+  const t = useT();
   const pathname = usePathname();
   // Spaces opened since the layout rendered: their counts are stale, so hide them.
   const current = spaces.find((s) => pathname.startsWith(`/community/${s.slug}`))?.slug;
@@ -35,14 +37,17 @@ export function SpaceNav({ spaces }: { spaces: SpaceLink[] }) {
           pathname === "/community" ? "bg-ink text-paper" : "hover:bg-line/60",
         )}
       >
-        Latest activity
+        {t("community.latestActivity")}
       </Link>
       <Groups spaces={spaces.filter((s) => s.pinned)} pathname={pathname} count={count} />
       {more.length > 0 && (
         <details open={moreOpen || undefined} className="group">
           <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted hover:bg-line/60 hover:text-ink [&::-webkit-details-marker]:hidden">
-            <ChevronRight size={14} className="transition-transform group-open:rotate-90" />
-            More spaces · {more.length}
+            <ChevronRight
+              size={14}
+              className="transition-transform group-open:rotate-90 rtl:-scale-x-100 rtl:group-open:-rotate-90"
+            />
+            {t("community.moreSpaces", { count: more.length })}
             <UnreadBadge n={more.reduce((n, s) => n + count(s), 0)} />
           </summary>
           <div className="mt-4 space-y-6">
@@ -55,12 +60,13 @@ export function SpaceNav({ spaces }: { spaces: SpaceLink[] }) {
 }
 
 function UnreadBadge({ n }: { n: number }) {
+  const t = useT();
   if (n <= 0) return null;
   return (
-    <span className="ml-auto rounded-[4px] bg-accent px-1.5 font-mono text-[11px] font-semibold text-accent-ink">
-      <span className="sr-only">, </span>
+    <span className="ms-auto rounded-[4px] bg-accent px-1.5 font-mono text-[11px] font-semibold text-accent-ink">
+      <span className="sr-only">{t("community.badgePrefix")}</span>
       {n > 99 ? "99+" : n}
-      <span className="sr-only"> new</span>
+      <span className="sr-only">{t("community.badgeSuffix")}</span>
     </span>
   );
 }

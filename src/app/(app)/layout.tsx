@@ -10,34 +10,46 @@ import { currentUser } from "@/lib/session";
 import { hasAdminArea } from "@/lib/authz";
 import { ToastProvider } from "@/components/toast";
 import { SubmitButton } from "@/components/submit-button";
+import { LanguageToggle } from "@/components/language-toggle";
+import { getI18n } from "@/lib/i18n/server";
+import type { Key } from "@/lib/i18n/translate";
+import type { Role } from "@/lib/types";
+
+const ROLE_LABEL: Record<Role, Key> = {
+  student: "common.roleStudent",
+  instructor: "common.roleInstructor",
+  admin: "common.roleAdmin",
+};
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
+  const { t, locale } = await getI18n();
   const user = await currentUser();
   const unread = unreadCount(user.id);
   const showAdmin = hasAdminArea(user);
 
   return (
     <div className="md:flex">
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line p-4 md:flex print:!hidden">
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-e border-line p-4 md:flex print:!hidden">
         <Link href="/dashboard" className="mb-8 flex items-center gap-2.5 px-2 pt-1">
           <Logo className="size-7 text-ink" />
           <span className="text-lg font-semibold tracking-tight">AcadeMe</span>
         </Link>
         <SearchButton className="mb-4 flex w-full items-center gap-3 rounded-md border border-line px-3 py-2 text-sm text-muted hover:border-ink hover:text-ink" />
         <Nav unread={unread} showAdmin={showAdmin} />
-        <div className="mt-auto flex items-center gap-1">
+        <LanguageToggle className="mt-auto mb-2 w-full text-muted hover:text-ink" />
+        <div className="flex items-center gap-1">
           <Link href="/profile" className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 hover:bg-line/60">
             <Avatar profile={user} />
             <span className="min-w-0">
               <span className="block truncate text-sm font-medium">{user.fullName}</span>
-              <span className="block text-xs text-muted capitalize">{user.role}</span>
+              <span className="block text-xs text-muted capitalize">{t(ROLE_LABEL[user.role])}</span>
             </span>
           </Link>
           <form action={signOut}>
             <SubmitButton
               unstyled
-              aria-label="Sign out"
-              title="Sign out"
+              aria-label={t("common.signOut")}
+              title={t("common.signOut")}
               className="rounded-md p-2 text-muted hover:bg-line/60 hover:text-ink"
             >
               <LogOut size={16} />
@@ -56,17 +68,17 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             <SearchButton compact className="rounded-md p-2 text-muted hover:text-ink" />
             <Link
               href="/notifications"
-              aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
+              aria-label={unread ? t("common.notificationsUnread", { count: unread }) : t("common.notifications")}
               className="relative rounded-md p-2 text-muted hover:text-ink"
             >
               <Bell size={20} />
               {unread > 0 && (
-                <span className="absolute top-1 right-0.5 rounded-[4px] bg-accent px-1 font-mono text-[10px] font-semibold text-accent-ink">
+                <span className="absolute end-0.5 top-1 rounded-[4px] bg-accent px-1 font-mono text-[10px] font-semibold text-accent-ink">
                   {unread}
                 </span>
               )}
             </Link>
-            <Link href="/profile" aria-label="Profile" className="p-1">
+            <Link href="/profile" aria-label={t("common.profile")} className="p-1">
               <Avatar profile={user} size={28} />
             </Link>
           </div>
@@ -76,7 +88,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
       <main className="mx-auto w-full max-w-6xl min-w-0 flex-1 px-4 pt-8 pb-28 md:px-10 md:py-12 print:max-w-none print:p-0">
         <ToastProvider>{children}</ToastProvider>
-        <CommandPalette />
+        <CommandPalette key={locale} />
       </main>
     </div>
   );

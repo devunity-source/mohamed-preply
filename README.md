@@ -1,6 +1,6 @@
 # AcadeMe
 
-A cohort-based digital university: programmes, live classes, labs, assignments, projects and a Circle-style community, in one app.
+A cohort-based digital university: programmes, live classes, labs, assignments, projects and a Circle-style community, in one app. In English and Arabic (right to left), switchable from any page.
 
 Right now it runs entirely on seeded demo data, so you can clone it and click through everything in a couple of minutes. No database or accounts needed. Plan, decisions and progress live in [PROGRESS.md](PROGRESS.md).
 
@@ -75,6 +75,7 @@ That's it. There's nothing to configure for the demo.
 | `npm start` | Serve the production build (run `npm run build` first) |
 | `npm run typecheck` | Generate route types, then run TypeScript |
 | `npm run lint` | ESLint |
+| `npm run i18n:check` | Fails if a page shows English typed into the markup instead of coming from the message files |
 | `npm run format` | Prettier, including Tailwind class ordering |
 | `npm run test:db` | Database security tests (see below) |
 | `npm run db:bundle` | All migrations as one file for Supabase's SQL Editor (`-- 0011` for just the newer ones) |
@@ -112,9 +113,10 @@ The first time, install the test browser: `npx playwright install chromium`.
 | `admin.spec.ts` | Certificates, pricing and publishing, new programmes and cohorts, adding and removing students, CSV export |
 | `office-hours.spec.ts` | Schedule, greyed-out outside hours, server enforcement, inbox, replies, unread counts, privacy |
 | `security.spec.ts` | Role boundaries and replayed or edited requests |
-| `layout.spec.ts` | 41 pages with no sideways scrolling, at 1440, 768 and 390 px |
+| `layout.spec.ts` | 41 pages with no sideways scrolling, at 1440, 768 and 390 px, in English and in Arabic |
+| `arabic.spec.ts` | Language toggle, browser language on first visit, saved choice across devices, Western digits, notifications and emails in each person's language |
 
-GitHub Actions (`.github/workflows/ci.yml`) runs typecheck, lint, formatting, the database tests, the build and the browser tests on every push and pull request. If a browser test fails, the report and screenshots are attached to the run.
+GitHub Actions (`.github/workflows/ci.yml`) runs typecheck, lint, the hard-coded English check, formatting, the database tests, the build and the browser tests on every push and pull request. If a browser test fails, the report and screenshots are attached to the run.
 
 ---
 
@@ -161,8 +163,9 @@ supabase/
 │   ├── 0009_office_hours_hardening.sql  review fixes: column-level updates, removed students, timezone setting
 │   ├── 0010_auth.sql                 a profile for every new account (always a student), email lookup for invites
 │   ├── 0011_app_data.sql             app_snapshot(), admins read every cohort, public catalogue, staff see progress
-│   └── 0012_email.sql                email settings (own only), class reminder log (server only)
-├── templates/                        invite and password reset emails
+│   ├── 0012_email.sql                email settings (own only), class reminder log (server only)
+│   └── 0013_arabic.sql               language choice, notifications as message keys, Arabic curriculum
+├── templates/                        invite and password reset emails (Arabic and English)
 ├── config.toml                       the local Supabase the browser tests start
 └── tests/
     ├── rls.test.mjs                  160 access-control checks
@@ -200,6 +203,7 @@ src/app/(marketing)/  public landing page at /
 src/app/(app)/admin/  admin and instructor tools
 src/app/(app)/        app pages: dashboard, programmes, cohorts, community, calendar, resources, notifications, profile
 src/components/       shared UI
+src/lib/i18n/         English and Arabic: messages, language detection, formatting (docs/i18n.md)
 src/lib/actions.ts    every write (server actions)
 src/lib/data/repo.ts  every read (swap point for Supabase)
 src/lib/data/seed.ts  demo data

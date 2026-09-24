@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BadgeCheck, CircleX } from "lucide-react";
 import { Certificate } from "@/components/certificate";
 import { lookupCertificate } from "@/lib/data/admin";
+import { getI18n } from "@/lib/i18n/server";
 import { formatDate, formatMonthYear } from "@/lib/time";
 
 // Public: anyone with the link can check a certificate. Shows only what's
@@ -11,11 +12,13 @@ import { formatDate, formatMonthYear } from "@/lib/time";
 const ID = /^ACM-[A-Z]{2,5}-\d{4}-\d{5}$/;
 
 export async function generateMetadata({ params }: PageProps<"/verify/[id]">): Promise<Metadata> {
+  const { t } = await getI18n();
   const { id } = await params;
-  return { title: `Verify ${id}`, robots: { index: false } };
+  return { title: t("verify.metaTitleId", { id }), robots: { index: false } };
 }
 
 export default async function Verify({ params }: PageProps<"/verify/[id]">) {
+  const { t } = await getI18n();
   const { id } = await params;
   const result = ID.test(id) ? await lookupCertificate(id) : undefined;
   const valid = result && !result.cert.revokedAt;
@@ -34,16 +37,18 @@ export default async function Verify({ params }: PageProps<"/verify/[id]">) {
         )}
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            {valid ? "Valid certificate" : result ? "This certificate was revoked" : "Certificate not found"}
+            {valid ? t("verify.valid") : result ? t("verify.revoked") : t("verify.notFound")}
           </h1>
           <p className="mt-1 text-muted">
             {valid
-              ? `Issued by AcadeMe on ${formatDate(result.cert.issuedAt)}.`
+              ? t("verify.issuedOn", { date: formatDate(result.cert.issuedAt) })
               : result
-                ? "It is no longer valid. Contact AcadeMe if you have questions."
-                : "Check the ID. It looks like ACM-DEV-2026-00001."}
+                ? t("verify.revokedBody")
+                : t("verify.notFoundBody")}
           </p>
-          <p className="mt-2 font-mono text-xs tracking-wider text-muted uppercase">{id}</p>
+          <p className="mt-2 font-mono text-xs tracking-wider text-muted uppercase" dir="ltr">
+            {id}
+          </p>
         </div>
       </div>
 
@@ -51,28 +56,32 @@ export default async function Verify({ params }: PageProps<"/verify/[id]">) {
         <Certificate
           name={result.name}
           programme={result.programme}
-          period={`${formatMonthYear(result.cohort.startsOn)} to ${formatMonthYear(result.cohort.endsOn)}`}
+          period={t("verify.period", {
+            from: formatMonthYear(result.cohort.startsOn),
+            to: formatMonthYear(result.cohort.endsOn),
+          })}
           certificateId={result.cert.id}
         />
       )}
 
       <form action="/verify" className="mt-10 flex max-w-md gap-2">
         <label htmlFor="verify-id" className="sr-only">
-          Certificate ID
+          {t("verify.idLabel")}
         </label>
         <input
           id="verify-id"
           name="id"
+          dir="ltr"
           placeholder="ACM-DEV-2026-00001"
           className="h-11 flex-1 rounded-md border border-line bg-surface px-3 font-mono text-sm uppercase outline-none focus:border-ink"
         />
         <button className="rounded-md bg-ink px-4 text-sm font-medium text-paper hover:bg-accent hover:text-accent-ink">
-          Verify
+          {t("verify.submit")}
         </button>
       </form>
       <p className="mt-6 text-sm text-muted">
         <Link href="/" className="underline hover:text-ink">
-          About AcadeMe
+          {t("verify.about")}
         </Link>
       </p>
     </section>

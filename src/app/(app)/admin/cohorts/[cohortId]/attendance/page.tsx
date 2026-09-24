@@ -9,18 +9,22 @@ import { saveAttendance } from "@/lib/admin-actions";
 import { requireCohortManager } from "@/lib/authz";
 import { formatShortDate, formatTime } from "@/lib/time";
 import type { Attendance } from "@/lib/types";
+import { getI18n } from "@/lib/i18n/server";
+import type { Key } from "@/lib/i18n/translate";
 
-const OPTIONS: { value: Attendance["status"]; label: string; on: string }[] = [
-  { value: "present", label: "Present", on: "peer-checked:bg-ink peer-checked:text-paper" },
-  { value: "late", label: "Late", on: "peer-checked:bg-k-workshop peer-checked:text-white" },
-  { value: "absent", label: "Absent", on: "peer-checked:bg-k-deadline peer-checked:text-white" },
+const OPTIONS: { value: Attendance["status"]; label: Key; on: string }[] = [
+  { value: "present", label: "teaching.present", on: "peer-checked:bg-ink peer-checked:text-paper" },
+  { value: "late", label: "teaching.late", on: "peer-checked:bg-k-workshop peer-checked:text-white" },
+  { value: "absent", label: "teaching.absent", on: "peer-checked:bg-k-deadline peer-checked:text-white" },
 ];
-const SHORT = { present: "P", late: "L", absent: "A" } as const;
+const SHORT = { present: "teaching.presentShort", late: "teaching.lateShort", absent: "teaching.absentShort" } as const;
+const LABEL = { present: "teaching.present", late: "teaching.late", absent: "teaching.absent" } as const;
 
 export default async function AttendancePage({
   params,
   searchParams,
 }: PageProps<"/admin/cohorts/[cohortId]/attendance">) {
+  const { t } = await getI18n();
   const { cohortId } = await params;
   await requireCohortManager(cohortId);
   const sp = await searchParams;
@@ -29,7 +33,7 @@ export default async function AttendancePage({
   const past = cohortClasses(cohortId).filter((c) => c.startsAt.getTime() - 10 * 60_000 <= now.getTime());
   const students = cohortRoster(cohortId).students;
 
-  if (past.length === 0) return <Empty>No classes have happened yet.</Empty>;
+  if (past.length === 0) return <Empty>{t("teaching.noPastClasses")}</Empty>;
 
   const selected = past.find((c) => c.id === sp.class) ?? past[past.length - 1];
   const marks = new Map(attendanceFor(selected.id).map((a) => [a.userId, a.status]));
@@ -38,8 +42,8 @@ export default async function AttendancePage({
 
   return (
     <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.2fr] [&>*]:min-w-0">
-      <Card title="Take attendance">
-        <nav aria-label="Class" className="mb-4 flex flex-wrap gap-2">
+      <Card title={t("teaching.takeAttendance")}>
+        <nav aria-label={t("teaching.classNav")} className="mb-4 flex flex-wrap gap-2">
           {past.slice(-6).map((c) => (
             <Link
               key={c.id}
@@ -61,13 +65,15 @@ export default async function AttendancePage({
           </span>
         </p>
         {/* key: remount with fresh defaults when switching class */}
-        <ActionForm key={selected.id} action={saveAttendance} submitLabel="Save attendance">
+        <ActionForm key={selected.id} action={saveAttendance} submitLabel={t("teaching.saveAttendance")}>
           <input type="hidden" name="classId" value={selected.id} />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-muted">
-              {unmarked === 0 ? "Everyone is marked." : `${unmarked} of ${students.length} not marked yet.`}
+              {unmarked === 0
+                ? t("teaching.everyoneMarked")
+                : t("teaching.notMarked", { count: unmarked, total: students.length })}
             </p>
-            <MarkRemaining value="present" label="Mark remaining present" />
+            <MarkRemaining value="present" label={t("teaching.markRemainingPresent")} />
           </div>
           <ul className="divide-y divide-line">
             {students.map((p) => (
@@ -90,7 +96,7 @@ export default async function AttendancePage({
                           o.on,
                         )}
                       >
-                        {o.label}
+                        {t(o.label)}
                       </span>
                     </label>
                   ))}
@@ -101,12 +107,12 @@ export default async function AttendancePage({
         </ActionForm>
       </Card>
 
-      <Card title="History">
+      <Card title={t("teaching.history")}>
         <div className="-mx-5 overflow-x-auto px-5">
           <table className="text-sm">
             <thead>
               <tr className="font-mono text-[11px] text-muted">
-                <th className="pr-4 pb-2 text-left font-medium">Student</th>
+                <th className="pe-4 pb-2 text-start font-medium">{t("teaching.colStudent")}</th>
                 {past.map((c) => (
                   <th key={c.id} className="w-8 pb-2 font-medium" title={c.title}>
                     {formatShortDate(c.startsAt).split(" ")[0]}
@@ -117,12 +123,13 @@ export default async function AttendancePage({
             <tbody>
               {students.map((p) => (
                 <tr key={p.id}>
-                  <td className="py-1 pr-4 whitespace-nowrap">{p.fullName}</td>
+                  <td className="py-1 pe-4 whitespace-nowrap">{p.fullName}</td>
                   {past.map((c) => {
                     const st = byClass.get(c.id)?.get(p.id);
                     return (
                       <td key={c.id} className="p-0.5">
                         <span
+                          title={st ? t(LABEL[st]) : undefined}
                           className={clsx(
                             "flex size-7 items-center justify-center rounded-[4px] font-mono text-[11px]",
                             st === "present" && "bg-ink text-paper",
@@ -131,7 +138,7 @@ export default async function AttendancePage({
                             !st && "border border-dashed border-line",
                           )}
                         >
-                          {st ? SHORT[st] : ""}
+                          {st ? t(SHORT[st]) : ""}
                         </span>
                       </td>
                     );

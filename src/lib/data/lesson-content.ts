@@ -197,3 +197,201 @@ az group delete -n rg-k8s-lab --yes --no-wait
 
 This is the core of Lab #04 and of your week 4 assignment. Stuck? Post the output of \`kubectl describe pod <name>\` in the cohort's Questions space.`,
 };
+
+// Arabic versions of LESSON_CONTENT, keyed by the same English lesson title.
+// Code blocks, commands and identifiers are kept exactly as in English.
+export const LESSON_CONTENT_AR: Record<string, string> = {
+  "Containers and images": `الحاوية (container) عملية Linux عادية، لكن لها رؤية معزولة للجهاز: نظام ملفات خاص بها، وقائمة عمليات خاصة، وشبكة خاصة. لا يوجد أي افتراض (virtualisation) هنا. لهذا تبدأ الحاويات خلال أجزاء من الثانية، ولهذا يمكنك تشغيل العشرات منها على حاسوب محمول.
+
+## الصور أنظمة ملفات من طبقات
+
+الصورة (image) مجموعة من الطبقات للقراءة فقط، فوقها بعض البيانات الوصفية (الأمر الذي يُشغَّل، ومتغيرات البيئة، والمستخدم). كل تعليمة في Dockerfile تضيف طبقة، والطبقات تُخزَّن مؤقتًا، لذلك الترتيب مهم: ضع الأشياء الأقل تغيّرًا في الأعلى.
+
+\`\`\`
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY . .
+USER node
+CMD ["node", "server.js"]
+\`\`\`
+
+نسخ \`package.json\` قبل الشيفرة المصدرية يعني أن تغيير الشيفرة لا يعيد تثبيت كل الاعتماديات.
+
+## الوسوم ليست إصدارات
+
+قد يشير \`node:22-alpine\` غدًا إلى صورة مختلفة. في بيئة الإنتاج، ثبّت الصورة ببصمتها (\`node@sha256:…\`) أو على الأقل بوسم إصدار تصحيحي محدد، ودع أداة آلية مثل Renovate تحدّثها.
+
+## ثلاث عادات تستحق أن تبنيها الآن
+
+- شغّل الحاوية بمستخدم غير root (\`USER node\` في المثال أعلاه).
+- اجعل الصور صغيرة: استخدم قواعد alpine أو distroless، وبناءً متعدد المراحل للشيفرة المُصرَّفة.
+- افحص الصور في CI (\`trivy image your-app:tag\`) قبل أن تصل إلى السجل (registry).
+
+## جرّبها
+
+\`\`\`
+docker build -t hello-api .
+docker run --rm -p 8080:8080 hello-api
+docker image history hello-api
+\`\`\`
+
+الأمر الأخير يعرض كل طبقة وحجمها. ابحث عن أكبرها واسأل نفسك لماذا هي موجودة.`,
+
+  "Pods, Deployments and Services": `لا يشغّل Kubernetes الحاويات مباشرة. بل يشغّل **Pods**، ويغلّفها في **Deployments** كي تصمد أمام الأعطال، ويضع أمامها **Services** كي تجدها المكوّنات الأخرى.
+
+## Pod
+
+أصغر شيء يجدوله Kubernetes: حاوية واحدة أو أكثر تتشارك مساحة أسماء الشبكة (network namespace) ويمكنها أن تتشارك وحدات التخزين (volumes). الـ Pods قابلة للاستبدال. عندما يتوقف أحدها، يحل محله Pod جديد بعنوان IP جديد. لا تعتمد أبدًا على عنوان IP الخاص بـ Pod.
+
+## Deployment
+
+تصف الحالة التي تريدها، ويحرص متحكّم الـ Deployment على أن يبقى الواقع مطابقًا لها.
+
+\`\`\`
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: hello-api }
+  template:
+    metadata:
+      labels: { app: hello-api }
+    spec:
+      containers:
+        - name: api
+          image: myregistry.azurecr.io/hello-api:1.4.2
+          ports: [{ containerPort: 8080 }]
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+\`\`\`
+
+غيّر وسم الصورة وطبّق الملف مرة أخرى: ينفّذ الـ Deployment تحديثًا تدريجيًا (rolling update)، فيشغّل Pods جديدة ولا يزيل القديمة إلا بعد أن تجتاز الجديدة فحص الجاهزية (readiness probe).
+
+## Service
+
+اسم ثابت وعنوان IP افتراضي أمام أي Pods تطابق حاليًا محدِّد الوسوم (label selector).
+
+\`\`\`
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-api
+spec:
+  selector: { app: hello-api }
+  ports: [{ port: 80, targetPort: 8080 }]
+\`\`\`
+
+يمكن الآن للـ Pods الأخرى أن تستدعي \`http://hello-api\`، ويوزّع Kubernetes الحِمل على النسخ السليمة.
+
+## تحقّق من فهمك
+
+- احذف Pod باستخدام \`kubectl delete pod <name>\`. ما الذي يحل محله، ولماذا؟
+- ماذا يحدث لحركة المرور أثناء النشر إذا فشلت الصورة الجديدة في فحص الجاهزية؟`,
+
+  "Kubernetes networking and Ingress": `ثلاث قواعد تشرح معظم الشبكات في Kubernetes:
+
+- كل Pod يحصل على عنوان IP خاص به.
+- كل Pod يمكنه الوصول إلى أي Pod آخر دون NAT (ما لم تمنع ذلك NetworkPolicy).
+- الـ Services تعطي مجموعات الـ Pods عنوانًا ثابتًا.
+
+## أنواع الـ Service
+
+- **ClusterIP** (الافتراضي): لا يمكن الوصول إليه إلا من داخل العنقود. استخدمه في كل شيء تقريبًا.
+- **NodePort**: يفتح المنفذ نفسه على كل عقدة. غالبًا للاختبار.
+- **LoadBalancer**: يطلب من السحابة (Azure هنا) موازن حِمل عامًا أو داخليًا. موازن واحد لكل Service، لذلك تصبح تكلفته مرتفعة.
+
+## Ingress: باب أمامي واحد لـ HTTP
+
+بدلًا من موازن حِمل لكل تطبيق، شغّل متحكّم ingress واحدًا (مثل ingress-nginx) خلف موازن حِمل واحد، ووجّه الطلبات حسب اسم المضيف والمسار:
+
+\`\`\`
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [api.example.com]
+      secretName: api-tls
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: hello-api, port: { number: 80 } }
+\`\`\`
+
+يمكن لأداة cert-manager أن تملأ \`api-tls\` تلقائيًا بشهادة من Let's Encrypt.
+
+## NetworkPolicy: الانفتاح الافتراضي خطر
+
+في الإعداد الافتراضي يمكن لأي Pod أن يتواصل مع أي Pod آخر. تتيح لك NetworkPolicy أن تقول «الواجهة الأمامية وحدها يمكنها استدعاء الـ API». ابدأ بسياسة تمنع كل شيء في كل namespace، ثم اسمح بما تحتاجه. على AKS يتطلب هذا تفعيل محرك سياسات الشبكة (Azure أو Calico) عند إنشاء العنقود.
+
+## قائمة فحص لتتبّع الأخطاء
+
+- \`kubectl get endpoints hello-api\`: إذا كانت فارغة فالمحدِّد لا يطابق أي Pods جاهزة.
+- \`kubectl run tmp --rm -it --image=busybox -- wget -qO- http://hello-api\`: اختبر من داخل العنقود.
+- هل يعيد Ingress الخطأ 404؟ تحقّق من \`ingressClassName\` ومن ترويسة المضيف (host header) التي ترسلها.`,
+
+  "Deploying to AKS": `حان وقت جمع كل شيء: ابنِ صورة، وادفعها إلى Azure Container Registry، وشغّلها على AKS خلف Ingress. خصّص لذلك نحو 45 دقيقة. كل ما هنا يكلّف مالًا ما دام يعمل، لذلك احذفه في النهاية.
+
+## 1. أنشئ العنقود والسجل
+
+\`\`\`
+az group create -n rg-k8s-lab -l westeurope
+az acr create -n <yourname>acr -g rg-k8s-lab --sku Basic
+az aks create -n aks-lab -g rg-k8s-lab --node-count 2 \\
+  --node-vm-size Standard_D2s_v5 --attach-acr <yourname>acr \\
+  --network-plugin azure --network-policy azure --generate-ssh-keys
+az aks get-credentials -n aks-lab -g rg-k8s-lab
+\`\`\`
+
+يسمح \`--attach-acr\` للعنقود بسحب الصور من سجلك دون تخزين كلمة مرور.
+
+## 2. ابنِ وادفع
+
+\`\`\`
+az acr build -r <yourname>acr -t hello-api:1.0.0 .
+\`\`\`
+
+يجري البناء في Azure، لذلك لا تحتاج إلى Docker على جهازك.
+
+## 3. انشر
+
+حدّث الصورة في الـ Deployment إلى \`<yourname>acr.azurecr.io/hello-api:1.0.0\`، ثم:
+
+\`\`\`
+kubectl apply -f deployment.yaml -f service.yaml
+kubectl rollout status deploy/hello-api
+\`\`\`
+
+## 4. اجعله متاحًا
+
+ثبّت ingress-nginx باستخدام Helm، وطبّق الـ Ingress، ثم اعثر على عنوان IP العام:
+
+\`\`\`
+kubectl get svc -n ingress-nginx
+\`\`\`
+
+## 5. أثبت أنه يعمل
+
+- الأمر \`curl http://<ip>/healthz\` يعيد 200.
+- وسّع إلى 5 نسخ وراقب الـ Pods الجديدة وهي تعمل.
+- انشر \`1.0.1\` وتأكّد من عدم وجود أي توقف للخدمة.
+
+## 6. احذف كل شيء
+
+\`\`\`
+az group delete -n rg-k8s-lab --yes --no-wait
+\`\`\`
+
+هذا جوهر المختبر #04 وواجب الأسبوع 4. هل واجهتك مشكلة؟ انشر ناتج \`kubectl describe pod <name>\` في مساحة الأسئلة الخاصة بالدفعة.`,
+};

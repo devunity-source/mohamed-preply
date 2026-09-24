@@ -1,4 +1,39 @@
 import type { Message } from "../../format";
 import type { cohort as en } from "../en/cohort";
 
-export const cohort: { [K in keyof typeof en]: Message } = {};
+export const cohort: { [K in keyof typeof en]: Message } = {
+  tabOverview: "نظرة عامة",
+  tabSchedule: "الجدول",
+  tabModules: "الوحدات",
+  tabClasses: "الحصص",
+  tabLabs: "المختبرات",
+  tabAssignments: "الواجبات",
+  tabOfficeHours: "الساعات المكتبية",
+  tabProjects: "المشاريع",
+  tabCertificate: "الشهادة",
+  eyebrow: "{programme} · الدفعة {code}",
+  dateRange: "من {start} إلى {end}",
+  weekOf: "الأسبوع {week} من {total}",
+  statusActive: "جارية",
+  statusUpcoming: "قادمة",
+  statusCompleted: "منتهية",
+  studentCount: {
+    zero: "لا طلاب",
+    one: "طالب واحد",
+    two: "طالبان",
+    few: "{count} طلاب",
+    many: "{count} طالبًا",
+    other: "{count} طالب",
+  },
+  aboutProgramme: "عن هذا البرنامج",
+  curriculum: "المنهج",
+  yourProgress: "تقدّمك",
+  instructor: "المدرّب",
+  classmates: "زملاء الدفعة · {count}",
+  included: "ما يشمله البرنامج",
+  weekShort: "{week}",
+  weekCaps: "الأسبوع {week}",
+  current: "الحالي",
+  complete: "مكتمل",
+  thisWeek: "هذا الأسبوع",
+};

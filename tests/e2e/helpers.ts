@@ -76,9 +76,11 @@ export async function emailLink(request: APIRequestContext, to: string): Promise
 
 export async function signIn(page: Page, who: Who, password = PASSWORD) {
   await page.goto("/login");
-  await page.getByLabel("Email").fill(`${USERS[who]}@academe.demo`);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  // By field name, so it works whichever language the page is in.
+  const form = page.locator("form").filter({ has: page.locator('input[name="password"]') });
+  await form.locator('input[name="email"]').fill(`${USERS[who]}@academe.demo`);
+  await form.locator('input[name="password"]').fill(password);
+  await form.locator("button").last().click();
   await expect(page).toHaveURL(/\/dashboard$/);
 }
 

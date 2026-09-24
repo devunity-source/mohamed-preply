@@ -50,8 +50,10 @@
   --color-k-workshop: var(--k-workshop);
   --color-k-event: var(--k-event);
   --color-dusk: var(--dusk);
-  /* Arabic letters fall through to Noto Kufi Arabic; Latin stays in Geist. */
-  --font-sans: var(--font-geist-sans), var(--font-arabic);
+  /* Noto Kufi Arabic comes first but only covers Arabic letters (its unicode
+     range), so Latin still lands in Geist. The other way round, Geist's
+     metric fallback (local Arial) would catch Arabic letters first. */
+  --font-sans: var(--font-arabic), var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -102,7 +104,7 @@ body {
   --dusk: #1f2a44; /* Dusk */
   background: var(--paper);
   color: var(--ink);
-  font-family: var(--font-archivo), var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-arabic), var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
 }
 
 .font-wide {
@@ -133,6 +135,9 @@ body {
 }
 .strip-fill {
   transform-origin: left;
+}
+[dir="rtl"] .strip-fill {
+  transform-origin: right;
 }
 @media (prefers-reduced-motion: no-preference) {
   .strip-fill {

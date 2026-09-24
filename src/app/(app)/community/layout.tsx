@@ -1,15 +1,18 @@
 import { SpaceNav } from "@/components/space-nav";
 import { primaryCohort, unreadBySpace, visibleSpaces } from "@/lib/data/repo";
 import { currentUser } from "@/lib/session";
+import { getI18n } from "@/lib/i18n/server";
+import { loc } from "@/lib/i18n/content";
 
 export default async function CommunityLayout({ children }: LayoutProps<"/community">) {
+  const { t, locale } = await getI18n();
   const user = await currentUser();
   const mine = primaryCohort(user.id)?.cohort.id;
   const unread = unreadBySpace(user.id, new Date());
   const spaces = visibleSpaces(user.id).map((s) => ({
     slug: s.slug,
-    name: s.name,
-    group: s.group,
+    name: loc(s, locale).name,
+    group: loc(s, locale).group,
     readOnly: s.readOnly,
     cohortOnly: !!s.cohortId,
     unread: unread[s.slug] ?? 0,
@@ -21,7 +24,7 @@ export default async function CommunityLayout({ children }: LayoutProps<"/commun
     <div className="gap-10 lg:flex">
       <aside className="mb-8 lg:mb-0 lg:w-56 lg:shrink-0">
         <details className="rounded-md border border-line bg-surface p-3 lg:hidden">
-          <summary className="cursor-pointer text-sm font-medium">Spaces</summary>
+          <summary className="cursor-pointer text-sm font-medium">{t("community.spaces")}</summary>
           <div className="mt-4">
             <SpaceNav spaces={spaces} />
           </div>

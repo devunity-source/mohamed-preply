@@ -6,14 +6,33 @@ import { hasAdminArea, isAdmin, managedCohortIds } from "@/lib/authz";
 import { currentUser } from "@/lib/session";
 import { withData } from "@/lib/data/store";
 import { formatShortDate } from "@/lib/time";
-import type { Cohort, Profile, Programme } from "@/lib/types";
+import { getI18n } from "@/lib/i18n/server";
+import { loc } from "@/lib/i18n/content";
+import type { Key, T } from "@/lib/i18n/translate";
+import type { Cohort, Locale, Profile, Programme } from "@/lib/types";
+
+type Kind = "Page" | "Lesson" | "Lab" | "Assignment" | "Class" | "Space" | "Admin";
 
 export interface SearchItem {
   label: string;
   hint: string;
   href: string;
-  kind: "Page" | "Lesson" | "Lab" | "Assignment" | "Class" | "Space" | "Admin";
+  kind: Kind;
+  /** `kind` in the reader's language, shown and searched. */
+  kindLabel: string;
 }
+
+const KIND_LABEL: Record<Kind, Key> = {
+  Page: "search.kindPage",
+  Lesson: "search.kindLesson",
+  Lab: "search.kindLab",
+  Assignment: "search.kindAssignment",
+  Class: "search.kindClass",
+  Space: "search.kindSpace",
+  Admin: "search.kindAdmin",
+};
+
+type Draft = Omit<SearchItem, "kindLabel">;
 
 /**
  * Everything the ⌘K palette can jump to, built from the same permission-aware
@@ -21,35 +40,39 @@ export interface SearchItem {
  * Loaded on first open rather than shipped with every page.
  */
 export const searchIndex = withData(async (): Promise<SearchItem[]> => {
+  const { t, locale } = await getI18n();
   const user = await currentUser();
-  const items: SearchItem[] = [
-    { label: "Home", hint: "Dashboard", href: "/dashboard", kind: "Page" },
-    { label: "Programmes", hint: "Your cohorts", href: "/programmes", kind: "Page" },
-    { label: "Community", hint: "Latest activity", href: "/community", kind: "Page" },
-    { label: "Calendar", hint: "Classes, deadlines, events", href: "/calendar", kind: "Page" },
-    { label: "Resources", hint: "Slides, recordings, cheat sheets", href: "/resources", kind: "Page" },
-    { label: "Notifications", hint: "", href: "/notifications", kind: "Page" },
-    { label: "Profile", hint: "Progress, certificates, sign out", href: "/profile", kind: "Page" },
+  const items: Draft[] = [
+    { label: t("common.home"), hint: t("search.hintHome"), href: "/dashboard", kind: "Page" },
+    { label: t("common.programmes"), hint: t("search.hintProgrammes"), href: "/programmes", kind: "Page" },
+    { label: t("common.community"), hint: t("search.hintCommunity"), href: "/community", kind: "Page" },
+    { label: t("common.calendar"), hint: t("search.hintCalendar"), href: "/calendar", kind: "Page" },
+    { label: t("common.resources"), hint: t("search.hintResources"), href: "/resources", kind: "Page" },
+    { label: t("common.notifications"), hint: "", href: "/notifications", kind: "Page" },
+    { label: t("common.profile"), hint: t("search.hintProfile"), href: "/profile", kind: "Page" },
   ];
 
-  for (const { cohort, programme } of myCohorts(user.id)) items.push(...cohortItems(cohort, programme));
-  for (const s of visibleSpaces(user.id)) {
+  for (const { cohort, programme } of myCohorts(user.id)) items.push(...cohortItems(cohort, programme, t, locale));
+  for (const space of visibleSpaces(user.id)) {
+    const s = loc(space, locale);
     items.push({ label: s.name, hint: s.group, href: `/community/${s.slug}`, kind: "Space" });
   }
-  if (hasAdminArea(user)) items.push(...staffItems(user));
-  return items;
+  if (hasAdminArea(user)) items.push(...staffItems(user, t));
+  return items.map((i) => ({ ...i, kindLabel: t(KIND_LABEL[i.kind]) }));
 });
 
 /** A cohort's page plus its lessons, labs, assignments and classes. */
-function cohortItems(cohort: Cohort, programme: Programme): SearchItem[] {
+function cohortItems(cohort: Cohort, programme: Programme, t: T, locale: Locale): Draft[] {
   const base = `/cohorts/${cohort.id}`;
-  const items: SearchItem[] = [{ label: cohort.name, hint: programme.title, href: base, kind: "Page" }];
+  const items: Draft[] = [{ label: cohort.name, hint: loc(programme, locale).title, href: base, kind: "Page" }];
   for (const { module, lessons } of modulesFor(programme.id)) {
-    for (const l of lessons) {
+    const m = loc(module, locale);
+    for (const lesson of lessons) {
+      const l = loc(lesson, locale);
       items.push({
         label: l.title,
-        hint: `Week ${module.week} · ${module.title}`,
-        href: `${base}/modules/${module.id}/${l.id}`,
+        hint: t("search.hintWeek", { week: m.week, title: m.title }),
+        href: `${base}/modules/${m.id}/${l.id}`,
         kind: "Lesson",
       });
     }
@@ -60,40 +83,51 @@ function cohortItems(cohort: Cohort, programme: Programme): SearchItem[] {
   for (const a of cohortAssignments(cohort.id)) {
     items.push({
       label: a.title,
-      hint: `Due ${formatShortDate(a.dueAt)}`,
+      hint: t("search.hintDue", { date: formatShortDate(a.dueAt, locale) }),
       href: `${base}/assignments/${a.id}`,
       kind: "Assignment",
     });
   }
   for (const c of cohortClasses(cohort.id)) {
-    items.push({ label: c.title, hint: formatShortDate(c.startsAt), href: `${base}/classes/${c.id}`, kind: "Class" });
+    items.push({
+      label: c.title,
+      hint: formatShortDate(c.startsAt, locale),
+      href: `${base}/classes/${c.id}`,
+      kind: "Class",
+    });
   }
   return items;
 }
 
-const ADMIN_ONLY: SearchItem[] = [
-  { label: "Students", hint: "Admin", href: "/admin/students", kind: "Admin" },
-  { label: "Curriculum", hint: "Admin", href: "/admin/programmes", kind: "Admin" },
-  { label: "Waitlist", hint: "Admin", href: "/admin/waitlist", kind: "Admin" },
-  { label: "New programme", hint: "Admin · create a draft programme", href: "/admin/programmes/new", kind: "Admin" },
-  { label: "New cohort", hint: "Admin · schedule a run of a programme", href: "/admin/cohorts/new", kind: "Admin" },
-];
-
 const COHORT_TABS = [
-  ["grading", "Grading"],
-  ["labs", "Lab reviews"],
-  ["attendance", "Attendance"],
-  ["classes", "Classes"],
+  ["grading", "search.grading"],
+  ["labs", "search.labReviews"],
+  ["attendance", "search.attendance"],
+  ["classes", "search.classes"],
 ] as const;
 
 /** Admin pages, then the teaching tabs of every cohort this person manages. */
-function staffItems(user: Profile): SearchItem[] {
-  const items: SearchItem[] = isAdmin(user) ? [...ADMIN_ONLY] : [];
-  items.push({ label: "Moderation", hint: "Admin", href: "/admin/moderation", kind: "Admin" });
+function staffItems(user: Profile, t: T): Draft[] {
+  const admin = t("search.hintAdmin");
+  const items: Draft[] = isAdmin(user)
+    ? [
+        { label: t("search.students"), hint: admin, href: "/admin/students", kind: "Admin" },
+        { label: t("search.curriculum"), hint: admin, href: "/admin/programmes", kind: "Admin" },
+        { label: t("search.waitlist"), hint: admin, href: "/admin/waitlist", kind: "Admin" },
+        {
+          label: t("search.newProgramme"),
+          hint: t("search.hintNewProgramme"),
+          href: "/admin/programmes/new",
+          kind: "Admin",
+        },
+        { label: t("search.newCohort"), hint: t("search.hintNewCohort"), href: "/admin/cohorts/new", kind: "Admin" },
+      ]
+    : [];
+  items.push({ label: t("search.moderation"), hint: admin, href: "/admin/moderation", kind: "Admin" });
   for (const id of managedCohortIds(user)) {
     const name = cohortById(id)!.name;
     for (const [tab, label] of COHORT_TABS) {
-      items.push({ label, hint: name, href: `/admin/cohorts/${id}/${tab}`, kind: "Admin" });
+      items.push({ label: t(label), hint: name, href: `/admin/cohorts/${id}/${tab}`, kind: "Admin" });
     }
   }
   return items;

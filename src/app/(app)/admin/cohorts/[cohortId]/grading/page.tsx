@@ -4,8 +4,10 @@ import { cohortAssignments, cohortRoster } from "@/lib/data/repo";
 import { submissionsFor } from "@/lib/data/admin";
 import { requireCohortManager } from "@/lib/authz";
 import { formatShortDate } from "@/lib/time";
+import { getI18n } from "@/lib/i18n/server";
 
 export default async function Grading({ params }: PageProps<"/admin/cohorts/[cohortId]/grading">) {
+  const { t } = await getI18n();
   const { cohortId } = await params;
   await requireCohortManager(cohortId);
   const now = new Date();
@@ -13,7 +15,7 @@ export default async function Grading({ params }: PageProps<"/admin/cohorts/[coh
   const assignments = cohortAssignments(cohortId);
 
   if (assignments.length === 0) {
-    return <p className="text-muted">This cohort has no assignments.</p>;
+    return <p className="text-muted">{t("grading.noAssignments")}</p>;
   }
 
   return (
@@ -28,16 +30,16 @@ export default async function Grading({ params }: PageProps<"/admin/cohorts/[coh
               className="flex flex-wrap items-center gap-x-5 gap-y-1 px-5 py-4 hover:bg-paper"
             >
               <span className="flex-1 font-medium">{a.title}</span>
-              <span className="font-mono text-xs text-muted">Due {formatShortDate(a.dueAt)}</span>
-              <span className="w-28 font-mono text-xs">
-                {subs.length}/{total} submitted
+              <span className="font-mono text-xs text-muted">
+                {t("grading.due", { date: formatShortDate(a.dueAt) })}
               </span>
+              <span className="w-28 font-mono text-xs">{t("grading.submittedOf", { count: subs.length, total })}</span>
               {toGrade > 0 ? (
-                <Pill tone="accent">{toGrade} to grade</Pill>
+                <Pill tone="accent">{t("grading.toGrade", { count: toGrade })}</Pill>
               ) : subs.length > 0 ? (
-                <Pill tone="good">All graded</Pill>
+                <Pill tone="good">{t("grading.allGraded")}</Pill>
               ) : (
-                <Pill>{a.dueAt > now ? "Open" : "None in"}</Pill>
+                <Pill>{a.dueAt > now ? t("grading.open") : t("grading.noneIn")}</Pill>
               )}
             </Link>
           </li>

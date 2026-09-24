@@ -6,9 +6,10 @@ import { setProjectRepo, toggleMilestone } from "@/lib/admin-actions";
 import type { ProjectView } from "@/lib/data/admin";
 import { formatFull, formatShortDate, formatTime } from "@/lib/time";
 import { SubmitButton } from "@/components/submit-button";
+import { getI18n } from "@/lib/i18n/server";
 
 /** Shared by the student project page and the admin projects tab. */
-export function ProjectCard({
+export async function ProjectCard({
   view,
   canEdit,
   now,
@@ -19,6 +20,7 @@ export function ProjectCard({
   now: Date;
   children?: React.ReactNode;
 }) {
+  const { t } = await getI18n();
   const { project, members, milestones, progress } = view;
   return (
     <Card>
@@ -35,7 +37,7 @@ export function ProjectCard({
 
       <ul className="mt-5 flex flex-wrap gap-2">
         {members.map((m) => (
-          <li key={m.id} className="flex items-center gap-2 rounded-md border border-line py-1 pr-3 pl-1 text-sm">
+          <li key={m.id} className="flex items-center gap-2 rounded-md border border-line py-1 ps-1 pe-3 text-sm">
             <Avatar profile={m} size={22} /> {m.fullName}
           </li>
         ))}
@@ -69,7 +71,7 @@ export function ProjectCard({
                   <SubmitButton
                     unstyled
                     aria-pressed={!!ms.doneAt}
-                    className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-paper"
+                    className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 py-1.5 text-start text-sm hover:bg-paper"
                   >
                     {box}
                     {label}
@@ -88,18 +90,19 @@ export function ProjectCard({
 
       <div className="mt-5 space-y-3 border-t border-line pt-4 text-sm">
         <p>
-          <span className="text-muted">Presentation: </span>
-          {project.presentsAt ? formatFull(project.presentsAt) : "not scheduled yet"}
+          <span className="text-muted">{t("projects.presentation")}</span>
+          {project.presentsAt ? formatFull(project.presentsAt) : t("projects.notScheduled")}
         </p>
         {canEdit ? (
-          <ActionForm action={setProjectRepo} submitLabel="Save repo" className="max-w-xl">
+          <ActionForm action={setProjectRepo} submitLabel={t("projects.saveRepo")} className="max-w-xl">
             <input type="hidden" name="projectId" value={project.id} />
             <label className="flex items-center gap-2">
               <GitBranch size={14} className="shrink-0 text-muted" />
-              <span className="sr-only">Repository</span>
+              <span className="sr-only">{t("projects.repository")}</span>
               <input
                 name="repoUrl"
                 type="url"
+                dir="ltr"
                 placeholder="https://github.com/your-team/capstone"
                 defaultValue={project.repoUrl ?? ""}
                 className={clsx(field, "font-mono")}
@@ -107,11 +110,11 @@ export function ProjectCard({
             </label>
           </ActionForm>
         ) : project.repoUrl ? (
-          <a href={project.repoUrl} target="_blank" rel="noreferrer" className="font-mono underline">
+          <a href={project.repoUrl} target="_blank" rel="noreferrer" dir="ltr" className="font-mono underline">
             {project.repoUrl}
           </a>
         ) : (
-          <p className="text-muted">No repository linked yet.</p>
+          <p className="text-muted">{t("projects.noRepo")}</p>
         )}
       </div>
       {children}

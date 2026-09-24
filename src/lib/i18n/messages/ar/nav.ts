@@ -8,4 +8,8 @@ export const nav: { [K in keyof typeof en]: Message } = {
   signIn: "تسجيل الدخول",
   joinWaitlist: "انضم إلى قائمة الانتظار",
   footerTagline: "دفعات مباشرة لمن ينتقل إلى مجال التقنية.",
+  metaDescription: "برامج قائمة على الدفعات، فيها حصص مباشرة ومختبرات ومشاريع ومجتمع.",
+  notFoundTitle: "الصفحة غير موجودة",
+  notFoundBody: "هذه الصفحة غير موجودة، أو ليست لديك صلاحية الوصول إليها.",
+  backToDashboard: "العودة إلى الرئيسية",
 };

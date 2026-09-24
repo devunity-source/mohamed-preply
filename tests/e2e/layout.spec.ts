@@ -70,18 +70,42 @@ for (const who of ["ahmed", "rakan"] as const) {
   });
 }
 
+const NAV = {
+  en: {
+    main: "Main",
+    tabs: ["Home", "Learn", "Community", "Calendar", "More"],
+    resources: "Resources",
+    calendar: "Calendar",
+  },
+  ar: {
+    main: "القائمة الرئيسية",
+    tabs: ["الرئيسية", "التعلّم", "المجتمع", "التقويم", "المزيد"],
+    resources: "الموارد",
+    calendar: "التقويم",
+  },
+};
+
 test("navigation suits the screen: sidebar on wide screens, bottom bar on phones", async ({ page }, info) => {
+  const arabic = info.project.name.endsWith("-ar");
+  const nav = NAV[arabic ? "ar" : "en"];
   await signIn(page, "ahmed");
-  const bottomBar = page.getByRole("navigation", { name: "Main" });
-  if (info.project.name === "phone") {
+  await expect(page.locator("html")).toHaveAttribute("dir", arabic ? "rtl" : "ltr");
+  const bottomBar = page.getByRole("navigation", { name: nav.main, exact: true });
+  if (info.project.name.startsWith("phone")) {
     await expect(bottomBar).toBeVisible();
-    await expect(bottomBar.locator("a, button")).toHaveText(["Home", "Learn", "Community", "Calendar", "More"]);
-    await bottomBar.getByRole("button", { name: "More" }).click();
-    await page.locator("#more-menu").getByRole("link", { name: "Resources" }).click();
+    await expect(bottomBar.locator("a, button")).toHaveText(nav.tabs);
+    await bottomBar.getByRole("button", { name: nav.tabs[4] }).click();
+    await page.locator("#more-menu").getByRole("link", { name: nav.resources }).click();
     await expect(page).toHaveURL(/\/resources$/);
     await expect(page.locator("#more-menu")).toBeHidden();
   } else {
     await expect(bottomBar).toBeHidden();
-    await expect(page.locator("aside").first().getByRole("link", { name: "Calendar" })).toBeVisible();
+    const sidebar = page.locator("aside").first();
+    await expect(sidebar.getByRole("link", { name: nav.calendar })).toBeVisible();
+    // Right to left puts the sidebar on the right.
+    const box = await sidebar.boundingBox();
+    const width = page.viewportSize()!.width;
+    if (arabic) expect(box!.x + box!.width).toBeGreaterThan(width - 5);
+    else expect(box!.x).toBeLessThan(5);
   }
 });

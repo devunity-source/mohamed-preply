@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { SubmitButton } from "@/components/submit-button";
+import { useT } from "@/components/i18n-provider";
 
 /**
  * A destructive action behind a real confirmation. Uses the native <dialog>:
@@ -27,6 +28,7 @@ export function ConfirmForm({
   description?: string;
   confirmLabel: string;
 }) {
+  const t = useT();
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
   return (
@@ -56,9 +58,9 @@ export function ConfirmForm({
             onClick={() => ref.current?.close()}
             className="rounded-md border border-line px-4 py-2 text-sm font-medium hover:border-ink"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
-          <SubmitButton variant="danger" pendingLabel="Working…">
+          <SubmitButton variant="danger" pendingLabel={t("common.working")}>
             {confirmLabel}
           </SubmitButton>
         </div>

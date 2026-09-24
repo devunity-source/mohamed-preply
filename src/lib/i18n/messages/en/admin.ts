@@ -1,1 +1,96 @@
-export const admin = {};
+export const admin = {
+  metaTitle: "Admin",
+  tabOverview: "Overview",
+  tabStudents: "Students",
+  tabCurriculum: "Curriculum",
+  tabWaitlist: "Waitlist",
+  tabModeration: "Moderation",
+  tabMyCohorts: "My cohorts",
+  academyAdmin: "Academy admin",
+  instructorTools: "Instructor tools",
+
+  // Overview
+  overviewEyebrow: "Overview",
+  yourCohortsEyebrow: "Your cohorts",
+  runningTitle: "Running the academy",
+  teachingTitle: "Teaching",
+  newProgramme: "New programme",
+  newCohort: "New cohort",
+  kpiActiveCohorts: "Active cohorts",
+  kpiActiveStudents: "Students (active)",
+  kpiToGrade: "To grade",
+  kpiRevenue: "Revenue, active (est.)",
+  kpiWaitlist: "Waitlist",
+  revenueNote: "Revenue is estimated as enrolled students × list price until Stripe is connected.",
+  cohortLabel: "{programme} · Cohort {code}",
+  weekOf: "Week {week}/{total}",
+  statusUpcoming: "upcoming",
+  statusActive: "active",
+  statusCompleted: "completed",
+  cohortDates: {
+    one: "{start} to {end} · {count} student",
+    other: "{start} to {end} · {count} students",
+  },
+  attendance: "Attendance",
+  submitted: "Submitted",
+  avgProgress: "Avg progress",
+  needAttention: {
+    one: "{count} student need attention",
+    other: "{count} students need attention",
+  },
+  noCohorts: "No cohorts yet.",
+
+  // Students
+  studentsCount: { one: "{count} student", other: "{count} students" },
+  studentsTitle: "Students",
+
+  // Waitlist
+  peopleCount: { one: "{count} person", other: "{count} people" },
+  waitlistTitle: "Waitlist",
+  exportCsv: "Export CSV",
+  signUps: "Sign-ups",
+  noSignUps: "No sign-ups yet. They appear here as people join from the landing page.",
+  demoData: "Demo data: sign-ups reset when the server restarts.",
+
+  // Moderation
+  spacesYouModerate: { one: "{count} space you moderate", other: "{count} spaces you moderate" },
+  moderationTitle: "Moderation",
+  noPosts: "No posts in your spaces yet.",
+  postMeta: "{author} in {space} · {ago}",
+  pinned: "Pinned",
+  pin: "Pin",
+  locked: "Locked",
+  lock: "Lock",
+  deleteNote: "Deleting posts and replies happens on the post itself, so you see the context first.",
+
+  // New cohort
+  backToAdmin: "Admin",
+  newCohortTitle: "New cohort",
+  newCohortIntro:
+    "One run of a programme. It gets the next cohort number, its own community spaces, and an end date based on the programme's length.",
+  createCohort: "Create cohort",
+  programme: "Programme",
+  programmeOption: { one: "{title} ({count} week)", other: "{title} ({count} weeks)" },
+  draftSuffix: " · draft",
+  startDate: "Start date (UAE time)",
+  instructor: "Instructor",
+  roleInstructor: "instructor",
+  roleAdmin: "admin",
+  staffOption: "{name} ({role})",
+  instructorNote:
+    "The instructor is notified and sees the cohort under Admin straight away. Students join through enrolment.",
+
+  // Shared form pieces
+  saved: "Saved",
+  saving: "Saving…",
+  saveAndNext: "Save and next ungraded",
+  updateGrade: "Update grade",
+  saveGrade: "Save grade",
+  gradedNotified: "Graded, student notified",
+  gradeTotal: "Grade: <b>{grade}</b>/100",
+  feedbackPlaceholder: "What worked, what to fix, one thing to try next.",
+  email: "Email",
+  fullNameNew: "Full name (new students only)",
+  adding: "Adding…",
+  addStudent: "Add student",
+};

@@ -16,19 +16,24 @@ import {
   ShieldCheck,
   UserRound,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { signOut } from "@/lib/auth-actions";
 import { SubmitButton } from "@/components/submit-button";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useT } from "@/components/i18n-provider";
+import type { Key } from "@/lib/i18n/translate";
 
-const MAIN = [
-  { href: "/dashboard", label: "Home", icon: House },
-  { href: "/programmes", label: "Learn", icon: GraduationCap, also: "/cohorts" },
-  { href: "/community", label: "Community", icon: MessagesSquare },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
+const MAIN: { href: string; label: Key; icon: LucideIcon; also?: string }[] = [
+  { href: "/dashboard", label: "common.home", icon: House },
+  { href: "/programmes", label: "common.learn", icon: GraduationCap, also: "/cohorts" },
+  { href: "/community", label: "common.community", icon: MessagesSquare },
+  { href: "/calendar", label: "common.calendar", icon: CalendarDays },
 ];
 
 /** Phone navigation: four labelled destinations in thumb reach, everything else behind More. */
 export function MobileNav({ unread, showAdmin }: { unread: number; showAdmin: boolean }) {
+  const t = useT();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [openedAt, setOpenedAt] = useState(pathname);
@@ -43,10 +48,10 @@ export function MobileNav({ unread, showAdmin }: { unread: number; showAdmin: bo
   }, [open]);
 
   const more = [
-    { href: "/resources", label: "Resources", icon: BookOpen, badge: 0 },
-    { href: "/notifications", label: "Notifications", icon: Bell, badge: unread },
-    { href: "/profile", label: "Profile", icon: UserRound, badge: 0 },
-    ...(showAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck, badge: 0 }] : []),
+    { href: "/resources", label: t("common.resources"), icon: BookOpen, badge: 0 },
+    { href: "/notifications", label: t("common.notifications"), icon: Bell, badge: unread },
+    { href: "/profile", label: t("common.profile"), icon: UserRound, badge: 0 },
+    ...(showAdmin ? [{ href: "/admin", label: t("common.admin"), icon: ShieldCheck, badge: 0 }] : []),
   ];
   const inMore = more.some((m) => pathname.startsWith(m.href));
 
@@ -56,7 +61,7 @@ export function MobileNav({ unread, showAdmin }: { unread: number; showAdmin: bo
         <>
           <button
             type="button"
-            aria-label="Close menu"
+            aria-label={t("common.closeMenu")}
             onClick={() => setOpen(false)}
             className="fixed inset-0 z-30 bg-ink/30"
           />
@@ -76,7 +81,7 @@ export function MobileNav({ unread, showAdmin }: { unread: number; showAdmin: bo
                   >
                     <Icon size={18} /> {label}
                     {badge > 0 && (
-                      <span className="ml-auto rounded-[4px] bg-accent px-1.5 font-mono text-[11px] font-semibold text-accent-ink">
+                      <span className="ms-auto rounded-[4px] bg-accent px-1.5 font-mono text-[11px] font-semibold text-accent-ink">
                         {badge}
                       </span>
                     )}
@@ -89,15 +94,18 @@ export function MobileNav({ unread, showAdmin }: { unread: number; showAdmin: bo
                 unstyled
                 className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-sm text-muted hover:bg-line/60 hover:text-ink"
               >
-                <LogOut size={18} /> Sign out
+                <LogOut size={18} /> {t("common.signOut")}
               </SubmitButton>
             </form>
+            <div className="mt-1 border-t border-line pt-1">
+              <LanguageToggle className="w-full justify-start gap-3 px-3 py-3 text-muted hover:text-ink" />
+            </div>
           </div>
         </>
       )}
 
       <nav
-        aria-label="Main"
+        aria-label={t("common.mainNav")}
         className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-paper/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
       >
         {MAIN.map(({ href, label, icon: Icon, also }) => {
@@ -113,7 +121,7 @@ export function MobileNav({ unread, showAdmin }: { unread: number; showAdmin: bo
               )}
             >
               <Icon size={20} strokeWidth={active ? 2.5 : 2} />
-              {label}
+              {t(label)}
             </Link>
           );
         })}
@@ -131,9 +139,9 @@ export function MobileNav({ unread, showAdmin }: { unread: number; showAdmin: bo
           )}
         >
           {open ? <X size={20} /> : <Menu size={20} strokeWidth={inMore ? 2.5 : 2} />}
-          More
+          {t("common.more")}
           {unread > 0 && !open && (
-            <span className="absolute top-1.5 left-1/2 ml-2 size-2 rounded-full bg-accent" aria-hidden />
+            <span className="absolute start-1/2 top-1.5 ms-2 size-2 rounded-full bg-accent" aria-hidden />
           )}
         </button>
       </nav>

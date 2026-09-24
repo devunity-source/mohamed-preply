@@ -1,1 +1,17 @@
-export const programmes = {};
+export const programmes = {
+  metaTitle: "Programmes",
+  eyebrow: "My programmes",
+  title: "Programmes",
+  newProgramme: "New programme",
+  cohortCode: "Cohort {code}",
+  weekPill: "Week {week}/{total}",
+  statusUpcoming: "upcoming",
+  statusActive: "active",
+  statusCompleted: "completed",
+  dateRange: "{start} to {end}",
+  asInstructor: " · Instructor",
+  explore: "Explore programmes",
+  weeksLive: { one: "{count} week · Live cohort", other: "{count} weeks · Live cohort" },
+  checkoutSoon: "Stripe checkout arrives in Phase 2",
+  enrol: "Enrol now",
+};
