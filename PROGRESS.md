@@ -224,6 +224,26 @@ Public page at `/`, the app moved behind it at `/dashboard`. Aimed at career swi
 - [x] Admin view of the waitlist with CSV export (Phase 3)
 - [ ] Real bio and photo for Rakan (waiting on you)
 
+## UX pass
+
+From a review of the running app (24 Sep 2026). First batch done, the rest queued in priority order.
+
+**Done**
+- [x] **Lessons you can actually take:** lesson pages at `/cohorts/…/modules/<module>/<lesson>` with real content, lesson N of M, prev/next, a module sidebar, and **Mark done and continue** (crosses into the next module). Week 4 (Kubernetes) has full lessons; other weeks show their summary until content is written. Video lessons show a placeholder until a video host is connected.
+- [x] **Continue where you left off** card at the top of the dashboard; dashboard tasks show open work only ("N done recently").
+- [x] **Current work first:** labs, assignments and classes list what's open or next at the top; finished items fold into a collapsed "Completed / Handed in / Past classes" group. Links to a folded item (e.g. `/labs#lab_1`) open the group.
+- [x] **Instant feedback:** every form button shows a spinner and can't be double-submitted; lesson done toggles and reactions update immediately with the server catching up; "Lesson marked done · Undo" toast.
+- [x] **Real confirm dialogs** (native `<dialog>`, Esc cancels, Cancel focused first) for deleting posts, replies, lessons, classes and revoking certificates.
+- [x] Fixed horizontal scroll at 390px on 9 pages (grid columns growing to fit long text); all 32 main pages checked.
+
+**Next**
+- [ ] Trim chrome: one-line cohort header on inner tabs, single admin tab bar with a cohort switcher, community spaces collapsed to your cohort + "More"
+- [ ] Mobile: bottom tab bar with labels (Home, Learn, Community, Calendar, More), scroll hint on tab rows
+- [ ] Colour semantics: orange only for "act now" and brand; calmer tones for statuses
+- [ ] Attendance starts blank with "Mark all present" instead of defaulting everyone to present
+- [ ] Grading one submission at a time: "Save and next ungraded", keyboard shortcuts
+- [ ] Smaller: explain the progress %, centred sign-in card with waitlist link, first-visit welcome, fewer mono labels, ⌘K search, unread counts per space
+
 ## Out of scope for V1 (on purpose)
 
 Full Circle parity: DMs, member directory, events ticketing, custom domains, white-labelling, native apps, heavy gamification.
@@ -252,3 +272,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-23 | Landing page at `/` with waitlist, migration 0003, rate limiter, `test:db` now 44 checks. |
 | 2026-09-23 | Phase 3: admin area, grading, lab reviews, attendance, classes, projects, certificates + public verify, moderation, curriculum editor. Migration 0004, `test:db` 70 checks. Fixed forms losing input after a validation error (React 19 auto-reset). |
 | 2026-09-23 | Replaced cookie auth with email + password sign-in, server-side sessions and a sign-in gate; demo login limited to dev. 32 auth checks (27 attack, 4 demo toggle, 1 dev). |
+| 2026-09-24 | UX batch 1: lesson pages + continue learning, current work first, instant feedback with undo, confirm dialogs, mobile overflow fixes. 29 new browser checks. |

@@ -6,6 +6,7 @@ import { allSpaces, recentPostsIn } from "@/lib/data/admin";
 import { toggleLock, togglePin } from "@/lib/admin-actions";
 import { canModerate, requireAdminArea } from "@/lib/authz";
 import { timeAgo } from "@/lib/time";
+import { SubmitButton } from "@/components/submit-button";
 
 const tool =
   "inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs text-muted hover:border-ink hover:text-ink";
@@ -38,14 +39,14 @@ export default async function Moderation() {
                   <MessageSquare size={12} /> {replies}
                 </span>
                 <form action={togglePin.bind(null, post.id)}>
-                  <button className={clsx(tool, post.pinned && "border-accent text-accent")}>
+                  <SubmitButton unstyled className={clsx(tool, post.pinned && "border-accent text-accent")}>
                     {post.pinned ? <PinOff size={12} /> : <Pin size={12} />} {post.pinned ? "Pinned" : "Pin"}
-                  </button>
+                  </SubmitButton>
                 </form>
                 <form action={toggleLock.bind(null, post.id)}>
-                  <button className={clsx(tool, post.locked && "border-ink text-ink")}>
+                  <SubmitButton unstyled className={clsx(tool, post.locked && "border-ink text-ink")}>
                     {post.locked ? <LockOpen size={12} /> : <Lock size={12} />} {post.locked ? "Locked" : "Lock"}
-                  </button>
+                  </SubmitButton>
                 </form>
               </li>
             ))}

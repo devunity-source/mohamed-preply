@@ -11,7 +11,7 @@ export default async function Projects({ params }: PageProps<"/cohorts/[cohortId
   const all = cohortProjects(cohort.id);
 
   return (
-    <div className="grid gap-5 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 [&>*]:min-w-0">
       <div className="lg:col-span-2">
         {mine ? (
           <ProjectCard view={mine} canEdit now={now} />

@@ -1,5 +1,6 @@
 import clsx from "clsx";
-import { Button, Empty, PageHeader } from "@/components/ui";
+import { Empty, PageHeader } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { notificationsFor } from "@/lib/data/repo";
 import { markAllRead, openNotification } from "@/lib/actions";
 import { currentUser } from "@/lib/session";
@@ -18,7 +19,7 @@ export default async function Notifications() {
       <PageHeader eyebrow="Inbox" title="Notifications">
         {unread && (
           <form action={markAllRead}>
-            <Button variant="ghost">Mark all read</Button>
+            <SubmitButton variant="ghost">Mark all read</SubmitButton>
           </form>
         )}
       </PageHeader>
@@ -29,11 +30,11 @@ export default async function Notifications() {
           {list.map((n) => (
             <li key={n.id}>
               <form action={openNotification.bind(null, n.id)}>
-                <button className="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-paper">
+                <SubmitButton unstyled className="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-paper">
                   <span className={clsx("size-2 shrink-0 rounded-[2px]", n.readAt ? "bg-transparent" : "bg-accent")} />
                   <span className={clsx("flex-1 text-sm", n.readAt ? "text-muted" : "font-medium")}>{n.text}</span>
                   <span className="shrink-0 font-mono text-xs text-muted">{timeAgo(n.createdAt, now)}</span>
-                </button>
+                </SubmitButton>
               </form>
             </li>
           ))}

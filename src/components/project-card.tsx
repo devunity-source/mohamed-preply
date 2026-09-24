@@ -5,6 +5,7 @@ import { ActionForm, field } from "@/components/admin-forms";
 import { setProjectRepo, toggleMilestone } from "@/lib/admin-actions";
 import type { ProjectView } from "@/lib/data/admin";
 import { formatFull, formatShortDate, formatTime } from "@/lib/time";
+import { SubmitButton } from "@/components/submit-button";
 
 /** Shared by the student project page and the admin projects tab. */
 export function ProjectCard({
@@ -65,13 +66,14 @@ export function ProjectCard({
             <li key={ms.id}>
               {canEdit ? (
                 <form action={toggleMilestone.bind(null, ms.id)}>
-                  <button
+                  <SubmitButton
+                    unstyled
                     aria-pressed={!!ms.doneAt}
                     className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-paper"
                   >
                     {box}
                     {label}
-                  </button>
+                  </SubmitButton>
                 </form>
               ) : (
                 <div className="flex items-center gap-3 py-1.5 text-sm">

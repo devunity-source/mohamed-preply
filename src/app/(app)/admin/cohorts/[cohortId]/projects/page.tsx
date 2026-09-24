@@ -6,6 +6,7 @@ import { cohortProjects, unassignedStudents } from "@/lib/data/admin";
 import { createProject, removeProjectMember, updateProject } from "@/lib/admin-actions";
 import { requireCohortManager } from "@/lib/authz";
 import { zonedParts } from "@/lib/time";
+import { SubmitButton } from "@/components/submit-button";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -31,9 +32,12 @@ export default async function AdminProjects({ params }: PageProps<"/admin/cohort
                     {view.members.map((m) => (
                       <li key={m.id}>
                         <form action={removeProjectMember.bind(null, view.project.id, m.id)}>
-                          <button className="flex items-center gap-1.5 rounded-md border border-line py-1 pr-2 pl-1 text-xs hover:border-k-deadline hover:text-k-deadline">
+                          <SubmitButton
+                            unstyled
+                            className="flex items-center gap-1.5 rounded-md border border-line py-1 pr-2 pl-1 text-xs hover:border-k-deadline hover:text-k-deadline"
+                          >
                             <Avatar profile={m} size={18} /> {m.fullName} <X size={12} />
-                          </button>
+                          </SubmitButton>
                         </form>
                       </li>
                     ))}

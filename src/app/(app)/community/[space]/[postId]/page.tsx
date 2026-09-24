@@ -4,15 +4,16 @@ import clsx from "clsx";
 import { ArrowLeft, Lock, LockOpen, Pin, PinOff, Trash2 } from "lucide-react";
 import { Avatar, Label } from "@/components/ui";
 import { CommentForm } from "@/components/community-forms";
+import { ConfirmForm } from "@/components/confirm-form";
+import { ReactionBar } from "@/components/reaction-bar";
+import { SubmitButton } from "@/components/submit-button";
 import { RichText } from "@/components/rich-text";
 import { postWithComments } from "@/lib/data/repo";
-import { toggleReaction } from "@/lib/actions";
 import { deleteComment, deletePost, toggleLock, togglePin } from "@/lib/admin-actions";
 import { canModerate } from "@/lib/authz";
 import { currentUser } from "@/lib/session";
 import { timeAgo } from "@/lib/time";
 
-const EMOJI = ["👍", "🔥", "🎉", "💡", "❤️"];
 const toolClass =
   "inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-line px-2.5 py-1 text-xs hover:border-ink";
 
@@ -55,24 +56,7 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
 
       <RichText text={post.body} />
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        {EMOJI.map((e) => {
-          const r = reactions.find((x) => x.emoji === e);
-          return (
-            <form key={e} action={toggleReaction.bind(null, post.id, e)}>
-              <button
-                aria-pressed={!!r?.mine}
-                className={clsx(
-                  "rounded-md border px-2.5 py-1 font-mono text-sm transition-colors",
-                  r?.mine ? "border-accent bg-accent/10" : "border-line hover:border-ink",
-                )}
-              >
-                {e} {r?.count ?? ""}
-              </button>
-            </form>
-          );
-        })}
-      </div>
+      <ReactionBar postId={post.id} reactions={reactions} />
 
       {(moderator || canDelete) && (
         <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-line pt-4 text-sm">
@@ -80,29 +64,30 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
             <>
               <span className="mr-1 font-mono text-[11px] tracking-wider text-muted uppercase">Moderate</span>
               <form action={togglePin.bind(null, post.id)}>
-                <button className={toolClass}>
+                <SubmitButton unstyled className={toolClass}>
                   {post.pinned ? <PinOff size={14} /> : <Pin size={14} />} {post.pinned ? "Unpin" : "Pin"}
-                </button>
+                </SubmitButton>
               </form>
               <form action={toggleLock.bind(null, post.id)}>
-                <button className={toolClass}>
+                <SubmitButton unstyled className={toolClass}>
                   {post.locked ? <LockOpen size={14} /> : <Lock size={14} />} {post.locked ? "Unlock" : "Lock replies"}
-                </button>
+                </SubmitButton>
               </form>
             </>
           )}
           {canDelete && (
-            // No-JS confirmation: the real delete button only appears once opened.
-            <details className="relative">
-              <summary className={clsx(toolClass, "list-none hover:border-k-deadline hover:text-k-deadline")}>
-                <Trash2 size={14} /> Delete
-              </summary>
-              <form action={deletePost.bind(null, post.id)} className="absolute top-full left-0 z-10 mt-1">
-                <button className="rounded-md bg-k-deadline px-3 py-1.5 text-xs font-medium whitespace-nowrap text-white">
-                  Delete post and {comments.length} {comments.length === 1 ? "reply" : "replies"}
-                </button>
-              </form>
-            </details>
+            <ConfirmForm
+              action={deletePost.bind(null, post.id)}
+              triggerClassName={clsx(toolClass, "hover:border-k-deadline hover:text-k-deadline")}
+              trigger={
+                <>
+                  <Trash2 size={14} /> Delete
+                </>
+              }
+              title="Delete this post?"
+              description={`This removes the post and its ${comments.length} ${comments.length === 1 ? "reply" : "replies"} for everyone. It can't be undone.`}
+              confirmLabel="Delete post"
+            />
           )}
         </div>
       )}
@@ -125,14 +110,15 @@ export default async function PostPage({ params }: PageProps<"/community/[space]
                 </div>
               </div>
               {(moderator || comment.authorId === user.id) && (
-                <form action={deleteComment.bind(null, comment.id)}>
-                  <button
-                    aria-label="Delete reply"
-                    className="rounded-md p-1.5 text-muted hover:bg-k-deadline/10 hover:text-k-deadline"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </form>
+                <ConfirmForm
+                  action={deleteComment.bind(null, comment.id)}
+                  triggerLabel="Delete reply"
+                  triggerClassName="rounded-md p-1.5 text-muted hover:bg-k-deadline/10 hover:text-k-deadline"
+                  trigger={<Trash2 size={13} />}
+                  title="Delete this reply?"
+                  description="It will be removed for everyone. This can't be undone."
+                  confirmLabel="Delete reply"
+                />
               )}
             </li>
           ))}

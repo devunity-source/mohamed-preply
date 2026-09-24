@@ -39,7 +39,7 @@ export default async function CohortDashboard({ params }: PageProps<"/admin/coho
         <p className="text-xs text-muted">Revenue is enrolled students × list price until Stripe is connected.</p>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 [&>*]:min-w-0">
         <Card title="Needs attention" className="lg:col-span-2">
           <ul className="space-y-2 text-sm">
             <li>

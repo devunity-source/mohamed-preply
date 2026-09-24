@@ -56,11 +56,17 @@ export function Card({
 
 const buttonBase =
   "inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50";
-const buttonVariants = {
+export const buttonVariants = {
   primary: "bg-ink text-paper hover:bg-accent hover:text-accent-ink",
   accent: "bg-accent text-accent-ink hover:bg-ink hover:text-paper",
   ghost: "border border-line hover:border-ink",
+  danger: "bg-k-deadline text-white hover:opacity-90",
 };
+
+export type ButtonVariant = keyof typeof buttonVariants;
+
+export const buttonClass = (variant: ButtonVariant = "primary", className?: string) =>
+  clsx(buttonBase, buttonVariants[variant], className);
 
 export function ButtonLink({
   href,
@@ -194,5 +200,31 @@ export function Legend({ className }: { className?: string }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Finished items, collapsed by default so current work stays on top. */
+export function DoneGroup({
+  label = "Completed",
+  count,
+  children,
+}: {
+  label?: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  if (count === 0) return null;
+  return (
+    <details className="group rounded-md border border-dashed border-line">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3.5 text-sm font-medium text-muted hover:text-ink">
+        <span>
+          {label} · {count}
+        </span>
+        <span className="font-mono text-xs transition-transform group-open:rotate-90" aria-hidden>
+          →
+        </span>
+      </summary>
+      <div className="space-y-5 border-t border-dashed border-line p-4">{children}</div>
+    </details>
   );
 }

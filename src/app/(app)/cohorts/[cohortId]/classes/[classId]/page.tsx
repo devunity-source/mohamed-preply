@@ -22,7 +22,7 @@ export default async function Classroom({ params }: PageProps<"/cohorts/[cohortI
   const resources = classResources(c);
 
   return (
-    <div className="grid gap-5 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 [&>*]:min-w-0">
       <section className="rounded-md bg-ink p-6 text-paper md:p-10 lg:col-span-2">
         <div className="flex items-center gap-3">
           <p className="font-mono text-[11px] font-medium tracking-[0.12em] uppercase opacity-60">Live classroom</p>

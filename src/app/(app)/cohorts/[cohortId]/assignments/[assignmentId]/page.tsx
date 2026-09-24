@@ -20,7 +20,7 @@ export default async function AssignmentPage({ params }: PageProps<"/cohorts/[co
   const resources = resourcesByIds(a.resourceIds);
 
   return (
-    <div className="grid gap-5 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 [&>*]:min-w-0">
       <div className="space-y-5 lg:col-span-2">
         <div>
           <Label className="mb-1">Assignment</Label>

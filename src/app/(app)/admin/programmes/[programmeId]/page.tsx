@@ -7,6 +7,8 @@ import { modulesFor, programmeById } from "@/lib/data/repo";
 import { deleteLesson, moveLesson, saveLesson, updateModule, updateProgramme } from "@/lib/admin-actions";
 import { requireAdmin } from "@/lib/authz";
 import type { Lesson } from "@/lib/types";
+import { SubmitButton } from "@/components/submit-button";
+import { ConfirmForm } from "@/components/confirm-form";
 
 const ICON = { reading: FileText, video: PlayCircle, exercise: Wrench };
 const iconButton = "rounded-md p-1.5 text-muted hover:bg-line/60 hover:text-ink disabled:opacity-30";
@@ -87,29 +89,34 @@ export default async function ProgrammeEditor({ params }: PageProps<"/admin/prog
                         <span className="flex-1 text-sm">{l.title}</span>
                         <span className="font-mono text-xs text-muted">{l.durationMin}m</span>
                         <form action={moveLesson.bind(null, l.id, "up")}>
-                          <button className={iconButton} disabled={i === 0} aria-label={`Move ${l.title} up`}>
+                          <SubmitButton
+                            unstyled
+                            className={iconButton}
+                            disabled={i === 0}
+                            aria-label={`Move ${l.title} up`}
+                          >
                             <ArrowUp size={14} />
-                          </button>
+                          </SubmitButton>
                         </form>
                         <form action={moveLesson.bind(null, l.id, "down")}>
-                          <button
+                          <SubmitButton
+                            unstyled
                             className={iconButton}
                             disabled={i === lessons.length - 1}
                             aria-label={`Move ${l.title} down`}
                           >
                             <ArrowDown size={14} />
-                          </button>
+                          </SubmitButton>
                         </form>
-                        <details className="relative">
-                          <summary className={`${iconButton} list-none`} aria-label={`Delete ${l.title}`}>
-                            <Trash2 size={14} />
-                          </summary>
-                          <form action={deleteLesson.bind(null, l.id)} className="absolute right-0 z-10 mt-1">
-                            <button className="rounded-md bg-k-deadline px-3 py-1.5 text-xs font-medium whitespace-nowrap text-white">
-                              Delete lesson and student progress on it
-                            </button>
-                          </form>
-                        </details>
+                        <ConfirmForm
+                          action={deleteLesson.bind(null, l.id)}
+                          triggerLabel={`Delete ${l.title}`}
+                          triggerClassName={iconButton}
+                          trigger={<Trash2 size={14} />}
+                          title={`Delete "${l.title}"?`}
+                          description="Students lose their progress on this lesson. This can't be undone."
+                          confirmLabel="Delete lesson"
+                        />
                       </div>
                       <details className="mt-1 ml-6">
                         <summary className="cursor-pointer text-xs text-muted hover:text-ink">Edit</summary>

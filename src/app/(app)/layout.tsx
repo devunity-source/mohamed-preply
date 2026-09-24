@@ -6,6 +6,8 @@ import { LogOut } from "lucide-react";
 import { signOut } from "@/lib/auth-actions";
 import { currentUser } from "@/lib/session";
 import { hasAdminArea } from "@/lib/authz";
+import { ToastProvider } from "@/components/toast";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await currentUser();
@@ -29,13 +31,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </span>
           </Link>
           <form action={signOut}>
-            <button
+            <SubmitButton
+              unstyled
               aria-label="Sign out"
               title="Sign out"
               className="rounded-md p-2 text-muted hover:bg-line/60 hover:text-ink"
             >
               <LogOut size={16} />
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </aside>
@@ -52,7 +55,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 md:px-10 md:py-12 print:max-w-none print:p-0">
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </main>
     </div>
   );

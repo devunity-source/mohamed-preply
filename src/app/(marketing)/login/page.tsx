@@ -6,6 +6,7 @@ import { demoLoginEnabled, demoPassword } from "@/lib/auth/config";
 import { profileById } from "@/lib/data/repo";
 import { isInternalPath } from "@/lib/paths";
 import { getSessionUser } from "@/lib/session";
+import { SubmitButton } from "@/components/submit-button";
 
 export const metadata = { title: "Sign in", robots: { index: false } };
 
@@ -44,14 +45,17 @@ export default async function Login({ searchParams }: PageProps<"/login">) {
             {demoProfiles.map((p) => (
               <li key={p.id}>
                 <form action={demoSignIn.bind(null, p.id)}>
-                  <button className="flex w-full items-center gap-3 rounded-md border border-line bg-surface p-3 text-left hover:border-ink">
+                  <SubmitButton
+                    unstyled
+                    className="flex w-full items-center gap-3 rounded-md border border-line bg-surface p-3 text-left hover:border-ink"
+                  >
                     <Avatar profile={p} size={32} />
                     <span className="flex-1">
                       <span className="block text-sm font-medium">{p.fullName}</span>
                       <span className="block text-xs text-muted">{p.headline}</span>
                     </span>
                     <span className="font-mono text-[11px] tracking-wider text-muted uppercase">{p.role}</span>
-                  </button>
+                  </SubmitButton>
                 </form>
               </li>
             ))}

@@ -31,6 +31,7 @@ import type {
 import { addDays, formatMonthYear, startOfWeek, zonedParts } from "@/lib/time";
 import { demoPassword } from "@/lib/auth/config";
 import { hashPasswordSync } from "@/lib/auth/password";
+import { LESSON_CONTENT } from "./lesson-content";
 
 const zonedYear = (d: Date) => zonedParts(d).year;
 
@@ -411,7 +412,9 @@ export function createSeed(now: Date = new Date()): Store {
         title,
         kind,
         durationMin,
-        body: `${title}. Work through this ${kind === "exercise" ? "exercise" : kind === "video" ? "video lesson" : "reading"} before the next live class. Notes, commands and links for each step live in the module resources.`,
+        body:
+          LESSON_CONTENT[title] ??
+          `${week.summary}\n\nFull notes for this ${kind === "exercise" ? "exercise" : kind === "video" ? "video lesson" : "reading"} are being written. Until then, use the slides and recording from this week's live classes in the module resources.`,
       });
     });
 

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, newId } from "@/lib/data/store";
-import { canPost, isCohortMember, profileByHandle, spaceBySlug, visibleSpaces } from "@/lib/data/repo";
+import { canPost, isCohortMember, lessonContext, profileByHandle, spaceBySlug, visibleSpaces } from "@/lib/data/repo";
 import { isInternalPath } from "@/lib/paths";
 import { rateLimit } from "@/lib/rate-limit";
 import { currentUser } from "@/lib/session";
@@ -56,6 +56,32 @@ export async function toggleLesson(lessonId: string) {
 }
 
 const STUDENT_LAB_STATUSES: readonly LabStatus[] = ["in_progress", "submitted"];
+
+/**
+ * "Mark done and continue": marks the lesson complete (idempotent) and moves
+ * to the next lesson. The destination is worked out here, never taken from
+ * the client.
+ */
+export async function completeLessonAndContinue(cohortId: string, lessonId: string) {
+  const user = await currentUser();
+  const s = db();
+  const cohort = s.cohorts.find((c) => c.id === cohortId);
+  const lesson = s.lessons.find((l) => l.id === lessonId);
+  const mod = lesson && s.modules.find((m) => m.id === lesson.moduleId);
+  if (!cohort || !lesson || !mod || mod.programmeId !== cohort.programmeId || !isCohortMember(user.id, cohortId)) {
+    throw new Error("Not found");
+  }
+  if (!s.lessonProgress.some((p) => p.userId === user.id && p.lessonId === lessonId)) {
+    s.lessonProgress.push({ userId: user.id, lessonId, completedAt: new Date() });
+  }
+  const next = lessonContext(cohort.programmeId, lessonId)?.next;
+  revalidatePath("/", "layout");
+  redirect(
+    next
+      ? `/cohorts/${cohortId}/modules/${next.moduleId}/${next.id}`
+      : `/cohorts/${cohortId}/modules/${mod.id}?finished=1`,
+  );
+}
 
 export async function updateLab(labId: string, status: Extract<LabStatus, "in_progress" | "submitted">) {
   // Bound arguments arrive as plain JSON from the client, so the type above is

@@ -14,7 +14,7 @@ export default async function CohortOverview({ params }: PageProps<"/cohorts/[co
     progress?.modules ?? modulesFor(cohort.programmeId).map((m) => ({ ...m, status: "not_started" as const }));
 
   return (
-    <div className="grid gap-5 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 [&>*]:min-w-0">
       <div className="space-y-5 lg:col-span-2">
         <Card title="About this programme">
           <p className="text-lg leading-relaxed">{programme.description}</p>

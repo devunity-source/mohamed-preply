@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Award, RotateCcw, Ban } from "lucide-react";
-import { Avatar, Button, Card, Pill } from "@/components/ui";
+import { Avatar, buttonClass, Card, Pill } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
+import { ConfirmForm } from "@/components/confirm-form";
 import { cohortCertificates } from "@/lib/data/admin";
 import { issueCertificate, setCertificateRevoked } from "@/lib/admin-actions";
 import { requireAdmin, requireCohortManager } from "@/lib/authz";
@@ -34,27 +36,34 @@ export default async function AdminCertificates({ params }: PageProps<"/admin/co
                   <>
                     <Pill tone="bad">Revoked {formatShortDate(certificate.revokedAt)}</Pill>
                     <form action={setCertificateRevoked.bind(null, certificate.id, false)}>
-                      <Button variant="ghost">
+                      <SubmitButton variant="ghost">
                         <RotateCcw size={14} /> Restore
-                      </Button>
+                      </SubmitButton>
                     </form>
                   </>
                 ) : (
                   <>
                     <Pill tone="good">Issued {formatShortDate(certificate.issuedAt)}</Pill>
-                    <form action={setCertificateRevoked.bind(null, certificate.id, true)}>
-                      <Button variant="ghost">
-                        <Ban size={14} /> Revoke
-                      </Button>
-                    </form>
+                    <ConfirmForm
+                      action={setCertificateRevoked.bind(null, certificate.id, true)}
+                      triggerClassName={buttonClass("ghost")}
+                      trigger={
+                        <>
+                          <Ban size={14} /> Revoke
+                        </>
+                      }
+                      title={`Revoke ${profile.fullName}'s certificate?`}
+                      description={`${certificate.id} will show as revoked on its public verification page. You can restore it later.`}
+                      confirmLabel="Revoke certificate"
+                    />
                   </>
                 )}
               </>
             ) : progress === 100 ? (
               <form action={issueCertificate.bind(null, profile.id, cohortId)}>
-                <Button>
+                <SubmitButton>
                   <Award size={14} /> Issue certificate
-                </Button>
+                </SubmitButton>
               </form>
             ) : (
               <Pill>Not complete</Pill>

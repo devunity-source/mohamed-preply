@@ -129,6 +129,40 @@ export function completedLessonIds(userId: string): Set<string> {
   );
 }
 
+/** Where a lesson sits in its programme: module, position, and its neighbours. */
+export function lessonContext(programmeId: string, lessonId: string) {
+  const modules = modulesFor(programmeId);
+  const flat = modules.flatMap(({ module, lessons }) =>
+    lessons.map((lesson) => ({ module, lesson, siblings: lessons })),
+  );
+  const i = flat.findIndex((x) => x.lesson.id === lessonId);
+  if (i < 0) return undefined;
+  const here = flat[i];
+  return {
+    module: here.module,
+    lesson: here.lesson,
+    siblings: here.siblings,
+    indexInModule: here.siblings.indexOf(here.lesson),
+    prev: flat[i - 1]?.lesson,
+    next: flat[i + 1]?.lesson,
+  };
+}
+
+/**
+ * The lesson to resume: the first unfinished one in this week's module, else
+ * the first unfinished one anywhere in the programme.
+ */
+export function nextLessonFor(userId: string, cohort: Cohort, now: Date) {
+  const done = completedLessonIds(userId);
+  const { week } = cohortWeek(cohort, now);
+  const modules = modulesFor(cohort.programmeId);
+  const pick = (list: typeof modules) =>
+    list
+      .flatMap((m) => m.lessons.map((lesson) => ({ module: m.module, lesson, total: m.lessons.length })))
+      .find((x) => !done.has(x.lesson.id));
+  return pick(modules.filter((m) => m.module.week === week)) ?? pick(modules);
+}
+
 export type ModuleStatus = "done" | "in_progress" | "not_started";
 
 export function labStatus(userId: string, labId: string): LabStatus {

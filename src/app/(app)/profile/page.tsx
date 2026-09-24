@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { Check, LogOut } from "lucide-react";
-import { Avatar, Button, Card, Label, PageHeader, ProgressBar } from "@/components/ui";
+import { Avatar, Card, Label, PageHeader, ProgressBar } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { achievementsFor, listProfiles, primaryCohort, progressFor } from "@/lib/data/repo";
 import { demoSignInForm, signOut } from "@/lib/auth-actions";
 import { demoLoginEnabled } from "@/lib/auth/config";
@@ -18,7 +19,7 @@ export default async function Profile() {
   return (
     <>
       <PageHeader eyebrow="Profile" title={user.fullName} />
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 [&>*]:min-w-0">
         <div className="space-y-5 lg:col-span-2">
           {progress && primary && (
             <Card title={primary.programme.title}>
@@ -93,9 +94,9 @@ export default async function Profile() {
               Signed in as <span className="font-mono">{accountEmail(user.id)}</span>
             </p>
             <form action={signOut} className="mt-4">
-              <Button variant="ghost" className="w-full">
+              <SubmitButton variant="ghost" className="w-full">
                 <LogOut size={14} /> Sign out
-              </Button>
+              </SubmitButton>
             </form>
           </Card>
 
@@ -117,7 +118,7 @@ export default async function Profile() {
                     </option>
                   ))}
                 </select>
-                <Button className="w-full">Switch account</Button>
+                <SubmitButton className="w-full">Switch account</SubmitButton>
               </form>
               <Label className="mt-4">Data resets when the server restarts</Label>
             </Card>

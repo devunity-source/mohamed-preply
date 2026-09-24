@@ -6,6 +6,7 @@ import { cohortClasses } from "@/lib/data/repo";
 import { deleteClass } from "@/lib/admin-actions";
 import { requireCohortManager } from "@/lib/authz";
 import { formatShortDate, formatTime, formatWeekday } from "@/lib/time";
+import { ConfirmForm } from "@/components/confirm-form";
 
 export default async function AdminClasses({ params }: PageProps<"/admin/cohorts/[cohortId]/classes">) {
   const { cohortId } = await params;
@@ -41,14 +42,15 @@ export default async function AdminClasses({ params }: PageProps<"/admin/cohorts
                   <Pill tone="warn">Needs recording</Pill>
                 )
               ) : (
-                <form action={deleteClass.bind(null, c.id)}>
-                  <button
-                    aria-label={`Delete ${c.title}`}
-                    className="rounded-md p-1.5 text-muted hover:bg-k-deadline/10 hover:text-k-deadline"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </form>
+                <ConfirmForm
+                  action={deleteClass.bind(null, c.id)}
+                  triggerLabel={`Delete ${c.title}`}
+                  triggerClassName="rounded-md p-1.5 text-muted hover:bg-k-deadline/10 hover:text-k-deadline"
+                  trigger={<Trash2 size={14} />}
+                  title={`Delete "${c.title}"?`}
+                  description="It disappears from every student's schedule and calendar."
+                  confirmLabel="Delete class"
+                />
               )}
             </li>
           );

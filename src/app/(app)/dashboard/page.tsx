@@ -1,6 +1,6 @@
 import Link from "next/link";
 import clsx from "clsx";
-import { ArrowUpRight, Check, Video } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Check, Video } from "lucide-react";
 import { Avatar, ButtonLink, Card, Empty, KindMark, Label, Legend, ProgressBar } from "@/components/ui";
 import {
   cohortAssignments,
@@ -9,6 +9,7 @@ import {
   cohortWeek,
   isLive,
   nextClass,
+  nextLessonFor,
   primaryCohort,
   profileById,
   progressFor,
@@ -54,8 +55,10 @@ export default async function Dashboard() {
     <>
       <Hello name={firstName} now={now} subtitle={`${cohort.name} · Cohort ${cohort.code}`} />
 
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 [&>*]:min-w-0">
         <div className="space-y-5 lg:col-span-2">
+          {role === "student" && <ContinueLearning userId={user.id} cohort={cohort} now={now} />}
+
           {/* Next class */}
           <section className="rounded-md bg-ink p-6 text-paper md:p-8">
             <p className="font-mono text-[11px] font-medium tracking-[0.12em] uppercase opacity-60">Next class</p>
@@ -230,10 +233,45 @@ function ProgressCard({
   );
 }
 
-function Tasks({ userId, cohortId, now }: { userId: string; cohortId: string; now: Date }) {
-  const tasks = tasksFor(userId, cohortId, now);
+function ContinueLearning({ userId, cohort, now }: { userId: string; cohort: Cohort; now: Date }) {
+  const next = nextLessonFor(userId, cohort, now);
+  if (!next) {
+    return (
+      <Card title="Continue learning">
+        <p className="font-medium">You&apos;ve finished every lesson. Nice.</p>
+      </Card>
+    );
+  }
+  const { module, lesson, total } = next;
   return (
-    <Card title="Your tasks">
+    <Link
+      href={`/cohorts/${cohort.id}/modules/${module.id}/${lesson.id}`}
+      className="group flex items-center gap-5 rounded-md border-2 border-ink bg-surface p-5 transition-colors hover:border-accent md:p-6"
+    >
+      <div className="min-w-0 flex-1">
+        <Label>Continue where you left off</Label>
+        <p className="mt-2 truncate text-xl font-semibold tracking-tight group-hover:text-accent">{lesson.title}</p>
+        <p className="mt-1 text-sm text-muted">
+          Week {module.week} · Lesson {lesson.position} of {total} · {lesson.durationMin} min
+        </p>
+      </div>
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-md bg-ink text-paper transition-colors group-hover:bg-accent group-hover:text-accent-ink">
+        <ArrowRight size={18} />
+      </span>
+    </Link>
+  );
+}
+
+function Tasks({ userId, cohortId, now }: { userId: string; cohortId: string; now: Date }) {
+  const all = tasksFor(userId, cohortId, now);
+  // Finished work doesn't need attention; it's summarised in one line instead.
+  const tasks = all.filter((t) => !t.done);
+  const doneCount = all.length - tasks.length;
+  return (
+    <Card
+      title="Your tasks"
+      action={doneCount > 0 ? <span className="text-xs text-muted">{doneCount} done recently</span> : undefined}
+    >
       {tasks.length === 0 ? (
         <Empty>Nothing due. Enjoy it.</Empty>
       ) : (

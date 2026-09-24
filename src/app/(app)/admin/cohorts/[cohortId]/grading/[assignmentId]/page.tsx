@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Bell } from "lucide-react";
-import { Avatar, Button, Card, Empty, Pill } from "@/components/ui";
+import { Avatar, Card, Empty, Pill } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { GradeForm } from "@/components/admin-forms";
 import { cohortAssignments, cohortRoster, profileById, submissionFor } from "@/lib/data/repo";
 import { gradeSubmission, remindNonSubmitters } from "@/lib/admin-actions";
@@ -40,9 +41,9 @@ export default async function GradeAssignment({
         </div>
         {missing.length > 0 && (
           <form action={remindNonSubmitters.bind(null, a.id)}>
-            <Button variant="ghost">
+            <SubmitButton variant="ghost">
               <Bell size={14} /> Remind {missing.length} who haven&apos;t submitted
-            </Button>
+            </SubmitButton>
           </form>
         )}
       </div>

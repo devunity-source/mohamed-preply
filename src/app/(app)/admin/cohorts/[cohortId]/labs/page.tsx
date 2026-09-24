@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { Check, Undo2 } from "lucide-react";
-import { Avatar, Button, Card, Empty } from "@/components/ui";
+import { Avatar, Card, Empty } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { labBoard } from "@/lib/data/admin";
 import { labStatus } from "@/lib/data/repo";
 import { reviewLab } from "@/lib/admin-actions";
@@ -36,14 +37,14 @@ export default async function LabReviews({ params }: PageProps<"/admin/cohorts/[
                   </span>
                 </span>
                 <form action={reviewLab.bind(null, lab.id, profile.id, "return")}>
-                  <Button variant="ghost">
+                  <SubmitButton variant="ghost">
                     <Undo2 size={14} /> Return
-                  </Button>
+                  </SubmitButton>
                 </form>
                 <form action={reviewLab.bind(null, lab.id, profile.id, "pass")}>
-                  <Button>
+                  <SubmitButton>
                     <Check size={14} /> Pass
-                  </Button>
+                  </SubmitButton>
                 </form>
               </li>
             ))}
