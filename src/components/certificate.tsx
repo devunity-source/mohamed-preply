@@ -15,9 +15,12 @@ export async function Certificate({
 }) {
   const { t } = await getI18n();
   return (
-    <div className="relative aspect-[1.414] w-full overflow-hidden rounded-md border border-line bg-surface p-[6%] text-ink">
-      <div className="absolute end-0 top-0 h-full w-[18%] bg-ink" aria-hidden />
-      <div className="absolute end-[18%] top-0 size-[9%] bg-accent" aria-hidden />
+    <div className="relative aspect-[1.414] w-full overflow-hidden rounded-2xl border border-line bg-surface p-[6%] text-ink print:rounded-none">
+      <div
+        className="absolute end-0 top-0 h-full w-[18%] bg-gradient-to-b from-violet to-cyan print:[print-color-adjust:exact]"
+        aria-hidden
+      />
+      <div className="absolute end-[18%] top-0 size-[9%] bg-pink print:[print-color-adjust:exact]" aria-hidden />
       <div className="relative flex h-full w-[76%] flex-col">
         <div className="flex items-center gap-2">
           <Logo className="size-[clamp(18px,3vw,32px)] text-ink" />

@@ -163,7 +163,7 @@ export function CommandPalette() {
               onClick={() => go(item)}
               className={clsx(
                 "flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm",
-                i === active && "bg-ink text-paper",
+                i === active && "bg-violet/20 text-ink",
               )}
             >
               <span className="min-w-0 flex-1">

@@ -2,111 +2,91 @@
 
 import { useId } from "react";
 import { useFormAction } from "@/components/use-form-action";
-import clsx from "clsx";
 import { Check } from "lucide-react";
 import { useT } from "@/components/i18n-provider";
 import { joinWaitlist } from "@/lib/actions";
 
+/** Email plus a programme picked from cards, as one card. */
 export function WaitlistForm({
   programmes,
   defaultProgramme,
-  tone = "light",
-  stacked = false,
 }: {
-  programmes: { slug: string; title: string }[];
+  programmes: { slug: string; title: string; price: string }[];
   defaultProgramme?: string;
-  tone?: "light" | "dark";
-  /** Email on its own row, for narrow columns. */
-  stacked?: boolean;
 }) {
   const { state, pending, formProps } = useFormAction(joinWaitlist);
   const t = useT();
   const id = useId();
-  const dark = tone === "dark";
-  const field = clsx(
-    "h-12 rounded-md border px-4 text-base outline-none transition-colors",
-    dark
-      ? "border-paper/25 bg-transparent text-paper placeholder:text-paper/50 focus:border-paper"
-      : "border-line bg-surface text-ink placeholder:text-muted focus:border-ink",
-  );
+  const chosen = defaultProgramme ?? programmes[0]?.slug;
 
-  if (state.ok) return <Joined dark={dark} />;
-
-  return (
-    <form {...formProps} className="w-full">
-      <div className={clsx("flex flex-col gap-2", stacked ? "sm:grid sm:grid-cols-[1fr_auto]" : "sm:flex-row")}>
-        <label htmlFor={`${id}-email`} className="sr-only">
-          {t("landing.formEmail")}
-        </label>
-        <input
-          id={`${id}-email`}
-          name="email"
-          type="email"
-          required
-          maxLength={254}
-          autoComplete="email"
-          dir="ltr"
-          placeholder="you@email.com"
-          className={clsx(field, "w-full min-w-0 sm:flex-1", stacked && "sm:col-span-2")}
-        />
-        <label htmlFor={`${id}-programme`} className="sr-only">
-          {t("landing.formProgramme")}
-        </label>
-        <select
-          id={`${id}-programme`}
-          name="programme"
-          defaultValue={defaultProgramme ?? programmes[0]?.slug}
-          className={clsx(field, "pe-8", dark && "[&>option]:text-ink")}
-        >
-          {programmes.map((p) => (
-            <option key={p.slug} value={p.slug}>
-              {p.title}
-            </option>
-          ))}
-        </select>
-        {/* Honeypot: hidden from people and screen readers, bots fill it in. */}
-        <input type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
-        <button
-          disabled={pending}
-          // Lamp: the page's one accent is reserved for this button.
-          className={clsx(
-            "inline-flex h-12 shrink-0 items-center justify-center rounded-md bg-accent px-5 font-semibold text-accent-ink transition-colors disabled:opacity-60",
-            dark ? "hover:bg-paper" : "hover:bg-ink hover:text-paper",
-          )}
-        >
-          {pending ? t("landing.formJoining") : t("landing.joinWaitlist")}
-        </button>
-      </div>
-      <Footnote dark={dark} error={state.error} />
-    </form>
-  );
-}
-
-function Joined({ dark }: { dark: boolean }) {
-  const t = useT();
-  return (
-    <p
-      role="status"
-      className={clsx(
-        "flex items-center gap-3 rounded-md px-4 py-3.5 font-medium",
-        dark ? "bg-paper text-ink" : "bg-ink text-paper",
-      )}
-    >
-      <Check size={18} strokeWidth={3} className={clsx("shrink-0", dark ? "text-dusk" : "text-accent")} />
-      {t("landing.formJoined")}
-    </p>
-  );
-}
-
-/** The error when there is one, otherwise the no-spam line. */
-function Footnote({ dark, error }: { dark: boolean; error?: string }) {
-  const t = useT();
-  if (error) {
+  if (state.ok) {
     return (
-      <p role="alert" className={clsx("mt-2 text-sm", dark ? "text-accent" : "text-k-deadline")}>
-        {error}
+      <p
+        role="status"
+        className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-6 font-medium sm:p-8"
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand text-white">
+          <Check size={16} strokeWidth={3} />
+        </span>
+        {t("landing.formJoined")}
       </p>
     );
   }
-  return <p className={clsx("mt-2 text-xs", dark ? "text-paper/60" : "text-muted")}>{t("landing.formNoSpam")}</p>;
+
+  return (
+    <form {...formProps} className="rounded-2xl border border-line bg-surface p-6 text-start sm:p-8">
+      <label htmlFor={`${id}-email`} className="mb-2 block text-sm font-medium text-ink/80">
+        {t("landing.formEmail")}
+      </label>
+      <input
+        id={`${id}-email`}
+        name="email"
+        type="email"
+        required
+        maxLength={254}
+        autoComplete="email"
+        dir="ltr"
+        placeholder="you@email.com"
+        className="w-full rounded-xl border border-line bg-ink/5 px-4 py-3 text-[15px] text-ink outline-none placeholder:text-muted focus:border-accent"
+      />
+
+      <fieldset className="mt-6">
+        <legend className="mb-2 text-sm font-medium text-ink/80">{t("landing.formProgramme")}</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {programmes.map((p) => (
+            <label key={p.slug} className="relative cursor-pointer">
+              <input
+                type="radio"
+                name="programme"
+                value={p.slug}
+                defaultChecked={p.slug === chosen}
+                className="peer sr-only"
+              />
+              <span className="block rounded-xl border border-line bg-ink/[0.02] p-4 transition-colors peer-checked:border-violet peer-checked:bg-violet/10 peer-focus-visible:outline-2 peer-focus-visible:outline-accent hover:border-ink/20">
+                <span className="block text-sm font-bold">{p.title}</span>
+                <span className="mt-1 block text-sm text-muted">{p.price}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {/* Honeypot: hidden from people and screen readers, bots fill it in. */}
+      <input type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
+
+      <button
+        disabled={pending}
+        className="mt-6 flex w-full items-center justify-center rounded-xl bg-brand py-3.5 text-sm font-bold text-white shadow-lg shadow-violet/20 transition-opacity hover:opacity-90 disabled:opacity-60"
+      >
+        {pending ? t("landing.formJoining") : t("landing.joinWaitlist")}
+      </button>
+      {state.error ? (
+        <p role="alert" className="mt-3 text-center text-sm text-k-deadline">
+          {state.error}
+        </p>
+      ) : (
+        <p className="mt-3 text-center text-xs text-muted">{t("landing.formNoSpam")}</p>
+      )}
+    </form>
+  );
 }

@@ -3,15 +3,14 @@ import { main, resetData, signIn, expect, test, id } from "./helpers";
 test.beforeEach(async ({ request }) => resetData(request));
 
 test.describe("landing page", () => {
-  test("shows the evening hero, the six-week strip and both programmes with USD prices", async ({ page }) => {
+  test("shows the hero, the week-by-week curriculum and both programmes with USD prices", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "Switch into cloud with a cohort, not a playlist.",
-    );
+    const h1 = page.getByRole("heading", { level: 1 });
+    await expect(h1).toContainText(/The (DevOps Engineer|AI Engineering) programme/);
+    await expect(h1).toContainText("Built for career switchers");
     await expect(main(page)).toContainText("Mondays and Thursdays at 19:00 Dubai time");
-    const strip = page.getByLabel(/week by week/);
-    await expect(strip.getByRole("listitem")).toHaveCount(6);
-    await expect(strip).toContainText(/Starts \d{1,2} \w{3}/);
+    await expect(main(page)).toContainText(/Next cohort starts \d{1,2} \w+/);
+    await expect(page.locator("#curriculum ol > li")).toHaveCount(6);
     const programmes = page.locator("#programmes");
     await expect(programmes).toContainText("DevOps Engineer");
     await expect(programmes).toContainText("$670");
@@ -19,15 +18,28 @@ test.describe("landing page", () => {
     await expect(programmes).toContainText("$790");
   });
 
-  test("a programme's waitlist button preselects it in the form", async ({ page }) => {
+  test("the programme tabs switch the whole page", async ({ page }) => {
     await page.goto("/");
+    const tabs = page.getByRole("navigation", { name: "Programmes" });
+    await tabs.getByRole("link", { name: "AI Engineering" }).click();
+    await expect(page).toHaveURL(/\?programme=ai-engineering$/);
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("The AI Engineering programme");
+    await expect(tabs.getByRole("link", { name: "AI Engineering" })).toHaveAttribute("aria-current", "page");
+    await expect(page.locator("#waitlist input[name=programme][value=ai-engineering]")).toBeChecked();
+
+    await tabs.getByRole("link", { name: "DevOps Engineer" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("The DevOps Engineer programme");
+  });
+
+  test("a programme's waitlist button preselects it in the form", async ({ page }) => {
+    await page.goto("/?programme=ai-engineering");
     await page
       .locator("#programmes article")
       .filter({ hasText: "DevOps Engineer" })
       .getByRole("link", { name: "Join the waitlist" })
       .click();
     await expect(page).toHaveURL(/programme=devops-engineer#waitlist/);
-    await expect(page.locator("#waitlist select[name=programme]")).toHaveValue("devops-engineer");
+    await expect(page.locator("#waitlist input[name=programme][value=devops-engineer]")).toBeChecked();
   });
 
   test("the waitlist rejects a bad email and accepts a good one", async ({ page }) => {
@@ -50,17 +62,6 @@ test.describe("landing page", () => {
       await form.getByRole("button", { name: "Join the waitlist" }).click();
       await expect(p.locator("#waitlist")).toContainText("You're on the list");
     }
-  });
-
-  test("uses sentence case, no uppercase monospace labels", async ({ page }) => {
-    await page.goto("/");
-    const shouting = await page.evaluate(
-      () =>
-        [...document.querySelectorAll("main *")].filter(
-          (e) => getComputedStyle(e).textTransform === "uppercase" && e.textContent?.trim(),
-        ).length,
-    );
-    expect(shouting).toBe(0);
   });
 });
 

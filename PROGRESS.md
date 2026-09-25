@@ -38,8 +38,7 @@ This file is the single source of truth for what's planned, what's built, and wh
 | Sign-in (target) | Email + password, Google, LinkedIn | Owner's choice, 24 Sep 2026. Google and LinkedIn arrive with Supabase Auth in Phase 2. |
 | Refunds | Full refund until week 2 starts; one free move to a later cohort before week 3 | Owner's choice, 24 Sep 2026. Draft in `docs/refund-policy.md`, needs legal review before publishing. |
 | Video | Zoom links for V1, LiveKit later | Brief says integrate first, build later. |
-| Design (app) | Warm off-white paper, near-black ink, one signal-orange accent, square geometry. Light + dark. | Matches "bold, geometric, minimalist". |
-| Design (marketing: `/`, `/login`, `/verify`) | Evening palette from the 19:00 class time: Dusk `#1F2A44`, Chalk `#F3F5F7`, Ink `#15181F`, Slate `#5B6475`, Rule `#D5DAE2`, one accent Lamp `#F2B33D`. One family, Archivo, using its width axis (wide headlines, condensed week strip). Sentence-case labels, no uppercase mono. Scoped with a `.marketing` class that redefines the tokens, so the app keeps its look. | Owner's redesign brief, 24 Sep 2026: build the page around the evening schedule. Terminal look rejected as a stock style. |
+| Design (whole site and app) | Taken from the owner's own starting design (25 Sep 2026): dark navy `#0F172A`, slate cards with white-at-10% borders, violet `#7C3AED` to cyan `#22D3EE` gradient for filled buttons and highlighted words, pink `#F472B6` as a third accent. Sora for headings (and all marketing text), Inter for app text, Noto Kufi Arabic for Arabic. One theme, no light mode. Tokens in `globals.css`. | Owner asked for the app to match the design they started with. Replaces the earlier paper/orange app look and the Dusk/Archivo marketing palette. |
 | Auth (now) | Built-in email + password: scrypt hashes, server-side sessions, `__Host-` HttpOnly cookie. One-click demo sign-in only in dev or with `DEMO_LOGIN=true`. Sign-in required for everything but `/`, `/verify` and `/login`. | Replaced the cookie-holds-a-user-id demo auth (security review #1). Phase 2 swaps it for Supabase Auth behind the same `currentUser()`. |
 | Roles | `student`, `instructor` (acts only in cohorts they teach), `admin` (runs the academy). Rakan is seeded as `admin`. | Came out of the security review: "any instructor can edit everything" was too broad. |
 
@@ -65,7 +64,7 @@ src/
 │   │   ├── calendar/            month grid + day agenda
 │   │   ├── resources/  notifications/  profile/
 │   │   ├── admin/               admin + instructor tools (Phase 3)
-│   ├── globals.css              design tokens (light + dark)
+│   ├── globals.css              design tokens (one dark theme)
 │   └── not-found.tsx
 ├── components/                  ui primitives, nav, forms, certificate
 ├── proxy.ts                     per-request Content Security Policy
@@ -251,8 +250,8 @@ Review of the whole app on 2026-09-23. Every finding was reproduced by exploitin
 
 Public page at `/`, the app moved behind it at `/dashboard`. Aimed at career switchers, main action is **join the waitlist**.
 
-- [x] **Redesign (24 Sep):** Dusk hero with the headline, the class times and the waitlist form, above a six-week strip for the next cohort ("Starts" marker in Lamp, capstone demo in the last week). The strip fills in once on load; no motion with reduced-motion on.
-- [x] Then: most courses vs AcadeMe; a real Monday to Friday timetable with times (same colours as the app calendar); what's included as a two-column list; programmes side by side with week list and large price; instructor and what you leave with; FAQ; Dusk closing band. No icon cards, no "A · B" strings, no arrows on links.
+- [x] **Redesign (25 Sep), from the owner's starting design:** pill tabs at the top switch the whole page between programmes. Hero on a grid with violet and cyan glow, "next cohort starts" badge, headline with gradient words, two buttons, two terminal-style chips. Then: who it's for (two cards), what's included (six icon cards), roadmap (one card per week with its lessons), the week's timetable as a terminal window, pricing (one card per programme, the selected one highlighted, "starts next" badge), numbers, instructor and outcomes, FAQ, waitlist form with programme cards, closing call to action, footer with link columns.
+- [x] Numbers are counted, not claimed: weeks, live classes (weeks times classes per week in the timetable), lessons in the curriculum, one capstone.
 - [x] Every price, date and curriculum item is read from the same data the app uses. No invented stats, testimonials or student counts.
 - [x] Programme cards preselect the programme in the form and scroll to it
 - [x] Waitlist action: email validation, per-IP rate limit, honeypot for bots, de-duplication, same response whether or not you're already listed (no enumeration)
@@ -260,7 +259,6 @@ Public page at `/`, the app moved behind it at `/dashboard`. Aimed at career swi
 - [x] Responsive (390px, no horizontal scroll), dark mode, SEO title/description/Open Graph
 - [x] Admin view of the waitlist with CSV export (Phase 3)
 - [ ] Real bio and photo for Rakan (waiting on you)
-- [ ] Marketing pages ignore dark mode on purpose (the Dusk bands carry the evening look); revisit if wanted
 
 ## UX pass
 
@@ -331,3 +329,4 @@ Full Circle parity: DMs, member directory, events ticketing, custom domains, whi
 | 2026-09-24 | Phase 2 step 2: all data in Supabase (one RLS-filtered snapshot per request, writes as the signed-in person). Migration 0011. Whole browser suite passes against a local Supabase too (66 each mode), including real invite and reset emails; CI runs both. Found and fixed: staff couldn't see student progress; session cookies weren't HttpOnly; revoked sessions lived until token expiry. |
 | 2026-09-24 | Email through Resend: app emails with per-kind opt-out and signed unsubscribe, class reminder job, test outbox, `npm run email:test`. Migration 0012. Browser suite 70 in each mode. |
 | 2026-09-24 | English and Arabic: toggle on every page (cookie, saved to the profile, browser language on first visit), right-to-left layout, Noto Kufi Arabic, Western digits. Every page, form message, notification and email translated; Arabic curriculum for both programmes, editable in the curriculum editor. Migration 0013, `npm run i18n:check` in CI, Arabic layout runs at all three sizes plus `arabic.spec.ts`. Glossary and rules in `docs/i18n.md`. |
+| 2026-09-25 | Redesign to the owner's starting design: dark navy, Sora + Inter, violet to cyan gradient, across the landing page and the app. Landing page rebuilt on its sections (programme pill tabs, hero with grid and glow, who it's for, features, week-by-week roadmap, the week as a terminal, pricing, numbers counted from the curriculum, instructor, FAQ, waitlist form with programme cards, closing call to action), in English and Arabic. `db:seed` also fills missing Arabic. |

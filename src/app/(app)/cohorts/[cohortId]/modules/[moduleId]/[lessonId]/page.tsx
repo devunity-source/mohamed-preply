@@ -58,7 +58,7 @@ export default async function LessonPage({ params }: PageProps<"/cohorts/[cohort
         <h2 className="mt-2 mb-8 text-3xl font-semibold tracking-tight md:text-4xl">{lesson.title}</h2>
 
         {lesson.kind === "video" && (
-          <div className="mb-8 flex aspect-video items-center justify-center rounded-md bg-ink text-paper">
+          <div className="mb-8 flex aspect-video items-center justify-center rounded-xl border border-line bg-dusk text-ink">
             <div className="text-center">
               <PlayCircle size={48} strokeWidth={1.25} className="mx-auto opacity-70" />
               <p className="mt-3 text-sm opacity-70">{t("lessons.videoPlaceholder")}</p>

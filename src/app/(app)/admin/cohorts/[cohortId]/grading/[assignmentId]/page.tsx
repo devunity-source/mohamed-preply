@@ -90,7 +90,7 @@ export default async function GradeAssignment({
                         aria-current={active ? "true" : undefined}
                         className={clsx(
                           "flex items-center gap-2.5 rounded-md px-2 py-2 text-sm",
-                          active ? "bg-ink text-paper" : "hover:bg-line/60",
+                          active ? "bg-violet/20 text-ink" : "hover:bg-line/60",
                         )}
                       >
                         <Avatar profile={p} size={24} />

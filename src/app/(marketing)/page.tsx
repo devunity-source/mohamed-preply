@@ -1,17 +1,29 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import clsx from "clsx";
+import {
+  ArrowRight,
+  BriefcaseBusiness,
+  Check,
+  Clock,
+  Code,
+  FlaskConical,
+  MessageSquareText,
+  Rocket,
+  Users,
+  Video,
+} from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { WaitlistForm } from "@/components/waitlist-form";
 import { demoLoginEnabled } from "@/lib/auth/config";
 import { cohortRoster, publishedProgrammes, modulesFor, nextCohortFor } from "@/lib/data/repo";
 import { loadData } from "@/lib/data/store";
 import { formatMoney } from "@/lib/format";
-import { ACADEMY_TZ, formatDate, formatShortDate } from "@/lib/time";
+import { ACADEMY_TZ, formatDate } from "@/lib/time";
 import { rich } from "@/components/rich";
 import { loc } from "@/lib/i18n/content";
 import { getI18n } from "@/lib/i18n/server";
-import type { Key, T } from "@/lib/i18n/translate";
+import type { Key } from "@/lib/i18n/translate";
 import type { Locale } from "@/lib/i18n/config";
 import type { CalendarKind } from "@/lib/types";
 
@@ -46,13 +58,13 @@ const AR_CITY: Record<string, string> = {
 };
 const cityFor = (locale: Locale) => (locale === "ar" ? (AR_CITY[TZ_CITY] ?? TZ_CITY) : TZ_CITY);
 
-const INCLUDED = [
-  { title: "landing.incLiveTitle", body: "landing.incLiveBody" },
-  { title: "landing.incLabsTitle", body: "landing.incLabsBody" },
-  { title: "landing.incFeedbackTitle", body: "landing.incFeedbackBody" },
-  { title: "landing.incCapstoneTitle", body: "landing.incCapstoneBody" },
-  { title: "landing.incCohortTitle", body: "landing.incCohortBody" },
-  { title: "landing.incOfficeHoursTitle", body: "landing.incOfficeHoursBody" },
+const FEATURES = [
+  { icon: Video, title: "landing.incLiveTitle", body: "landing.incLiveBody" },
+  { icon: FlaskConical, title: "landing.incLabsTitle", body: "landing.incLabsBody" },
+  { icon: MessageSquareText, title: "landing.incFeedbackTitle", body: "landing.incFeedbackBody" },
+  { icon: Rocket, title: "landing.incCapstoneTitle", body: "landing.incCapstoneBody" },
+  { icon: Users, title: "landing.incCohortTitle", body: "landing.incCohortBody" },
+  { icon: Clock, title: "landing.incOfficeHoursTitle", body: "landing.incOfficeHoursBody" },
 ] as const;
 
 const OUTCOMES = [
@@ -70,12 +82,13 @@ const WEEK: { day: Key; kind: CalendarKind; what: Key; from: string; to: string 
   { day: "landing.thursday", kind: "class", what: "landing.weekLiveClass", from: "19:00", to: "20:30" },
   { day: "landing.friday", kind: "workshop", what: "landing.weekProject", from: "17:00", to: "19:00" },
 ];
+const CLASSES_PER_WEEK = WEEK.filter((d) => d.kind === "class").length;
 
-const KIND_BAR: Record<string, string> = {
-  class: "bg-k-class",
-  lab: "bg-k-lab",
-  office_hours: "bg-k-office",
-  workshop: "bg-k-workshop",
+const KIND_TEXT: Record<string, string> = {
+  class: "text-k-class",
+  lab: "text-k-lab",
+  office_hours: "text-k-office",
+  workshop: "text-k-workshop",
 };
 
 const FAQ = [
@@ -86,309 +99,466 @@ const FAQ = [
   { q: "landing.faqCertificateQ", a: "landing.faqCertificateA" },
 ] as const;
 
+const gradientWords = { g: (c: React.ReactNode) => <span className="text-brand">{c}</span> };
+
 export default async function Landing({ searchParams }: PageProps<"/">) {
   const { t, locale } = await getI18n();
   await loadData();
   const sp = await searchParams;
   const city = cityFor(locale);
-  const programmes = publishedProgrammes().map((p) => ({
-    ...loc(p, locale),
-    cohort: nextCohortFor(p.id),
-    modules: modulesFor(p.id).map((m) => loc(m.module, locale)),
-  }));
-  const options = programmes.map((p) => ({ slug: p.slug, title: p.title }));
-  const requested = typeof sp.programme === "string" ? sp.programme : undefined;
-  const defaultProgramme = options.some((o) => o.slug === requested) ? requested : undefined;
+  const programmes = publishedProgrammes().map((p) => {
+    const modules = modulesFor(p.id).map(({ module, lessons }) => ({
+      ...loc(module, locale),
+      lessons: lessons.map((l) => loc(l, locale).title),
+    }));
+    return { ...loc(p, locale), cohort: nextCohortFor(p.id), modules };
+  });
+  if (programmes.length === 0) return null;
 
-  // The strip shows whichever programme starts next, so its "starts" marker is always true.
+  // The programme whose cohort starts first; it's the default tab and gets the "starts next" badge.
   const upcoming = programmes
     .filter((p) => p.cohort?.status === "upcoming")
     .sort((a, b) => a.cohort!.startsOn.getTime() - b.cohort!.startsOn.getTime())[0];
-  const featured = upcoming ?? programmes[0];
-  const lead = programmes.find((p) => p.slug === "devops-engineer") ?? programmes[0];
-  const instructor = lead?.cohort ? cohortRoster(lead.cohort.id).instructors[0] : undefined;
-  const formDefault = defaultProgramme ?? upcoming?.slug;
+  const requested = typeof sp.programme === "string" ? sp.programme : undefined;
+  const p = programmes.find((x) => x.slug === requested) ?? upcoming ?? programmes[0];
+  const instructor = p.cohort ? cohortRoster(p.cohort.id).instructors[0] : undefined;
+  const lessonCount = p.modules.reduce((n, m) => n + m.lessons.length, 0);
+  const starts = p.cohort?.status === "upcoming" ? p.cohort.startsOn : undefined;
+
+  const numbers = [
+    { value: p.durationWeeks, label: t("landing.numWeeks") },
+    { value: p.durationWeeks * CLASSES_PER_WEEK, label: t("landing.numClasses") },
+    { value: lessonCount, label: t("landing.numLessons") },
+    { value: 1, label: t("landing.numCapstone") },
+  ];
 
   return (
     <>
-      {/* Hero: the evening */}
-      <section className="bg-dusk text-paper">
-        <div className="mx-auto max-w-6xl px-4 pt-16 pb-12 md:px-8 md:pt-24">
-          <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr] lg:items-end">
-            <div>
-              <h1 className="font-wide text-5xl leading-[0.95] font-extrabold tracking-tight md:text-7xl">
-                {t("landing.heroTitle")}
-              </h1>
-              <p className="mt-6 max-w-xl text-lg text-paper/75 md:text-xl">{t("landing.heroLead", { city })}</p>
-            </div>
-            <div>
-              <WaitlistForm
-                key={formDefault ?? "default"}
-                programmes={options}
-                defaultProgramme={formDefault}
-                tone="dark"
-                stacked
-              />
-              {demoLoginEnabled() && (
-                <Link
-                  href="/login"
-                  className="mt-4 inline-block text-sm font-medium text-paper/80 underline-offset-4 hover:underline"
-                >
-                  {t("landing.exploreDemo")}
-                </Link>
-              )}
-            </div>
-          </div>
-
-          {featured && <WeekStrip programme={featured} t={t} />}
+      {programmes.length > 1 && (
+        <div className="relative z-30 flex justify-center px-4 pt-2 md:pointer-events-none md:fixed md:inset-x-0 md:top-4 md:pt-0">
+          <nav
+            aria-label={t("landing.tabsLabel")}
+            className="flex gap-1 rounded-full border border-neutral-200/50 bg-white/90 p-1.5 font-sans shadow-lg backdrop-blur-md md:pointer-events-auto"
+          >
+            {programmes.map((x) => (
+              <Link
+                key={x.slug}
+                href={`/?programme=${x.slug}`}
+                scroll={false}
+                aria-current={x.slug === p.slug ? "page" : undefined}
+                className={clsx(
+                  "rounded-full px-5 py-2.5 text-sm font-medium whitespace-nowrap transition-colors sm:px-6",
+                  x.slug === p.slug ? "bg-neutral-900 text-white" : "text-neutral-600 hover:text-neutral-900",
+                )}
+              >
+                {x.title}
+              </Link>
+            ))}
+          </nav>
         </div>
+      )}
+
+      {/* Hero */}
+      <section className="relative -mt-16 overflow-hidden pt-32 pb-28 md:-mt-20 md:pt-52 md:pb-40">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,#000_60%,transparent_100%)] bg-[size:4rem_4rem]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-1/3 left-1/2 size-[500px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,#7c3aed,transparent)] opacity-20 blur-[80px]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-1/4 right-1/4 size-[280px] rounded-full bg-[radial-gradient(circle,#22d3ee,transparent)] opacity-15 blur-[70px]"
+        />
+        <div className="relative z-10 mx-auto max-w-7xl px-4 text-center md:px-8">
+          <p className="inline-flex items-center gap-2 rounded-full border border-line bg-ink/5 px-4 py-1.5 text-sm backdrop-blur-sm sm:text-base">
+            <Rocket size={14} className="text-cyan" aria-hidden />
+            {starts ? t("landing.nextCohortStarts", { date: formatDate(starts) }) : t("landing.cohortRunning")}
+          </p>
+          <h1 className="mx-auto mt-8 max-w-6xl text-5xl leading-[1.05] font-bold tracking-[-0.025em] sm:text-6xl lg:text-[88px]">
+            {t("landing.heroTitle", { title: p.title })}
+            <br />
+            {rich(t("landing.heroTitleEnd"), gradientWords)}
+          </h1>
+          <p className="mt-8 text-lg text-muted md:text-xl">{t("landing.heroKicker")}</p>
+          <p className="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-ink/80 md:text-xl">
+            {t("landing.heroLead", { city })}
+          </p>
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link
+              href={`/?programme=${p.slug}#waitlist`}
+              scroll={false}
+              className="flex items-center gap-2 rounded-lg bg-white px-8 py-4 text-lg font-bold text-slate-900 shadow-lg transition-all hover:-translate-y-0.5 hover:bg-slate-100"
+            >
+              {t("landing.joinWaitlist")}
+              <ArrowRight size={18} className="rtl:-scale-x-100" aria-hidden />
+            </Link>
+            <Link
+              href="#curriculum"
+              className="rounded-lg border border-line bg-ink/5 px-8 py-4 text-lg font-medium backdrop-blur-sm transition-all hover:bg-ink/10"
+            >
+              {t("landing.viewCurriculum")}
+            </Link>
+          </div>
+        </div>
+        <p className="absolute start-12 bottom-16 hidden rounded-xl border border-line bg-ink/5 px-4 py-3 font-mono text-sm text-ink/80 backdrop-blur-sm lg:block">
+          <span className="text-cyan">$ </span>
+          {t("landing.chipClasses")} <span className="text-emerald-400">✓ {t("landing.chipClassesValue")}</span>
+        </p>
+        <p className="absolute end-12 bottom-16 hidden rounded-xl border border-line bg-ink/5 px-4 py-3 font-mono text-sm text-ink/80 backdrop-blur-sm lg:block">
+          <span className="text-violet-400">$ </span>
+          {t("landing.chipCapstone")}{" "}
+          <span className="text-emerald-400">{t("landing.chipCapstoneValue", { week: p.durationWeeks })}</span>
+        </p>
       </section>
 
-      {/* Contrast */}
-      <section id="how" className="scroll-mt-16 border-b border-line">
-        <div className="mx-auto grid max-w-6xl md:grid-cols-2">
-          <div className="border-b border-line px-4 py-14 md:border-e md:border-b-0 md:px-8">
-            <p className="mb-5 text-sm font-semibold text-muted">{t("landing.contrastOthers")}</p>
-            <p className="font-wide text-3xl leading-tight font-bold tracking-tight text-muted md:text-4xl">
+      {/* Who it's for */}
+      <Section>
+        <SectionHeading kicker={t("landing.whoKicker")} title={t("landing.whoTitle")} />
+        <div className="mx-auto mt-14 grid max-w-4xl gap-6 md:grid-cols-2">
+          {[
+            { icon: BriefcaseBusiness, title: t("landing.whoSwitchTitle"), body: t("landing.whoSwitchBody") },
+            { icon: Code, title: t("landing.whoLevelTitle"), body: t("landing.whoLevelBody") },
+          ].map((w) => (
+            <GlassCard key={w.title}>
+              <IconBox icon={w.icon} />
+              <h3 className="text-xl font-bold">{w.title}</h3>
+              <p className="mt-3 text-[15px] leading-relaxed text-muted">{w.body}</p>
+            </GlassCard>
+          ))}
+        </div>
+      </Section>
+
+      {/* What's included */}
+      <Section>
+        <SectionHeading
+          title={t("landing.featuresTitle")}
+          lead={
+            <>
               {rich(t("landing.contrastOthersBody"), {
                 s: (c) => <span className="line-through decoration-2">{c}</span>,
-              })}
-            </p>
-          </div>
-          <div className="px-4 py-14 md:px-8">
-            <p className="mb-5 text-sm font-semibold">AcadeMe</p>
-            <p className="font-wide text-3xl leading-tight font-bold tracking-tight md:text-4xl">
+              })}{" "}
               {t("landing.contrastUs")}
-            </p>
-          </div>
+            </>
+          }
+        />
+        <div className="mt-14 grid gap-6 md:grid-cols-3">
+          {FEATURES.map((f, i) => (
+            <GlassCard key={f.title} className={clsx(i === 0 && "md:col-span-2")}>
+              <IconBox icon={f.icon} />
+              <h3 className="text-xl font-bold">{t(f.title)}</h3>
+              <p className="mt-3 text-[15px] leading-relaxed text-muted">{t(f.body)}</p>
+            </GlassCard>
+          ))}
         </div>
-      </section>
+      </Section>
 
-      {/* A week */}
-      <section id="week" className="mx-auto max-w-6xl scroll-mt-16 px-4 py-24 md:px-8">
-        <Heading
+      {/* Roadmap: the modules week by week */}
+      <Section id="curriculum">
+        <SectionHeading
+          kicker={t("landing.roadmapKicker")}
+          title={t("landing.roadmapTitle", { count: p.durationWeeks })}
+          lead={t("landing.roadmapLead")}
+        />
+        <ol className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {p.modules.map((m) => (
+            <li key={m.id} className="rounded-2xl border border-line bg-surface p-6">
+              <p className="text-5xl font-bold text-ink/10 tabular-nums" aria-hidden>
+                {String(m.week).padStart(2, "0")}
+              </p>
+              <p className="mt-3 text-xs font-bold tracking-[0.2em] text-cyan uppercase">
+                {t("landing.roadmapWeek", { week: m.week })}
+              </p>
+              <h3 className="mt-2 text-lg font-bold">{m.title}</h3>
+              {m.lessons.length > 0 && (
+                <ul className="mt-4 space-y-2 text-[15px] text-muted">
+                  {m.lessons.map((l) => (
+                    <li key={l} className="flex gap-2">
+                      <span className="mt-2.5 size-1 shrink-0 rounded-full bg-violet-400" aria-hidden />
+                      {l}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ol>
+      </Section>
+
+      {/* A week, as a terminal */}
+      <Section id="week" tinted>
+        <SectionHeading
           kicker={t("landing.weekKicker")}
           title={t("landing.weekTitle")}
           lead={t("landing.weekLead", { city })}
         />
-        <ol className="mt-12 grid border-t border-line md:grid-cols-5">
-          {WEEK.map((d) => (
-            <li
-              key={d.day}
-              className="flex items-baseline gap-4 border-b border-line py-5 md:block md:border-e md:border-b-0 md:px-5 md:py-6 md:first:ps-0 md:last:border-e-0"
-            >
-              <p className="font-condensed w-28 shrink-0 text-lg font-semibold md:w-auto md:text-2xl">{t(d.day)}</p>
-              <div className="md:mt-8">
-                <span className={clsx("mb-3 hidden h-1 w-10 rounded-full md:block", KIND_BAR[d.kind])} aria-hidden />
-                <p className="font-medium">{t(d.what)}</p>
-                <p className="text-sm text-muted tabular-nums">{t("landing.timeRange", { from: d.from, to: d.to })}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {/* What's included */}
-      <section className="border-y border-line bg-surface">
-        <div className="mx-auto max-w-6xl px-4 py-24 md:px-8">
-          <Heading kicker={t("landing.includedKicker")} title={t("landing.includedTitle")} />
-          <dl className="mt-12 grid gap-x-16 md:grid-cols-2">
-            {INCLUDED.map((f) => (
-              <div key={f.title} className="border-t border-line py-6">
-                <dt className="text-lg font-semibold">{t(f.title)}</dt>
-                <dd className="mt-1 text-muted">{t(f.body)}</dd>
-              </div>
-            ))}
-          </dl>
+        <div className="mx-auto mt-14 max-w-3xl overflow-hidden rounded-xl border border-line bg-dusk shadow-2xl">
+          <div className="flex items-center gap-2 border-b border-line bg-ink/5 px-4 py-3">
+            <span className="size-3 rounded-full bg-[#ff5f57]" aria-hidden />
+            <span className="size-3 rounded-full bg-[#febc2e]" aria-hidden />
+            <span className="size-3 rounded-full bg-[#28c840]" aria-hidden />
+            <span className="flex-1 text-center font-mono text-xs text-muted" dir="ltr">
+              {t("landing.terminalTitle")}
+            </span>
+          </div>
+          <div className="p-5 font-mono text-sm leading-7 sm:p-6">
+            <p dir="ltr" className="text-start text-ink/80">
+              <span className="text-cyan">~ $ </span>
+              {t("landing.terminalCommand")}
+            </p>
+            <ol className="mt-2">
+              {WEEK.map((d) => (
+                <li key={d.day} className="grid grid-cols-[7rem_1fr] gap-x-4 sm:grid-cols-[8rem_1fr_auto]">
+                  <span className="text-ink/60">{t(d.day)}</span>
+                  <span className={KIND_TEXT[d.kind]}>{t(d.what)}</span>
+                  <span className="col-start-2 text-ink/80 tabular-nums sm:col-start-auto">
+                    {t("landing.timeRange", { from: d.from, to: d.to })}
+                  </span>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-2 text-muted">
+              # {t("landing.terminalDue")}
+              <span className="ms-1 inline-block h-4 w-2 translate-y-0.5 animate-pulse bg-ink/70" aria-hidden />
+            </p>
+          </div>
         </div>
-      </section>
+      </Section>
 
-      {/* Programmes */}
-      <section id="programmes" className="mx-auto max-w-6xl scroll-mt-16 px-4 py-24 md:px-8">
-        <Heading kicker={t("landing.programmesKicker")} title={t("landing.programmesTitle")} />
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
-          {programmes.map((p) => (
-            <article key={p.id} className="flex flex-col rounded-md border border-line bg-surface p-7 md:p-8">
-              <h3 className="font-wide text-3xl font-bold tracking-tight">{p.title}</h3>
-              <p className="mt-2 text-muted">{p.tagline}</p>
-              <ol className="mt-6 border-t border-line">
-                {p.modules.map((m) => (
-                  <li key={m.id} className="flex gap-4 border-b border-line py-2 text-sm">
-                    <span className="font-condensed min-w-8 shrink-0 font-semibold whitespace-nowrap text-muted">
-                      {t("landing.weekShort", { week: m.week })}
-                    </span>
-                    <span>{m.title}</span>
-                  </li>
-                ))}
-              </ol>
-              <div className="mt-auto pt-8">
-                <p className="flex items-center gap-2 text-sm text-muted">
-                  {p.cohort?.status === "upcoming" ? (
-                    <>
-                      <span className="size-2.5 rounded-full bg-accent" aria-hidden />
-                      {t("landing.nextCohortStarts", { date: formatDate(p.cohort.startsOn) })}
-                    </>
-                  ) : (
-                    t("landing.cohortRunning")
-                  )}
+      {/* Pricing */}
+      <Section id="programmes">
+        <SectionHeading
+          kicker={t("landing.pricingKicker")}
+          title={t("landing.pricingTitle")}
+          lead={t("landing.pricingLead")}
+        />
+        <div
+          className={clsx(
+            "mx-auto mt-14 grid gap-6 md:items-start",
+            programmes.length === 1
+              ? "max-w-md"
+              : programmes.length === 2
+                ? "max-w-4xl md:grid-cols-2"
+                : "md:grid-cols-3",
+          )}
+        >
+          {programmes.map((x) => {
+            const on = x.slug === p.slug;
+            return (
+              <article
+                key={x.id}
+                className={clsx(
+                  "relative flex flex-col rounded-2xl border p-8",
+                  on ? "border-violet/60 bg-violet/[0.08] shadow-xl shadow-violet/10" : "border-line bg-surface",
+                )}
+              >
+                {x.slug === upcoming?.slug && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand px-3 py-1 text-xs font-bold whitespace-nowrap text-white">
+                    {t("landing.startsNext")}
+                  </span>
+                )}
+                <h3 className="text-xl font-bold">{x.title}</h3>
+                <p className="mt-3 text-4xl font-bold tracking-tight">{formatMoney(x.priceCents, x.currency)}</p>
+                <p className="mt-1 text-xs text-muted">
+                  {t("landing.oneTime")} · {t("landing.weeksLive", { count: x.durationWeeks })}
                 </p>
-                <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
-                  <p>
-                    <span className="font-wide block text-5xl font-extrabold tracking-tight">
-                      {formatMoney(p.priceCents, p.currency)}
-                    </span>
-                    <span className="text-sm text-muted">{t("landing.weeksLive", { count: p.durationWeeks })}</span>
-                  </p>
-                  <Link
-                    href={`/?programme=${p.slug}#waitlist`}
-                    className="rounded-md border border-ink px-4 py-2.5 text-sm font-medium transition-colors hover:bg-ink hover:text-paper"
-                  >
-                    {t("landing.joinWaitlist")}
-                  </Link>
-                </div>
-              </div>
-            </article>
-          ))}
+                <p className="mt-4 text-[15px] leading-relaxed text-muted">{x.tagline}</p>
+                <ul className="mt-6 space-y-3 text-[15px]">
+                  {x.includes.map((inc) => (
+                    <li key={inc} className="flex items-start gap-3">
+                      <span
+                        className={clsx(
+                          "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full",
+                          on ? "bg-violet/30 text-violet-300" : "bg-ink/10 text-muted",
+                        )}
+                        aria-hidden
+                      >
+                        <Check size={12} strokeWidth={3} />
+                      </span>
+                      <span className={on ? "text-ink" : "text-ink/80"}>{inc}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-6 font-mono text-xs text-ink/70">
+                  {x.cohort?.status === "upcoming"
+                    ? t("landing.nextCohortStarts", { date: formatDate(x.cohort.startsOn) })
+                    : t("landing.cohortRunning")}
+                </p>
+                <Link
+                  href={`/?programme=${x.slug}#waitlist`}
+                  scroll={false}
+                  className={clsx(
+                    "mt-6 rounded-xl py-3.5 text-center text-sm font-bold transition-all",
+                    on
+                      ? "bg-brand text-white shadow-lg shadow-violet/20 hover:opacity-90"
+                      : "border border-line bg-ink/5 hover:bg-ink/10",
+                  )}
+                >
+                  {t("landing.joinWaitlist")}
+                </Link>
+              </article>
+            );
+          })}
         </div>
-      </section>
+      </Section>
 
-      {/* Instructor + outcomes */}
-      <section className="border-t border-line bg-surface">
-        <div className="mx-auto grid max-w-6xl gap-16 px-4 py-24 md:px-8 lg:grid-cols-2">
+      {/* By the numbers: all counted from the programme itself */}
+      <Section tinted>
+        <SectionHeading kicker={t("landing.numbersKicker")} title={t("landing.numbersTitle")} />
+        <dl className="mt-14 grid grid-cols-2 gap-6 lg:grid-cols-4">
+          {numbers.map((n) => (
+            <div key={n.label} className="rounded-2xl border border-line bg-surface p-6 text-center md:p-8">
+              <dd className="text-brand text-4xl font-bold tabular-nums md:text-5xl">{n.value}</dd>
+              <dt className="mt-3 text-sm text-muted">{n.label}</dt>
+            </div>
+          ))}
+        </dl>
+      </Section>
+
+      {/* Instructor and outcomes */}
+      <Section>
+        <div className="grid gap-6 lg:grid-cols-2">
           {instructor && (
-            <div>
-              <p className="mb-6 text-sm font-semibold text-muted">{t("landing.taughtBy")}</p>
+            <GlassCard>
+              <p className="mb-6 text-xs font-bold tracking-[0.2em] text-cyan uppercase">{t("landing.taughtBy")}</p>
               <div className="flex items-center gap-5">
                 <Avatar profile={instructor} size={72} />
                 <div>
-                  <p className="font-wide text-2xl font-bold tracking-tight">{instructor.fullName}</p>
+                  <p className="text-2xl font-bold">{instructor.fullName}</p>
                   <p className="text-muted">{instructor.headline}</p>
                 </div>
               </div>
-              <p className="mt-6 max-w-md text-muted">{t("landing.taughtByBody")}</p>
-            </div>
+              <p className="mt-6 text-[15px] leading-relaxed text-muted">{t("landing.taughtByBody")}</p>
+            </GlassCard>
           )}
-          <div>
-            <p className="mb-2 text-sm font-semibold text-muted">{t("landing.outcomesKicker")}</p>
+          <GlassCard className={clsx(!instructor && "lg:col-span-2")}>
+            <p className="mb-2 text-xs font-bold tracking-[0.2em] text-cyan uppercase">{t("landing.outcomesKicker")}</p>
             <dl>
               {OUTCOMES.map((o) => (
                 <div key={o.title} className="border-b border-line py-4 last:border-b-0">
-                  <dt className="font-semibold">{t(o.title)}</dt>
-                  <dd className="text-muted">{t(o.body)}</dd>
+                  <dt className="font-bold">{t(o.title)}</dt>
+                  <dd className="mt-1 text-[15px] text-muted">{t(o.body)}</dd>
                 </div>
               ))}
             </dl>
-          </div>
+          </GlassCard>
         </div>
-      </section>
+      </Section>
 
       {/* FAQ */}
-      <section id="faq" className="scroll-mt-16 border-t border-line">
-        <div className="mx-auto grid max-w-6xl gap-12 px-4 py-24 md:px-8 lg:grid-cols-[1fr_2fr]">
-          <Heading kicker={t("landing.faqKicker")} title={t("landing.faqTitle")} />
-          <div className="divide-y divide-line border-y border-line">
-            {FAQ.map(({ q, a }) => (
-              <details key={q} className="group py-5">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-lg font-medium">
-                  {t(q)}
-                  <span
-                    className="flex size-7 shrink-0 items-center justify-center rounded-md border border-line transition-transform group-open:rotate-45"
-                    aria-hidden
-                  >
-                    +
-                  </span>
-                </summary>
-                <p className="mt-3 max-w-2xl text-muted">{t(a)}</p>
-              </details>
-            ))}
-          </div>
+      <Section id="faq">
+        <SectionHeading kicker={t("landing.faqKicker")} title={t("landing.faqTitle")} />
+        <div className="mx-auto mt-14 max-w-3xl space-y-3">
+          {FAQ.map(({ q, a }) => (
+            <details key={q} className="group rounded-xl border border-line bg-surface px-6 py-5">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-bold">
+                {t(q)}
+                <span
+                  className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-line text-muted transition-transform group-open:rotate-45"
+                  aria-hidden
+                >
+                  +
+                </span>
+              </summary>
+              <p className="mt-3 text-[15px] leading-relaxed text-muted">{t(a)}</p>
+            </details>
+          ))}
         </div>
-      </section>
+      </Section>
 
-      {/* Final call to action: the evening again */}
-      <section id="waitlist" className="scroll-mt-16 bg-dusk text-paper">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-24 md:px-8 lg:grid-cols-[1fr_1.4fr] lg:items-center">
-          <div>
-            <h2 className="font-wide text-4xl leading-none font-extrabold tracking-tight md:text-6xl">
-              {t("landing.ctaTitle")}
-            </h2>
-            <p className="mt-4 max-w-md text-paper/75">{t("landing.ctaBody")}</p>
-          </div>
+      {/* Waitlist form */}
+      <Section id="waitlist" tinted>
+        <SectionHeading kicker={t("landing.formKicker")} title={t("landing.formTitle")} lead={t("landing.ctaBody")} />
+        <div className="mx-auto mt-12 max-w-xl">
           <WaitlistForm
-            key={formDefault ?? "default"}
-            programmes={options}
-            defaultProgramme={formDefault}
-            tone="dark"
+            key={p.slug}
+            programmes={programmes.map((x) => ({
+              slug: x.slug,
+              title: x.title,
+              price: formatMoney(x.priceCents, x.currency),
+            }))}
+            defaultProgramme={p.slug}
           />
+        </div>
+      </Section>
+
+      {/* Final call to action */}
+      <section className="relative overflow-hidden border-t border-line py-28 md:py-36">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 left-1/2 h-[400px] w-[900px] -translate-x-1/2 translate-y-1/2 rounded-full bg-[radial-gradient(ellipse,#7c3aed,transparent)] opacity-25 blur-[80px]"
+        />
+        <div className="relative mx-auto max-w-4xl px-4 text-center md:px-8">
+          <h2 className="text-5xl leading-[1.05] font-bold tracking-tight md:text-6xl">
+            {rich(t("landing.finalTitle"), gradientWords)}
+          </h2>
+          <p className="mx-auto mt-6 max-w-xl text-lg text-muted">
+            {starts ? t("landing.finalStarts", { date: formatDate(starts) }) : t("landing.ctaBody")}
+          </p>
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Link
+              href={`/?programme=${p.slug}#waitlist`}
+              scroll={false}
+              className="flex items-center gap-2 rounded-lg bg-white px-8 py-4 text-lg font-bold text-slate-900 shadow-lg transition-all hover:-translate-y-0.5 hover:bg-slate-100"
+            >
+              {t("landing.joinWaitlist")}
+              <ArrowRight size={18} className="rtl:-scale-x-100" aria-hidden />
+            </Link>
+            <Link
+              href="/login"
+              className="rounded-lg border border-line bg-ink/5 px-8 py-4 text-lg font-medium transition-all hover:bg-ink/10"
+            >
+              {demoLoginEnabled() ? t("landing.exploreDemo") : t("nav.signIn")}
+            </Link>
+          </div>
         </div>
       </section>
     </>
   );
 }
 
-function Heading({ kicker, title, lead }: { kicker: string; title: string; lead?: string }) {
+function Section({ id, tinted, children }: { id?: string; tinted?: boolean; children: React.ReactNode }) {
   return (
-    <div>
-      <p className="mb-3 text-sm font-semibold text-muted">{kicker}</p>
-      <h2 className="font-wide max-w-3xl text-3xl leading-tight font-extrabold tracking-tight md:text-5xl">{title}</h2>
-      {lead && <p className="mt-4 max-w-xl text-muted">{lead}</p>}
+    <section id={id} className={clsx("scroll-mt-24 border-t border-line py-24 md:py-28", tinted && "bg-black/20")}>
+      <div className="mx-auto max-w-7xl px-4 md:px-8">{children}</div>
+    </section>
+  );
+}
+
+function SectionHeading({ kicker, title, lead }: { kicker?: string; title: string; lead?: React.ReactNode }) {
+  return (
+    <div className="mx-auto max-w-3xl text-center">
+      {kicker && <p className="mb-4 text-sm font-bold tracking-[0.2em] text-cyan uppercase">{kicker}</p>}
+      <h2 className="text-4xl leading-tight font-bold md:text-5xl">{title}</h2>
+      {lead && <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-muted">{lead}</p>}
     </div>
   );
 }
 
-/**
- * The one bold element: the six weeks of the next cohort as a strip, from the
- * start date to the capstone demo. Each week fills in once on load.
- */
-function WeekStrip({
-  programme,
-  t,
-}: {
-  t: T;
-  programme: {
-    title: string;
-    modules: { id: string; week: number; title: string }[];
-    cohort?: { status: string; startsOn: Date };
-  };
-}) {
-  const starts = programme.cohort?.status === "upcoming" ? programme.cohort.startsOn : undefined;
-  const last = programme.modules.length;
+/** The reference's card: faint glass with a violet wash at the top. */
+function GlassCard({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
     <div
-      className="mt-14 border-t border-paper/15 pt-8"
-      aria-label={t("landing.stripLabel", { title: programme.title })}
+      className={clsx(
+        "relative overflow-hidden rounded-2xl border border-line bg-surface p-8 transition-colors hover:border-ink/20",
+        className,
+      )}
     >
-      <p className="mb-5 text-sm text-paper/70">
-        {rich(t("landing.stripNextUp", { title: programme.title }), {
-          b: (c) => <span className="font-semibold text-paper">{c}</span>,
-        })}
-      </p>
-      <ol className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:grid-cols-6">
-        {programme.modules.map((m, i) => (
-          <li key={m.id}>
-            <div className="h-2 overflow-hidden rounded-full bg-paper/15">
-              <div
-                className={clsx("strip-fill h-full rounded-full", m.week === last ? "bg-accent" : "bg-paper/80")}
-                style={{ "--i": i } as React.CSSProperties}
-              />
-            </div>
-            <p className="font-condensed mt-3 text-sm font-semibold text-paper/60">
-              {t("landing.stripWeek", { week: m.week })}
-            </p>
-            <p className="font-condensed text-xl leading-tight font-semibold md:text-2xl">{m.title}</p>
-          </li>
-        ))}
-      </ol>
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm">
-        <p className="flex items-center gap-2">
-          <span className="size-2.5 rounded-full bg-accent" aria-hidden />
-          {starts ? t("landing.stripStarts", { date: formatShortDate(starts) }) : t("landing.stripNextDates")}
-        </p>
-        <p className="flex items-center gap-2 text-paper/80">
-          {t("landing.stripCapstone", { week: last })}
-          <span className="size-2.5 rounded-full border-2 border-accent" aria-hidden />
-        </p>
-      </div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-violet/10 via-transparent to-transparent"
+      />
+      <div className="relative">{children}</div>
     </div>
+  );
+}
+
+function IconBox({ icon: Icon }: { icon: React.ComponentType<{ size?: number; className?: string }> }) {
+  return (
+    <span className="mb-6 flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet/30 to-cyan/20 text-cyan">
+      <Icon size={22} />
+    </span>
   );
 }

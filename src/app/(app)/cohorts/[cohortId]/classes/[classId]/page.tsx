@@ -26,7 +26,7 @@ export default async function Classroom({ params }: PageProps<"/cohorts/[cohortI
 
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 [&>*]:min-w-0">
-      <section className="rounded-md bg-ink p-6 text-paper md:p-10 lg:col-span-2">
+      <section className="relative overflow-hidden rounded-2xl border border-violet/40 bg-gradient-to-br from-violet/25 via-surface to-cyan/10 p-6 text-ink md:p-10 lg:col-span-2">
         <div className="flex items-center gap-3">
           <p className="text-[13px] font-medium opacity-60">{t("classes.liveClassroom")}</p>
           {live && <Pill tone="accent">{t("classes.live")}</Pill>}
@@ -64,7 +64,7 @@ export default async function Classroom({ params }: PageProps<"/cohorts/[cohortI
             </ButtonLink>
           ) : (
             <div>
-              <span className="inline-flex cursor-not-allowed items-center gap-2 rounded-md bg-paper/15 px-4 py-2 text-sm font-medium">
+              <span className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg bg-ink/10 px-4 py-2 text-sm font-medium">
                 <Video size={16} /> {t("classes.join")}
               </span>
               <p className="mt-2 font-mono text-xs opacity-60">

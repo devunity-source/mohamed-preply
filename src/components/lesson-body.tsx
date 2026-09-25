@@ -90,7 +90,7 @@ export function LessonBody({ source }: { source: string }) {
             <pre
               key={i}
               dir="ltr"
-              className="overflow-x-auto rounded-md bg-ink p-4 font-mono text-[13px] leading-relaxed text-paper"
+              className="overflow-x-auto rounded-xl border border-line bg-dusk p-4 font-mono text-[13px] leading-relaxed text-ink"
             >
               <code>{b.text}</code>
             </pre>

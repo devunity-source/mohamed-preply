@@ -1,6 +1,6 @@
 # AcadeMe
 
-A cohort-based digital university: programmes, live classes, labs, assignments, projects and a Circle-style community, in one app. In English and Arabic (right to left), switchable from any page.
+A cohort-based digital university: programmes, live classes, labs, assignments, projects and a Circle-style community, in one app. In English and Arabic (right to left), switchable from any page, on one dark navy theme with Sora and Inter.
 
 Right now it runs entirely on seeded demo data, so you can clone it and click through everything in a couple of minutes. No database or accounts needed. Plan, decisions and progress live in [PROGRESS.md](PROGRESS.md).
 

@@ -76,7 +76,7 @@ export function MobileNav({ unread, showAdmin }: { unread: number; showAdmin: bo
                     href={href}
                     className={clsx(
                       "flex items-center gap-3 rounded-md px-3 py-3 text-sm",
-                      pathname.startsWith(href) ? "bg-ink text-paper" : "hover:bg-line/60",
+                      pathname.startsWith(href) ? "bg-violet/20 text-ink" : "hover:bg-line/60",
                     )}
                   >
                     <Icon size={18} /> {label}

@@ -34,7 +34,7 @@ export function SpaceNav({ spaces }: { spaces: SpaceLink[] }) {
         href="/community"
         className={clsx(
           "block rounded-md px-3 py-2 text-sm font-medium",
-          pathname === "/community" ? "bg-ink text-paper" : "hover:bg-line/60",
+          pathname === "/community" ? "bg-violet/20 text-ink" : "hover:bg-line/60",
         )}
       >
         {t("community.latestActivity")}
@@ -106,7 +106,7 @@ function Groups({
                   aria-current={active ? "page" : undefined}
                   className={clsx(
                     "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm",
-                    active ? "bg-ink text-paper" : "text-muted hover:bg-line/60 hover:text-ink",
+                    active ? "bg-violet/20 text-ink" : "text-muted hover:bg-line/60 hover:text-ink",
                   )}
                 >
                   <Icon size={14} /> {s.name}

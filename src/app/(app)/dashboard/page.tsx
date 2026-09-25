@@ -104,7 +104,7 @@ export default async function Dashboard() {
           {role === "student" && <ContinueLearning t={t} locale={locale} userId={user.id} cohort={cohort} now={now} />}
 
           {/* Next class */}
-          <section className="rounded-md bg-ink p-6 text-paper md:p-8">
+          <section className="relative overflow-hidden rounded-2xl border border-violet/40 bg-gradient-to-br from-violet/25 via-surface to-cyan/10 p-6 text-ink md:p-8">
             <p className="text-[13px] font-medium opacity-60">{t("dashboard.nextClass")}</p>
             {next ? (
               <>
@@ -119,8 +119,8 @@ export default async function Dashboard() {
                     className={clsx(
                       "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium",
                       isLive(next, now)
-                        ? "bg-accent text-accent-ink"
-                        : "bg-paper text-ink hover:bg-accent hover:text-accent-ink",
+                        ? "bg-brand text-white hover:opacity-90"
+                        : "bg-ink text-paper hover:bg-slate-200",
                     )}
                   >
                     <Video size={16} />{" "}

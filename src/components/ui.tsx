@@ -44,7 +44,7 @@ export function Card({
   action?: React.ReactNode;
 }) {
   return (
-    <section className={clsx("rounded-md border border-line bg-surface p-5", className)}>
+    <section className={clsx("rounded-xl border border-line bg-surface p-5", className)}>
       {(title || action) && (
         <div className="mb-4 flex items-center justify-between gap-3">
           {title && <Label>{title}</Label>}
@@ -57,11 +57,11 @@ export function Card({
 }
 
 const buttonBase =
-  "inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50";
 export const buttonVariants = {
   primary: "bg-ink text-paper hover:bg-accent hover:text-accent-ink",
-  accent: "bg-accent text-accent-ink hover:bg-ink hover:text-paper",
-  ghost: "border border-line hover:border-ink",
+  accent: "bg-brand font-semibold text-white hover:opacity-90",
+  ghost: "border border-line bg-ink/5 hover:bg-ink/10",
   danger: "bg-k-deadline text-white hover:opacity-90",
 };
 
@@ -221,9 +221,15 @@ export function Empty({ children }: { children: React.ReactNode }) {
 export function Logo({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" className={className} aria-hidden>
-      <rect width="32" height="32" rx="6" fill="currentColor" />
-      <path d="M9 24 L16 8 L23 24 Z" fill="var(--paper)" />
-      <rect x="20" y="20" width="6" height="6" fill="var(--accent)" />
+      <defs>
+        <linearGradient id="academe-logo" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#7c3aed" />
+          <stop offset="1" stopColor="#22d3ee" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="8" fill="url(#academe-logo)" />
+      <path d="M9 24 L16 8 L23 24 Z" fill="#fff" />
+      <rect x="20" y="20" width="6" height="6" fill="#0f172a" />
     </svg>
   );
 }

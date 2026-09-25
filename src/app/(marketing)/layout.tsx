@@ -1,72 +1,87 @@
 import Link from "next/link";
-import { Archivo } from "next/font/google";
 import { Logo } from "@/components/ui";
 import { LanguageToggle } from "@/components/language-toggle";
 import { getI18n } from "@/lib/i18n/server";
 
-// Variable width as well as weight: wide headlines, condensed week strip.
-const archivo = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-archivo", display: "swap" });
-
-const LINKS = [
-  { href: "/#week", label: "nav.aWeek" },
-  { href: "/#programmes", label: "nav.programmes" },
+const PROGRAMME_LINKS = [
+  { href: "/#curriculum", label: "landing.footerCurriculum" },
+  { href: "/#week", label: "landing.footerWeek" },
+  { href: "/#programmes", label: "landing.footerPricing" },
   { href: "/#faq", label: "nav.faq" },
+] as const;
+
+const SUPPORT_LINKS = [
+  { href: "/login", label: "nav.signIn" },
+  { href: "/verify", label: "landing.footerVerify" },
 ] as const;
 
 export default async function MarketingLayout({ children }: LayoutProps<"/">) {
   const { t } = await getI18n();
   return (
-    <div className={`marketing ${archivo.variable} min-h-dvh`}>
-      <header className="sticky top-0 z-20 border-b border-line bg-paper/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 md:px-8">
+    <div className="marketing flex min-h-dvh flex-col">
+      <header className="relative z-20">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 md:h-20 md:px-8">
           <Link href="/" className="flex items-center gap-2.5">
-            <Logo className="size-7 text-ink" />
-            <span className="font-wide text-lg font-bold tracking-tight">AcadeMe</span>
+            <Brand />
+            <span className="text-lg font-bold">AcadeMe</span>
           </Link>
-          <nav className="hidden items-center gap-7 text-sm text-muted md:flex">
-            {LINKS.map((l) => (
-              <Link key={l.href} href={l.href} className="hover:text-ink">
-                {t(l.label)}
-              </Link>
-            ))}
-          </nav>
           <div className="flex items-center gap-2">
             <LanguageToggle />
-            <Link href="/login" className="hidden px-3 py-2 text-sm font-medium hover:text-muted sm:block">
-              {t("nav.signIn")}
-            </Link>
             <Link
-              href="/#waitlist"
-              className="rounded-md bg-ink px-4 py-2 text-sm font-medium text-paper transition-colors hover:bg-dusk"
+              href="/login"
+              className="rounded-lg border border-line bg-ink/5 px-4 py-2 text-sm font-medium transition-colors hover:bg-ink/10"
             >
-              {t("nav.joinWaitlist")}
+              {t("nav.signIn")}
             </Link>
           </div>
         </div>
       </header>
 
-      <main>{children}</main>
+      <main className="flex-1">{children}</main>
 
-      <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 text-sm text-muted md:flex-row md:items-center md:justify-between md:px-8">
-          <div className="flex items-center gap-2.5 text-ink">
-            <Logo className="size-6" />
-            <span className="font-wide font-bold tracking-tight">AcadeMe</span>
+      <footer className="border-t border-line bg-black/40">
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-[2fr_1fr_1fr] md:px-8">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <Brand />
+              <span className="font-bold">AcadeMe</span>
+            </div>
+            <p className="mt-4 max-w-xs text-sm text-muted">{t("nav.footerTagline")}</p>
           </div>
-          <p>{t("nav.footerTagline")}</p>
-          <nav className="flex flex-wrap gap-x-6 gap-y-2">
-            {LINKS.map((l) => (
-              <Link key={l.href} href={l.href} className="hover:text-ink">
-                {t(l.label)}
-              </Link>
-            ))}
-            <Link href="/login" className="hover:text-ink">
-              {t("nav.signIn")}
-            </Link>
-          </nav>
-          <p>© {new Date().getFullYear()} AcadeMe</p>
+          <FooterColumn
+            title={t("landing.footerProgramme")}
+            links={PROGRAMME_LINKS.map((l) => ({ ...l, label: t(l.label) }))}
+          />
+          <FooterColumn
+            title={t("landing.footerSupport")}
+            links={SUPPORT_LINKS.map((l) => ({ ...l, label: t(l.label) }))}
+          />
+        </div>
+        <div className="border-t border-line">
+          <p className="mx-auto max-w-7xl px-4 py-6 text-sm text-muted md:px-8">© {new Date().getFullYear()} AcadeMe</p>
         </div>
       </footer>
     </div>
+  );
+}
+
+function Brand() {
+  return <Logo className="size-8" />;
+}
+
+function FooterColumn({ title, links }: { title: string; links: { href: string; label: string }[] }) {
+  return (
+    <nav aria-label={title}>
+      <p className="mb-4 text-xs font-semibold tracking-widest text-cyan uppercase">{title}</p>
+      <ul className="space-y-2.5 text-sm text-muted">
+        {links.map((l) => (
+          <li key={l.href}>
+            <Link href={l.href} className="transition-colors hover:text-ink">
+              {l.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }
