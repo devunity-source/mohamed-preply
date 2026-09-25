@@ -4,6 +4,9 @@ import type { common as en } from "../en/common";
 export const common: { [K in keyof typeof en]: Message } = {
   languageLabel: "اللغة",
   switchTo: "English",
+  themeToggle: "التبديل بين الوضع الفاتح والداكن",
+  lightMode: "الوضع الفاتح",
+  darkMode: "الوضع الداكن",
   today: "اليوم",
   tomorrow: "غدًا",
   yesterday: "أمس",

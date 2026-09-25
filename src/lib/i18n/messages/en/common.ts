@@ -1,6 +1,9 @@
 export const common = {
   languageLabel: "Language",
   switchTo: "العربية",
+  themeToggle: "Switch between light and dark mode",
+  lightMode: "Light mode",
+  darkMode: "Dark mode",
   today: "Today",
   tomorrow: "Tomorrow",
   yesterday: "Yesterday",

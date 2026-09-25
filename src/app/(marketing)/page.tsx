@@ -162,7 +162,7 @@ export default async function Landing({ searchParams }: PageProps<"/">) {
       <section className="relative -mt-16 overflow-hidden pt-32 pb-28 md:-mt-20 md:pt-52 md:pb-40">
         <div
           aria-hidden
-          className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,#000_60%,transparent_100%)] bg-[size:4rem_4rem]"
+          className="absolute inset-0 bg-[linear-gradient(to_right,var(--grid)_1px,transparent_1px),linear-gradient(to_bottom,var(--grid)_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,#000_60%,transparent_100%)] bg-[size:4rem_4rem]"
         />
         <div
           aria-hidden
@@ -190,7 +190,7 @@ export default async function Landing({ searchParams }: PageProps<"/">) {
             <Link
               href={`/?programme=${p.slug}#waitlist`}
               scroll={false}
-              className="flex items-center gap-2 rounded-lg bg-white px-8 py-4 text-lg font-bold text-slate-900 shadow-lg transition-all hover:-translate-y-0.5 hover:bg-slate-100"
+              className="flex items-center gap-2 rounded-lg bg-ink px-8 py-4 text-lg font-bold text-paper shadow-lg transition-all hover:-translate-y-0.5 hover:opacity-90"
             >
               {t("landing.joinWaitlist")}
               <ArrowRight size={18} className="rtl:-scale-x-100" aria-hidden />
@@ -205,12 +205,12 @@ export default async function Landing({ searchParams }: PageProps<"/">) {
         </div>
         <p className="absolute start-12 bottom-16 hidden rounded-xl border border-line bg-ink/5 px-4 py-3 font-mono text-sm text-ink/80 backdrop-blur-sm lg:block">
           <span className="text-cyan">$ </span>
-          {t("landing.chipClasses")} <span className="text-emerald-400">✓ {t("landing.chipClassesValue")}</span>
+          {t("landing.chipClasses")} <span className="text-k-office">✓ {t("landing.chipClassesValue")}</span>
         </p>
         <p className="absolute end-12 bottom-16 hidden rounded-xl border border-line bg-ink/5 px-4 py-3 font-mono text-sm text-ink/80 backdrop-blur-sm lg:block">
-          <span className="text-violet-400">$ </span>
+          <span className="text-accent">$ </span>
           {t("landing.chipCapstone")}{" "}
-          <span className="text-emerald-400">{t("landing.chipCapstoneValue", { week: p.durationWeeks })}</span>
+          <span className="text-k-office">{t("landing.chipCapstoneValue", { week: p.durationWeeks })}</span>
         </p>
       </section>
 
@@ -276,7 +276,7 @@ export default async function Landing({ searchParams }: PageProps<"/">) {
                 <ul className="mt-4 space-y-2 text-[15px] text-muted">
                   {m.lessons.map((l) => (
                     <li key={l} className="flex gap-2">
-                      <span className="mt-2.5 size-1 shrink-0 rounded-full bg-violet-400" aria-hidden />
+                      <span className="mt-2.5 size-1 shrink-0 rounded-full bg-accent" aria-hidden />
                       {l}
                     </li>
                   ))}
@@ -371,7 +371,7 @@ export default async function Landing({ searchParams }: PageProps<"/">) {
                       <span
                         className={clsx(
                           "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full",
-                          on ? "bg-violet/30 text-violet-300" : "bg-ink/10 text-muted",
+                          on ? "bg-violet/30 text-accent" : "bg-ink/10 text-muted",
                         )}
                         aria-hidden
                       >
@@ -501,7 +501,7 @@ export default async function Landing({ searchParams }: PageProps<"/">) {
             <Link
               href={`/?programme=${p.slug}#waitlist`}
               scroll={false}
-              className="flex items-center gap-2 rounded-lg bg-white px-8 py-4 text-lg font-bold text-slate-900 shadow-lg transition-all hover:-translate-y-0.5 hover:bg-slate-100"
+              className="flex items-center gap-2 rounded-lg bg-ink px-8 py-4 text-lg font-bold text-paper shadow-lg transition-all hover:-translate-y-0.5 hover:opacity-90"
             >
               {t("landing.joinWaitlist")}
               <ArrowRight size={18} className="rtl:-scale-x-100" aria-hidden />
@@ -521,7 +521,7 @@ export default async function Landing({ searchParams }: PageProps<"/">) {
 
 function Section({ id, tinted, children }: { id?: string; tinted?: boolean; children: React.ReactNode }) {
   return (
-    <section id={id} className={clsx("scroll-mt-24 border-t border-line py-24 md:py-28", tinted && "bg-black/20")}>
+    <section id={id} className={clsx("scroll-mt-24 border-t border-line py-24 md:py-28", tinted && "bg-tint")}>
       <div className="mx-auto max-w-7xl px-4 md:px-8">{children}</div>
     </section>
   );

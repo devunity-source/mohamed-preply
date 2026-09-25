@@ -27,6 +27,8 @@ export const profile: { [K in keyof typeof en]: Message } = {
   signOut: "تسجيل الخروج",
   language: "اللغة",
   languageHint: "يستخدم الموقع والرسائل التي نرسلها إلى بريدك هذه اللغة.",
+  appearance: "المظهر",
+  appearanceHint: "فاتح أو داكن. إلى أن تختار، يتبع إعداد جهازك.",
   email: "البريد الإلكتروني",
   emailIntro: "كل شيء يظهر أيضًا في إشعاراتك. اختر ما يصل إلى <email>{email}</email>.",
   password: "كلمة المرور",

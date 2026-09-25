@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Inter, Noto_Kufi_Arabic, Sora } from "next/font/google";
 import { I18nProvider } from "@/components/i18n-provider";
+import { cookies } from "next/headers";
 import { getI18n } from "@/lib/i18n/server";
+import { THEME_COOKIE, isTheme } from "@/lib/theme";
 import "./globals.css";
 
 // Inter for text, Sora for headings and the marketing pages. Neither has
@@ -35,10 +37,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const { locale, dir } = await getI18n();
+  const saved = (await cookies()).get(THEME_COOKIE)?.value;
   return (
     <html
       lang={locale}
       dir={dir}
+      // No attribute until someone picks: then the device decides.
+      data-theme={isTheme(saved) ? saved : undefined}
+      // The toggle changes data-theme on the client before the next render.
+      suppressHydrationWarning
       className={`${inter.variable} ${sora.variable} ${geistMono.variable} ${arabic.variable} h-full antialiased`}
     >
       <body className="min-h-full font-sans">

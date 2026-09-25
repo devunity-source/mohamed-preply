@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui";
 import { LanguageToggle } from "@/components/language-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getI18n } from "@/lib/i18n/server";
 
 const PROGRAMME_LINKS = [
@@ -26,6 +27,7 @@ export default async function MarketingLayout({ children }: LayoutProps<"/">) {
             <span className="text-lg font-bold">AcadeMe</span>
           </Link>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <LanguageToggle />
             <Link
               href="/login"
@@ -39,7 +41,7 @@ export default async function MarketingLayout({ children }: LayoutProps<"/">) {
 
       <main className="flex-1">{children}</main>
 
-      <footer className="border-t border-line bg-black/40">
+      <footer className="border-t border-line bg-tint">
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 md:grid-cols-[2fr_1fr_1fr] md:px-8">
           <div>
             <div className="flex items-center gap-2.5">

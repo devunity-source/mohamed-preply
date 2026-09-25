@@ -24,6 +24,8 @@ export const profile = {
   signOut: "Sign out",
   language: "Language",
   languageHint: "The site and the emails we send you use this language.",
+  appearance: "Appearance",
+  appearanceHint: "Light or dark. Until you pick one, it follows your device.",
   email: "Email",
   emailIntro: "Everything also shows in your notifications. Choose what reaches <email>{email}</email>.",
   password: "Password",

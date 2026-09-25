@@ -11,6 +11,7 @@ import { hasAdminArea } from "@/lib/authz";
 import { ToastProvider } from "@/components/toast";
 import { SubmitButton } from "@/components/submit-button";
 import { LanguageToggle } from "@/components/language-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getI18n } from "@/lib/i18n/server";
 import type { Key } from "@/lib/i18n/translate";
 import type { Role } from "@/lib/types";
@@ -36,7 +37,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </Link>
         <SearchButton className="mb-4 flex w-full items-center gap-3 rounded-md border border-line px-3 py-2 text-sm text-muted hover:border-ink hover:text-ink" />
         <Nav unread={unread} showAdmin={showAdmin} />
-        <LanguageToggle className="mt-auto mb-2 w-full text-muted hover:text-ink" />
+        <ThemeToggle label className="mt-auto w-full text-muted hover:text-ink" />
+        <LanguageToggle className="mb-2 w-full text-muted hover:text-ink" />
         <div className="flex items-center gap-1">
           <Link href="/profile" className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 hover:bg-line/60">
             <Avatar profile={user} />

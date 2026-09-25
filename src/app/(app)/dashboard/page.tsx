@@ -118,9 +118,7 @@ export default async function Dashboard() {
                     href={`/cohorts/${cohort.id}/classes/${next.id}`}
                     className={clsx(
                       "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium",
-                      isLive(next, now)
-                        ? "bg-brand text-white hover:opacity-90"
-                        : "bg-ink text-paper hover:bg-slate-200",
+                      isLive(next, now) ? "bg-brand text-white hover:opacity-90" : "bg-ink text-paper hover:opacity-90",
                     )}
                   >
                     <Video size={16} />{" "}

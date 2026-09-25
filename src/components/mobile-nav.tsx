@@ -21,6 +21,7 @@ import {
 import { signOut } from "@/lib/auth-actions";
 import { SubmitButton } from "@/components/submit-button";
 import { LanguageToggle } from "@/components/language-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useT } from "@/components/i18n-provider";
 import type { Key } from "@/lib/i18n/translate";
 
@@ -98,6 +99,7 @@ export function MobileNav({ unread, showAdmin }: { unread: number; showAdmin: bo
               </SubmitButton>
             </form>
             <div className="mt-1 border-t border-line pt-1">
+              <ThemeToggle label className="w-full justify-start gap-3 px-3 py-3 text-muted hover:text-ink" />
               <LanguageToggle className="w-full justify-start gap-3 px-3 py-3 text-muted hover:text-ink" />
             </div>
           </div>

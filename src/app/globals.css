@@ -1,11 +1,63 @@
 @import "tailwindcss";
 
 /*
- * One theme everywhere: dark navy with a violet to cyan accent, Sora for
- * headings and Inter for text. Every colour in the app comes from these
- * tokens, so pages don't pick their own.
+ * Two modes of one design: light (the reference's slate-50 and white) and dark
+ * navy, with the same violet to cyan accent, Sora headings and Inter text.
+ * Every colour comes from these tokens, so pages don't pick their own.
+ *
+ * Which mode: the academe_theme cookie sets data-theme on <html> ("light" or
+ * "dark"); with no cookie the device decides (prefers-color-scheme). The dark
+ * values appear twice below, for both routes to dark: keep them in sync.
  */
 :root {
+  color-scheme: light;
+  --paper: #f8fafc; /* Slate 50: the page */
+  --surface: #ffffff; /* Cards */
+  --raised: #f1f5f9; /* Inputs, hovered rows */
+  --ink: #0f172a;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --accent: #7c3aed; /* Violet, dark enough for text on white */
+  --accent-ink: #ffffff;
+  --violet: #7c3aed;
+  --cyan: #0e7490; /* Deep cyan: small cyan text stays readable on white */
+  --pink: #db2777;
+  --dusk: #f1f5f9; /* Code blocks, the terminal window */
+  --grid: #e2e8f0; /* Hero grid lines */
+  --tint: rgb(15 23 42 / 0.03); /* Alternate section bands */
+  --k-class: #7c5cff;
+  --k-lab: #2f6bff;
+  --k-office: #047857; /* Deep green and amber: readable as text on white */
+  --k-deadline: #e5484d;
+  --k-workshop: #b45309;
+  --k-event: #0f172a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #0f172a;
+    --surface: #151e31;
+    --raised: #1e293b;
+    --ink: #f8fafc;
+    --muted: #94a3b8;
+    --line: #273145;
+    --accent: #a78bfa;
+    --accent-ink: #0f172a;
+    --cyan: #22d3ee;
+    --pink: #f472b6;
+    --dusk: #0b1120;
+    --grid: #1e293b;
+    --tint: rgb(0 0 0 / 0.2);
+    --k-class: #9a82ff;
+    --k-lab: #5b8cff;
+    --k-office: #2cc38c;
+    --k-deadline: #ff6b6f;
+    --k-workshop: #f5a524;
+    --k-event: #e2e8f0;
+  }
+}
+:root[data-theme="dark"] {
   color-scheme: dark;
   --paper: #0f172a; /* Navy: the page */
   --surface: #151e31; /* Cards: white at 3% over navy */
@@ -15,16 +67,29 @@
   --line: #273145; /* White at 10% over navy */
   --accent: #a78bfa; /* Violet, light enough for text on navy */
   --accent-ink: #0f172a;
-  --violet: #7c3aed;
   --cyan: #22d3ee;
   --pink: #f472b6;
   --dusk: #0b1120;
+  --grid: #1e293b;
+  --tint: rgb(0 0 0 / 0.2);
   --k-class: #9a82ff;
   --k-lab: #5b8cff;
   --k-office: #2cc38c;
   --k-deadline: #ff6b6f;
   --k-workshop: #f5a524;
   --k-event: #e2e8f0;
+}
+
+/* dark: in class names follows the same two routes as the tokens. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+  &:where([data-theme="dark"] *) {
+    @slot;
+  }
 }
 
 @theme inline {
@@ -39,6 +104,8 @@
   --color-violet: var(--violet);
   --color-cyan: var(--cyan);
   --color-pink: var(--pink);
+  --color-grid: var(--grid);
+  --color-tint: var(--tint);
   --color-k-class: var(--k-class);
   --color-k-lab: var(--k-lab);
   --color-k-office: var(--k-office);
@@ -98,7 +165,11 @@ body {
     size: A4 landscape;
     margin: 12mm;
   }
-  :root {
+  /* Paper is white whatever the screen mode (these selectors outrank both dark routes). */
+  :root,
+  :root:not([data-theme="light"]),
+  :root[data-theme] {
+    color-scheme: light;
     --paper: #ffffff;
     --surface: #ffffff;
     --ink: #0f172a;

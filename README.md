@@ -1,6 +1,6 @@
 # AcadeMe
 
-A cohort-based digital university: programmes, live classes, labs, assignments, projects and a Circle-style community, in one app. In English and Arabic (right to left), switchable from any page, on one dark navy theme with Sora and Inter.
+A cohort-based digital university: programmes, live classes, labs, assignments, projects and a Circle-style community, in one app. In English and Arabic (right to left), switchable from any page, in light and dark mode (sun/moon toggle), with Sora and Inter.
 
 Right now it runs entirely on seeded demo data, so you can clone it and click through everything in a couple of minutes. No database or accounts needed. Plan, decisions and progress live in [PROGRESS.md](PROGRESS.md).
 
@@ -114,6 +114,7 @@ The first time, install the test browser: `npx playwright install chromium`.
 | `office-hours.spec.ts` | Schedule, greyed-out outside hours, server enforcement, inbox, replies, unread counts, privacy |
 | `security.spec.ts` | Role boundaries and replayed or edited requests |
 | `layout.spec.ts` | 41 pages with no sideways scrolling, at 1440, 768 and 390 px, in English and in Arabic |
+| `theme.spec.ts` | Light and dark mode: follows the device, the toggle, the choice surviving a reload and following you into the app |
 | `arabic.spec.ts` | Language toggle, browser language on first visit, saved choice across devices, Western digits, notifications and emails in each person's language |
 
 GitHub Actions (`.github/workflows/ci.yml`) runs typecheck, lint, the hard-coded English check, formatting, the database tests, the build and the browser tests on every push and pull request. If a browser test fails, the report and screenshots are attached to the run.

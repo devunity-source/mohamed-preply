@@ -12,6 +12,7 @@ import { ChangePasswordForm } from "@/components/change-password-form";
 import { EmailSettingsForm } from "@/components/email-settings-form";
 import { EMAIL_KINDS, emailOff } from "@/lib/email/prefs";
 import { LanguageToggle } from "@/components/language-toggle";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { rich } from "@/components/rich";
 import { getI18n } from "@/lib/i18n/server";
 import { loc } from "@/lib/i18n/content";
@@ -159,6 +160,13 @@ export default async function Profile() {
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-muted">{t("profile.languageHint")}</p>
               <LanguageToggle className="shrink-0 border border-line" />
+            </div>
+          </Card>
+
+          <Card title={t("profile.appearance")}>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-muted">{t("profile.appearanceHint")}</p>
+              <ThemeToggle label className="shrink-0 border border-line" />
             </div>
           </Card>
 
