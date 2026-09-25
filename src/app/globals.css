@@ -1,0 +1,221 @@
+@import "tailwindcss";
+
+/*
+ * Two modes of one design: light (the reference's slate-50 and white) and dark
+ * navy, with the same violet to cyan accent, Sora headings and Inter text.
+ * Every colour comes from these tokens, so pages don't pick their own.
+ *
+ * Which mode: the academe_theme cookie sets data-theme on <html> ("light" or
+ * "dark"); with no cookie the device decides (prefers-color-scheme). The dark
+ * values appear twice below, for both routes to dark: keep them in sync.
+ */
+:root {
+  color-scheme: light;
+  --paper: #f8fafc; /* Slate 50: the page */
+  --surface: #ffffff; /* Cards */
+  --raised: #f1f5f9; /* Inputs, hovered rows */
+  --ink: #0f172a;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --accent: #7c3aed; /* Violet, dark enough for text on white */
+  --accent-ink: #ffffff;
+  --violet: #7c3aed;
+  --cyan: #0e7490; /* Deep cyan: small cyan text stays readable on white */
+  --pink: #db2777;
+  --dusk: #f1f5f9; /* Code blocks, the terminal window */
+  --grid: #e2e8f0; /* Hero grid lines */
+  --tint: rgb(15 23 42 / 0.03); /* Alternate section bands */
+  --k-class: #7c5cff;
+  --k-lab: #2f6bff;
+  --k-office: #047857; /* Deep green and amber: readable as text on white */
+  --k-deadline: #e5484d;
+  --k-workshop: #b45309;
+  --k-event: #0f172a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #0f172a;
+    --surface: #151e31;
+    --raised: #1e293b;
+    --ink: #f8fafc;
+    --muted: #94a3b8;
+    --line: #273145;
+    --accent: #a78bfa;
+    --accent-ink: #0f172a;
+    --cyan: #22d3ee;
+    --pink: #f472b6;
+    --dusk: #0b1120;
+    --grid: #1e293b;
+    --tint: rgb(0 0 0 / 0.2);
+    --k-class: #9a82ff;
+    --k-lab: #5b8cff;
+    --k-office: #2cc38c;
+    --k-deadline: #ff6b6f;
+    --k-workshop: #f5a524;
+    --k-event: #e2e8f0;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0f172a; /* Navy: the page */
+  --surface: #151e31; /* Cards: white at 3% over navy */
+  --raised: #1e293b; /* Slate: inputs, hovered rows */
+  --ink: #f8fafc;
+  --muted: #94a3b8;
+  --line: #273145; /* White at 10% over navy */
+  --accent: #a78bfa; /* Violet, light enough for text on navy */
+  --accent-ink: #0f172a;
+  --cyan: #22d3ee;
+  --pink: #f472b6;
+  --dusk: #0b1120;
+  --grid: #1e293b;
+  --tint: rgb(0 0 0 / 0.2);
+  --k-class: #9a82ff;
+  --k-lab: #5b8cff;
+  --k-office: #2cc38c;
+  --k-deadline: #ff6b6f;
+  --k-workshop: #f5a524;
+  --k-event: #e2e8f0;
+}
+
+/* dark: in class names follows the same two routes as the tokens. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+  &:where([data-theme="dark"] *) {
+    @slot;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-violet: var(--violet);
+  --color-cyan: var(--cyan);
+  --color-pink: var(--pink);
+  --color-grid: var(--grid);
+  --color-tint: var(--tint);
+  --color-k-class: var(--k-class);
+  --color-k-lab: var(--k-lab);
+  --color-k-office: var(--k-office);
+  --color-k-deadline: var(--k-deadline);
+  --color-k-workshop: var(--k-workshop);
+  --color-k-event: var(--k-event);
+  --color-dusk: var(--dusk);
+  /* Latin fonts first: Noto Kufi Arabic also has Latin letters and would win
+     them otherwise. Arabic letters aren't in Inter or Sora, so they land in Kufi. */
+  --font-sans: var(--font-inter), var(--font-arabic), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sora), var(--font-inter), var(--font-arabic), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, Menlo, monospace;
+}
+
+/* The accent gradient. Filled buttons end on a deeper cyan (#0e7490) so white
+   text stays readable across the whole button (at least 4.5:1); headline
+   words keep the bright cyan. */
+@utility bg-brand {
+  background-image: linear-gradient(to right, var(--violet), #0e7490);
+}
+@utility text-brand {
+  background-image: linear-gradient(to right, var(--cyan), var(--violet));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+  }
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* In the base layer so a component can opt out (e.g. the search input, whose dialog already shows focus). */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+/* Certificates print as a single landscape page with nothing but the certificate. */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+  /* Paper is white whatever the screen mode (these selectors outrank both dark routes). */
+  :root,
+  :root:not([data-theme="light"]),
+  :root[data-theme] {
+    color-scheme: light;
+    --paper: #ffffff;
+    --surface: #ffffff;
+    --ink: #0f172a;
+    --muted: #475569;
+    --line: #cbd5e1;
+    --accent: #7c3aed;
+  }
+  body {
+    background: #fff;
+  }
+}
+
+/* Marketing pages: Sora for everything, like the headings. */
+.marketing {
+  font-family: var(--font-display);
+}
+
+/* The week strip fills in once on load. Nothing moves for people who ask for reduced motion. */
+@keyframes strip-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.strip-fill {
+  transform-origin: left;
+}
+[dir="rtl"] .strip-fill {
+  transform-origin: right;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .strip-fill {
+    animation: strip-fill 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--i, 0) * 140ms + 250ms);
+  }
+}
+
+/* Arabic: Kufi letters need more line height than Latin, and there is no
+   letter-spacing or width axis in Arabic script. */
+[dir="rtl"] body {
+  line-height: 1.7;
+}
+[dir="rtl"] .tracking-tight,
+[dir="rtl"] .tracking-wider,
+[dir="rtl"] .tracking-widest {
+  letter-spacing: 0;
+}

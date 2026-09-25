@@ -1,0 +1,17 @@
+export const certificate = {
+  period: "{start} to {end}",
+  studentName: "Student Name",
+  preview: "Preview",
+  revoked: "Revoked",
+  yourCertificate: "Your certificate",
+  issued: "Issued {date}",
+  shareNote: "Share the verification link on your CV or LinkedIn. Anyone can check it without signing in.",
+  print: "Print / Save as PDF",
+  howToEarn: "How to earn it",
+  earnLessons: "Complete every lesson",
+  earnSubmit: "Submit every lab and assignment",
+  earnCapstone: "Present your capstone",
+  percentComplete: "{percent}% complete",
+  revokedNote: "This certificate was revoked. Contact the academy if you think that's a mistake.",
+  issueNote: "Once you finish, the academy issues your certificate with a public verification link.",
+};

@@ -1,0 +1,33 @@
+export const grading = {
+  // Assignment list
+  noAssignments: "This cohort has no assignments.",
+  due: "Due {date}",
+  submittedOf: "{count}/{total} submitted",
+  toGrade: { one: "{count} to grade", other: "{count} to grade" },
+  allGraded: "All graded",
+  open: "Open",
+  noneIn: "None in",
+
+  // One assignment
+  allAssignments: "All assignments",
+  dueAllGraded: "Due {date} · all graded",
+  dueToGrade: { one: "Due {date} · {count} to grade", other: "Due {date} · {count} to grade" },
+  submissionsTitle: "Submissions · {count}",
+  needsGrading: "Needs grading",
+  nothingSubmitted: "Nothing submitted yet.",
+  notSubmittedTitle: "Not submitted · {count}",
+  sendReminder: "Send a reminder",
+  savedGrade: "Saved {name}'s grade ({grade}/100). They've been notified.",
+  submittedMeta: "Submitted {ago} · {position} of {total}",
+  gradeOutOf: "{grade}/100",
+  stateGraded: "Graded",
+  stateSubmitted: "Submitted",
+  stateLate: "Late",
+  stateNotSubmitted: "Not submitted",
+  openRepo: "Open repo",
+  note: "“{note}”",
+  lastGraded: "Last graded by {name} {ago}",
+  lastGradedNoRubric: "Last graded by {name} {ago} (before rubrics; re-grade to record scores)",
+  keysHint: "<k>j</k> / <k>k</k> next and previous · <k>⌘</k>/<k>Ctrl</k> + <k>Enter</k> save",
+  noSubmissions: "No submissions to grade yet.",
+};
