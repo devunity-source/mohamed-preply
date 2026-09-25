@@ -53,9 +53,11 @@
   --font-mono: var(--font-geist-mono), ui-monospace, Menlo, monospace;
 }
 
-/* The accent gradient: filled buttons and the highlighted words in headlines. */
+/* The accent gradient. Filled buttons end on a deeper cyan (#0e7490) so white
+   text stays readable across the whole button (at least 4.5:1); headline
+   words keep the bright cyan. */
 @utility bg-brand {
-  background-image: linear-gradient(to right, var(--violet), var(--cyan));
+  background-image: linear-gradient(to right, var(--violet), #0e7490);
 }
 @utility text-brand {
   background-image: linear-gradient(to right, var(--cyan), var(--violet));
